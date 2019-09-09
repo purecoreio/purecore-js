@@ -6,15 +6,9 @@ class Core {
         this.key = key;
     }
 
-    // PAYMENT HANDLET
-
-    successfulPayment() {
-        console.log("successful payment received")
-    }
-
     // CHECKOUT ELEMENT
 
-    createCheckoutElement(legacy_username, product_list, element) {
+    createCheckoutElement(legacy_username, product_list, target_element) {
 
         var CoreInstance = this;
 
@@ -32,14 +26,14 @@ class Core {
 
         // js external lib loading
 
-        var js_libs = ["https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js", "https://cdn.jsdelivr.net/npm/canvas-confetti@0.4.0/dist/confetti.browser.min.js", "https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js", "https://js.stripe.com/v3/"];
+        var js_libs = ["https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"];
         var final_js_tag = ""
         js_libs.forEach(lib => {
             final_js_tag += "<script src='" + lib + "'></script>"
         });
 
         var final_html = final_css_tag + css_props + final_js_tag + html_min;
-        element.innerHTML = final_html;
+        target_element.innerHTML = final_html;
 
         // content loading
 
@@ -147,24 +141,12 @@ class Core {
                             document.getElementById("payment_errors").classList.remove("light_warning_card");
                             CoreInstance.createPayment(request, "Stripe", ev.token.id).then(function (result) {
 
-                                // confetti
-                                var canvas = document.getElementById('conf_canvas');
-                                canvas.confetti = canvas.confetti || confetti.create(canvas, {
-                                    resize: true
-                                });
-
-                                canvas.confetti({
-                                    spread: 70,
-                                    origin: {
-                                        y: 1.2
-                                    }
-                                });
-
                                 document.getElementById("payment_process").classList.add("animated");
                                 document.getElementById("payment_process").classList.add("tdShrinkOut");
 
                                 // result
-                                this.successfulPayment()
+                                var event = new CustomEvent('successfulPayment');
+                                target_element.dispatchEvent(event);
 
                             }).catch(function (error) {
                                 document.getElementById("payment_errors").classList.remove("hidden");
@@ -182,7 +164,7 @@ class Core {
                     currency: 'eur',
                     total: {
                         label: 'Donation',
-                        amount: price.getFinal()*100,
+                        amount: price.getFinal() * 100,
                     },
                     requestPayerName: false,
                     requestPayerEmail: false,
@@ -203,7 +185,7 @@ class Core {
                 paymentRequest.canMakePayment().then(function (result) {
                     card_element.mount('#card-element');
                     setTimeout(() => {
-                        
+
                         document.getElementById("buttons").classList.remove("hidden");
                         document.getElementById("buttons").classList.add("animated");
                         document.getElementById("buttons").classList.add("tdFadeInDown");
@@ -223,24 +205,12 @@ class Core {
                         document.getElementById("payment_errors").classList.add("hidden")
                         ev.complete('success');
 
-                        // confetti
-                        var canvas = document.getElementById('conf_canvas');
-                        canvas.confetti = canvas.confetti || confetti.create(canvas, {
-                            resize: true
-                        });
-
-                        canvas.confetti({
-                            spread: 70,
-                            origin: {
-                                y: 1.2
-                            }
-                        });
-
                         document.getElementById("payment_process").classList.add("animated")
                         document.getElementById("payment_process").classList.add("tdShrinkOut")
 
                         // result
-                        this.successfulPayment()
+                        var event = new CustomEvent('successfulPayment');
+                        target_element.dispatchEvent(event);
 
                     }).catch(function (error) {
 
@@ -248,7 +218,7 @@ class Core {
                         document.getElementById("payment_errors").classList.add("animated")
                         document.getElementById("payment_errors").classList.add("tdExpandIn")
                         document.getElementById("payment_errors").classList.add("light_warning_card")
-                        document.getElementById("payment_errors").innerHTML=error.message
+                        document.getElementById("payment_errors").innerHTML = error.message
                         ev.complete('fail');
 
                     })
