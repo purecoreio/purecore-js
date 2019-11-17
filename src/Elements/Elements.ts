@@ -12,3 +12,5 @@ class Elements extends Core {
     }
 
 }
+
+module.exports.Elements

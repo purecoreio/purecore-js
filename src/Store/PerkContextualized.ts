@@ -8,3 +8,5 @@ class PerkContextualized {
         this.quantity=quantity;
     }
 }
+
+module.exports.PerkContextualized

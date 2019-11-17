@@ -18,3 +18,5 @@ class Perk {
 
     }
 }
+
+module.exports.Perk

@@ -1,16 +1,3 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -20,155 +7,179 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
-var Core = /** @class */ (function () {
-    function Core(key) {
+class Core {
+    constructor(key) {
         this.key = key;
     }
-    Core.prototype.getKey = function () {
+    getKey() {
         return this.key;
-    };
-    Core.prototype.getElements = function () {
-        return new Elements(this);
-    };
-    Core.prototype.getInstance = function (instanceId, name, type) {
-        new Instance(this, instanceId, name, type);
-    };
-    return Core;
-}());
-var CheckoutElement = /** @class */ (function (_super) {
-    __extends(CheckoutElement, _super);
-    function CheckoutElement(core, products, successFunction) {
-        var _this = _super.call(this, core.getKey()) || this;
-        _this.core = core;
-        _this.products = products;
-        document.addEventListener("paymentSuccess", successFunction);
-        return _this;
     }
-    CheckoutElement.prototype.getJSON = function () {
+    getElements() {
+        return new Elements(this);
+    }
+    getInstance(instanceId, name, type) {
+        return new Instance(this, instanceId, name, type);
+    }
+    fromDiscord(guildId, botToken) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var obj = this;
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            obj.key = jsonresponse.hash;
+                            resolve(obj);
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
+}
+module.exports = Core;
+class CheckoutElement extends Core {
+    constructor(core, products, successFunction) {
+        super(core.getKey());
+        this.core = core;
+        this.products = products;
+        document.addEventListener("paymentSuccess", successFunction);
+    }
+    getJSON() {
         var finalProducts = new Array();
-        this.products.forEach(function (product) {
+        this.products.forEach(product => {
             finalProducts.push(product.getId());
         });
         return JSON.stringify(finalProducts);
-    };
-    CheckoutElement.prototype.loadInto = function (selector) {
+    }
+    loadInto(selector) {
         var key = this.core.getKey();
         var products = this.getJSON();
         $.getScript("https://js.stripe.com/v3/", function (data, textStatus, jqxhr) {
             $(selector).load("https://api.purecore.io/rest/2/element/checkout/?key=" + key + "&items=" + products);
         });
-    };
-    return CheckoutElement;
-}(Core));
-var Elements = /** @class */ (function (_super) {
-    __extends(Elements, _super);
-    function Elements(core) {
-        var _this = _super.call(this, core.getKey()) || this;
-        _this.core = core;
-        return _this;
     }
-    Elements.prototype.getCheckoutElement = function (products, successFunction) {
+}
+module.exports.CheckoutElement;
+class Elements extends Core {
+    constructor(core) {
+        super(core.getKey());
+        this.core = core;
+    }
+    getCheckoutElement(products, successFunction) {
         return new CheckoutElement(this.core, products, successFunction);
-    };
-    return Elements;
-}(Core));
-var Instance = /** @class */ (function (_super) {
-    __extends(Instance, _super);
-    function Instance(core, uuid, name, type) {
-        var _this = _super.call(this, core.getKey()) || this;
-        _this.core = core;
-        _this.uuid = uuid;
-        _this.name = name;
-        _this.type = type;
-        return _this;
     }
-    Instance.prototype.getName = function () {
+}
+module.exports.Elements;
+class Instance extends Core {
+    constructor(core, uuid, name, type) {
+        super(core.getKey());
+        this.core = core;
+        this.uuid = uuid;
+        this.name = name;
+        this.type = type;
+    }
+    getName() {
         return this.name;
-    };
-    Instance.prototype.getId = function () {
-        return this.uuid;
-    };
-    Instance.prototype.asNetwork = function () {
-        return new Network(this.core, this);
-    };
-    return Instance;
-}(Core));
-var Network = /** @class */ (function (_super) {
-    __extends(Network, _super);
-    function Network(core, instance) {
-        var _this = _super.call(this, core.getKey()) || this;
-        _this.core = core;
-        _this.uuid = instance.getId();
-        _this.name = instance.getName();
-        return _this;
     }
-    Network.prototype.setGuild = function (discordGuildId) {
-        return __awaiter(this, void 0, void 0, function () {
-            var e_1;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, fetch("https://api.purecore.io/rest/2/instance/network/setguild/?key=" + this.core.getKey() + "&guildid=" + discordGuildId, { method: "GET" }).then(function (response) {
-                                return response.json();
-                            }).then(function (jsonresponse) {
-                                if ("error" in jsonresponse) {
-                                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
-                                }
-                                else {
-                                    return true;
-                                }
-                            })];
-                    case 1: return [2 /*return*/, _a.sent()];
-                    case 2:
-                        e_1 = _a.sent();
-                        throw new Error(e_1.message);
-                    case 3: return [2 /*return*/];
-                }
-            });
+    getId() {
+        return this.uuid;
+    }
+    asNetwork() {
+        return new Network(this.core, this);
+    }
+}
+module.exports.Instance;
+class Network extends Core {
+    constructor(core, instance) {
+        super(core.getKey());
+        this.core = core;
+        this.uuid = instance.getId();
+        this.name = instance.getName();
+    }
+    setGuild(discordGuildId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            try {
+                return yield fetch("https://api.purecore.io/rest/2/instance/network/discord/setguild/?key=" + key + "&guildid=" + discordGuildId, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return true;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
         });
-    };
-    return Network;
-}(Core));
-var StoreCategory = /** @class */ (function () {
-    function StoreCategory(uuid, name, description, network, upgradable) {
+    }
+    setSessionChannel(channelId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            try {
+                return yield fetch("https://api.purecore.io/rest/2/instance/network/discord/setchannel/session/?key=" + key + "&channelid=" + channelId, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return true;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    setDonationChannel(channelId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            try {
+                return yield fetch("https://api.purecore.io/rest/2/instance/network/discord/setchannel/donation/?key=" + key + "&channelid=" + channelId, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return true;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+}
+module.exports.Network;
+class StoreCategory {
+    constructor(uuid, name, description, network, upgradable) {
         this.uuid = uuid;
         this.name = name;
         this.description = description;
         this.network = network;
         this.upgradable = upgradable;
     }
-    return StoreCategory;
-}());
-var StoreItem = /** @class */ (function () {
-    function StoreItem(uuid, name, description, category, network, price, contextualizedPerks) {
+}
+module.exports.StoreCategory;
+class StoreItem {
+    constructor(uuid, name, description, category, network, price, contextualizedPerks) {
         this.uuid = uuid;
         this.name = name;
         this.description = description;
@@ -177,13 +188,13 @@ var StoreItem = /** @class */ (function () {
         this.price = price;
         this.perks = contextualizedPerks;
     }
-    StoreItem.prototype.getId = function () {
+    getId() {
         return this.uuid;
-    };
-    return StoreItem;
-}());
-var Perk = /** @class */ (function () {
-    function Perk(uuid, network, name, description, type, category) {
+    }
+}
+module.exports.StoreItem;
+class Perk {
+    constructor(uuid, network, name, description, type, category) {
         this.uuid = uuid;
         this.network = network;
         this.name = name;
@@ -191,20 +202,20 @@ var Perk = /** @class */ (function () {
         this.type = type;
         this.category = category;
     }
-    return Perk;
-}());
-var PerkCategory = /** @class */ (function () {
-    function PerkCategory(uuid, name, network) {
+}
+module.exports.Perk;
+class PerkCategory {
+    constructor(uuid, name, network) {
         this.uuid = uuid;
         this.name = name;
         this.network = network;
     }
-    return PerkCategory;
-}());
-var PerkContextualized = /** @class */ (function () {
-    function PerkContextualized(perk, quantity) {
+}
+module.exports.PerkCategory;
+class PerkContextualized {
+    constructor(perk, quantity) {
         this.perk = perk;
         this.quantity = quantity;
     }
-    return PerkContextualized;
-}());
+}
+module.exports.PerkContextualized;

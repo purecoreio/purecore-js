@@ -11,3 +11,5 @@ class PerkCategory {
     }
 
 }
+
+module.exports.PerkCategory

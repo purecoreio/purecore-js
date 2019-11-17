@@ -21,8 +21,10 @@ class Instance extends Core {
         return this.uuid;
     }
 
-    asNetwork() {
-        return new Network(this.core,this)
+    asNetwork(): Network {
+        return new Network(this.core, this)
     }
 
 }
+
+module.exports.Instance
