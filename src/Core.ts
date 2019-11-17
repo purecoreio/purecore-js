@@ -14,4 +14,8 @@ class Core {
         return new Elements(this);
     }
 
+    getInstance(instanceId, name, type){
+        new Instance(this,instanceId, name, type)
+    }
+
 }
