@@ -69,6 +69,33 @@ class Network extends Core {
         }
 
     }
+
+    async getHashes() {
+
+        var key = this.core.getKey();
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/session/hash/list/?key=" + key, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        var response = new Array();
+                        jsonresponse.forEach(ConnectionHash => {
+                            response.push(new ConnectionHash().fromArray(ConnectionHash))
+                        });
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+                    throw new Error(error)
+                })
+            } catch (e) {
+                throw new Error(e.message)
+            }
+        });
+    }
 }
 
 module.exports.Network
