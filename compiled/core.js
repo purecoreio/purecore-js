@@ -20,12 +20,16 @@ class Core {
     getInstance(instanceId, name, type) {
         return new Instance(this, instanceId, name, type);
     }
-    fromDiscord(guildId, botToken) {
+    fromDiscord(guildId, botToken, devkey) {
         return __awaiter(this, void 0, void 0, function* () {
             var obj = this;
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken, { method: "GET" }).then(function (response) {
+                    var url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken;
+                    if (devkey == true) {
+                        url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
+                    }
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
