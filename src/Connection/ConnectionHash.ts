@@ -6,7 +6,7 @@ class ConnectionHash extends Core {
     hash: string;
     player: Player;
 
-    constructor(core: Core, network: Network, uuid: string, hash: string, player: Player) {
+    constructor(core: Core, network?: Network, uuid?: string, hash?: string, player?: Player) {
         super(core.getKey())
         this.core = core;
         this.network = network;
@@ -38,7 +38,9 @@ class ConnectionHash extends Core {
     async requestSession() {
 
         var key = this.core.getKey();
+        var core = this.core;
         var hash = this.hash;
+        
         return new Promise(function (resolve, reject) {
 
             try {
@@ -48,7 +50,10 @@ class ConnectionHash extends Core {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
                     } else {
-                        resolve(new SessionRequest(new Core(key), jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, new Player(new Core(key), jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified), new Network(new Core(key), new Instance(new Core(key), jsonresponse.network.uuid, jsonresponse.network.name, "NTW")), "player"))
+                        var player = new Player(core, jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified);
+                        var instance = new Network(core, new Instance(core, jsonresponse.network.uuid, jsonresponse.network.name, "NTW"));
+                        var sessionRequest = new SessionRequest(core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, instance, "player");
+                        resolve(sessionRequest)
                     }
                 }).catch(function (error) {
                     throw new Error(error)
@@ -60,5 +65,3 @@ class ConnectionHash extends Core {
     }
 
 }
-
-module.exports.ConnectionHash

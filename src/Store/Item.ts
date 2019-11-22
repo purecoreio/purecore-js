@@ -23,5 +23,3 @@ class StoreItem {
     }
 
 }
-
-module.exports.StoreItem

@@ -26,5 +26,3 @@ class Instance extends Core {
     }
 
 }
-
-module.exports.Instance

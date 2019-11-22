@@ -15,5 +15,3 @@ class StoreCategory {
     }
 
 }
-
-module.exports.StoreCategory

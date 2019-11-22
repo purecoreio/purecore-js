@@ -49,4 +49,8 @@ class Core {
 
 }
 
-module.exports = Core
+try {
+    module.exports = Core
+} catch (error) {
+    console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available")
+}

@@ -50,7 +50,19 @@ class Core {
         });
     }
 }
-module.exports = Core;
+try {
+    module.exports = Core;
+}
+catch (error) {
+    console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available");
+}
+class Command {
+    constructor(uuid, cmd, network) {
+        this.uuid = uuid;
+        this.cmd = cmd;
+        this.network = network;
+    }
+}
 class ConnectionHash extends Core {
     constructor(core, network, uuid, hash, player) {
         super(core.getKey());
@@ -79,6 +91,7 @@ class ConnectionHash extends Core {
     requestSession() {
         return __awaiter(this, void 0, void 0, function* () {
             var key = this.core.getKey();
+            var core = this.core;
             var hash = this.hash;
             return new Promise(function (resolve, reject) {
                 try {
@@ -89,7 +102,10 @@ class ConnectionHash extends Core {
                             throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                         }
                         else {
-                            resolve(new SessionRequest(new Core(key), jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, new Player(new Core(key), jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified), new Network(new Core(key), new Instance(new Core(key), jsonresponse.network.uuid, jsonresponse.network.name, "NTW")), "player"));
+                            var player = new Player(core, jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified);
+                            var instance = new Network(core, new Instance(core, jsonresponse.network.uuid, jsonresponse.network.name, "NTW"));
+                            var sessionRequest = new SessionRequest(core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, instance, "player");
+                            resolve(sessionRequest);
                         }
                     }).catch(function (error) {
                         throw new Error(error);
@@ -102,7 +118,6 @@ class ConnectionHash extends Core {
         });
     }
 }
-module.exports.ConnectionHash;
 class CheckoutElement extends Core {
     constructor(core, products, successFunction) {
         super(core.getKey());
@@ -125,7 +140,6 @@ class CheckoutElement extends Core {
         });
     }
 }
-module.exports.CheckoutElement;
 class Elements extends Core {
     constructor(core) {
         super(core.getKey());
@@ -135,7 +149,6 @@ class Elements extends Core {
         return new CheckoutElement(this.core, products, successFunction);
     }
 }
-module.exports.Elements;
 class Instance extends Core {
     constructor(core, uuid, name, type) {
         super(core.getKey());
@@ -154,7 +167,6 @@ class Instance extends Core {
         return new Network(this.core, this);
     }
 }
-module.exports.Instance;
 class Network extends Core {
     constructor(core, instance) {
         super(core.getKey());
@@ -235,8 +247,9 @@ class Network extends Core {
                         }
                         else {
                             var response = new Array();
-                            jsonresponse.forEach(ConnectionHash => {
-                                response.push(new ConnectionHash().fromArray(ConnectionHash));
+                            jsonresponse.forEach(hashData => {
+                                var hash = new ConnectionHash(new Core(key));
+                                response.push(hash.fromArray(hashData));
                             });
                             resolve(response);
                         }
@@ -251,16 +264,174 @@ class Network extends Core {
         });
     }
 }
-module.exports.Network;
+class Offence extends Core {
+    constructor(core, uuid, type, network, name, description, negativePoints) {
+        super(core.getKey());
+        this.core = core;
+        this.uuid = uuid;
+        this.type = type;
+        this.network = network;
+        this.name = name;
+        this.description = description;
+        this.negativePoints = negativePoints;
+    }
+}
+class OffenceAction extends Core {
+    constructor(core, uuid, cmd, requiredPoints, network, pointsType, punishmentType, name, description) {
+        super(core.getKey());
+        this.core = core;
+        this.uuid = uuid;
+        this.cmd = cmd;
+        this.requiredPoints = requiredPoints;
+        this.network = network;
+        this.pointsType = pointsType;
+        this.punishmentType = punishmentType;
+        this.name = name;
+        this.description = description;
+    }
+}
+class Punishment extends Core {
+    constructor(core, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes) {
+        super(core.getKey());
+        this.core = core;
+        this.player = player;
+        this.offenceList = offenceList;
+        this.moderator = moderator;
+        this.network = network;
+        this.pointsChat = pointsChat;
+        this.pointsGameplay = pointsGameplay;
+        this.report = report;
+        this.notes = notes;
+    }
+}
+class Report {
+    constructor(parameters) {
+    }
+}
+class Session extends Core {
+    constructor(core, uuid, hash, device, location, usage, network, player) {
+        super(core.getKey());
+        this.core = core;
+        this.uuid = uuid;
+        this.hash = hash;
+        this.device = device;
+        this.location = location;
+        this.usage = usage;
+        this.network = network;
+        this.player = player;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.device = new SessionDevice(array.device.brand, array.device.device, array.device.model, array.device.os);
+        this.location = new SessionLocation(array.location.city, array.location.state, array.location.country_code);
+        this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        return this;
+    }
+    fromHash(sessionHash) {
+        var key = this.core.getKey();
+        var core = this.core;
+        var hash = sessionHash;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/session/get/?key=" + key + "&hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var newSession = new Session(core);
+                        newSession = newSession.fromArray(jsonresponse);
+                        resolve(newSession);
+                    }
+                }).catch(function (error) {
+                    throw new Error(error);
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    getId() {
+        return this.uuid;
+    }
+    getHash() {
+        return this.hash;
+    }
+    getPlayer() {
+        return this.player;
+    }
+}
+class SessionDevice {
+    constructor(brand, device, model, os) {
+        this.brand = brand;
+        this.device = device;
+        this.model = model;
+        this.os = os;
+    }
+}
+class SessionLocation {
+    constructor(city, state, country_code) {
+        this.city = city;
+        this.state = state;
+        this.country_code = country_code;
+    }
+}
 class SessionRequest extends Core {
     constructor(core, uuid, token, validated, player, network, type) {
         super(core.getKey());
+        this.core = core;
         this.uuid = uuid;
         this.token = token;
         this.validated = validated;
         this.player = player;
         this.network = network;
         this.type = type;
+    }
+    isValidated() {
+        return this.validated;
+    }
+    getValidationUrl() {
+        return "https://api.purecore.io/link/discord/redirect/?uuid=" + this.uuid + "&hash=" + this.token;
+    }
+    getToken() {
+        return this.token;
+    }
+    getSession() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            var core = this.core;
+            var token = this.token;
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/session/hash/token/exchange/?key=" + key + "&token=" + token, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            resolve(new Session(core).fromArray(jsonresponse));
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
+}
+class SessionUsage {
+    constructor(creation, uses) {
+        this.creation = creation;
+        this.uses = uses;
     }
 }
 class StoreCategory {
@@ -272,7 +443,6 @@ class StoreCategory {
         this.upgradable = upgradable;
     }
 }
-module.exports.StoreCategory;
 class StoreItem {
     constructor(uuid, name, description, category, network, price, contextualizedPerks) {
         this.uuid = uuid;
@@ -287,7 +457,6 @@ class StoreItem {
         return this.uuid;
     }
 }
-module.exports.StoreItem;
 class Perk {
     constructor(uuid, network, name, description, type, category) {
         this.uuid = uuid;
@@ -298,7 +467,6 @@ class Perk {
         this.category = category;
     }
 }
-module.exports.Perk;
 class PerkCategory {
     constructor(uuid, name, network) {
         this.uuid = uuid;
@@ -306,14 +474,12 @@ class PerkCategory {
         this.network = network;
     }
 }
-module.exports.PerkCategory;
 class PerkContextualized {
     constructor(perk, quantity) {
         this.perk = perk;
         this.quantity = quantity;
     }
 }
-module.exports.PerkContextualized;
 class Player extends Core {
     constructor(core, id, username, uuid, verified) {
         super(core.getKey());
@@ -333,4 +499,3 @@ class Player extends Core {
         return this.username;
     }
 }
-module.exports.Player;

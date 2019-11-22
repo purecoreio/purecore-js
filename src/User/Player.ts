@@ -28,5 +28,3 @@ class Player extends Core {
     }
 
 }
-
-module.exports.Player

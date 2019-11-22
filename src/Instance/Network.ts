@@ -83,8 +83,9 @@ class Network extends Core {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
                     } else {
                         var response = new Array();
-                        jsonresponse.forEach(ConnectionHash => {
-                            response.push(new ConnectionHash().fromArray(ConnectionHash))
+                        jsonresponse.forEach(hashData => {
+                            var hash = new ConnectionHash(new Core(key));
+                            response.push(hash.fromArray(hashData))
                         });
                         resolve(response)
                     }
@@ -97,5 +98,3 @@ class Network extends Core {
         });
     }
 }
-
-module.exports.Network

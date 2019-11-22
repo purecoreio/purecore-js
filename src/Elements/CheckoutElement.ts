@@ -32,5 +32,3 @@ class CheckoutElement extends Core {
     }
 
 }
-
-module.exports.CheckoutElement

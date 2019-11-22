@@ -1,0 +1,25 @@
+class OffenceAction extends Core {
+
+    public core: Core;
+    public uuid: string;
+    public cmd: Command;
+    public requiredPoints;
+    public network: Network;
+    public pointsType: string;
+    public punishmentType: string;
+    public name: string;
+    public description: string;
+
+    constructor(core?: Core, uuid?: string, cmd?: Command, requiredPoints?, network?: Network, pointsType?: string, punishmentType?: string, name?: string, description?: string) {
+        super(core.getKey());
+        this.core=core;
+        this.uuid=uuid;
+        this.cmd=cmd;
+        this.requiredPoints=requiredPoints;
+        this.network=network;
+        this.pointsType=pointsType;
+        this.punishmentType=punishmentType;
+        this.name=name;
+        this.description=description;
+    }
+}
