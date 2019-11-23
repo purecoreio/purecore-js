@@ -8,7 +8,7 @@ class Offence extends Core {
     public description: string;
     public negativePoints;
 
-    constructor(core?: Core, uuid?: string, type?: string, network?: Network, name?: string, description?: string, negativePoints?) {
+    constructor(core: Core, uuid?: string, type?: string, network?: Network, name?: string, description?: string, negativePoints?) {
         super(core.getKey())
         this.core = core;
         this.uuid = uuid;
@@ -17,5 +17,16 @@ class Offence extends Core {
         this.name = name;
         this.description = description;
         this.negativePoints = negativePoints;
+    }
+
+    public fromArray(array) {
+        this.uuid = array.uuid;
+        this.type = array.type;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"))
+        this.name = array.name;
+        this.description = array.description;
+        this.negativePoints = parseInt(array.negativePoints);
+
+        return this;
     }
 }

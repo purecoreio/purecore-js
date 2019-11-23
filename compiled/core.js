@@ -263,6 +263,64 @@ class Network extends Core {
             });
         });
     }
+    getOffences() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/punishment/offence/list/?key=" + key, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            var response = new Array();
+                            jsonresponse.forEach(offenceData => {
+                                var offence = new Offence(new Core(key));
+                                response.push(offence.fromArray(offenceData));
+                            });
+                            resolve(response);
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
+    getOffenceActions() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/punishment/action/list/?key=" + key, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            var response = new Array();
+                            jsonresponse.forEach(actionData => {
+                                var offence = new OffenceAction(new Core(key));
+                                response.push(offence.fromArray(actionData));
+                            });
+                            resolve(response);
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
 }
 class Offence extends Core {
     constructor(core, uuid, type, network, name, description, negativePoints) {
@@ -274,6 +332,15 @@ class Offence extends Core {
         this.name = name;
         this.description = description;
         this.negativePoints = negativePoints;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.type = array.type;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.name = array.name;
+        this.description = array.description;
+        this.negativePoints = parseInt(array.negativePoints);
+        return this;
     }
 }
 class OffenceAction extends Core {
@@ -288,6 +355,17 @@ class OffenceAction extends Core {
         this.punishmentType = punishmentType;
         this.name = name;
         this.description = description;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+        this.requiredPoints = parseInt(array.requiredPoints);
+        this.pointsType = array.pointsType;
+        this.punishmentType = array.punishmentType;
+        this.name = array.name;
+        this.description = array.description;
+        return this;
     }
 }
 class Punishment extends Core {

@@ -97,4 +97,66 @@ class Network extends Core {
             }
         });
     }
+
+    async getOffences() {
+
+        var key = this.core.getKey();
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/punishment/offence/list/?key=" + key, { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        var response = new Array();
+                        jsonresponse.forEach(offenceData => {
+
+                            var offence = new Offence(new Core(key));
+                            response.push(offence.fromArray(offenceData))
+                        });
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+                    throw new Error(error)
+                })
+            } catch (e) {
+                throw new Error(e.message)
+            }
+        });
+    }
+
+    async getOffenceActions() {
+
+        var key = this.core.getKey();
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/punishment/action/list/?key=" + key, { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        var response = new Array();
+                        jsonresponse.forEach(actionData => {
+
+                            var offence = new OffenceAction(new Core(key));
+                            response.push(offence.fromArray(actionData))
+                        });
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+                    throw new Error(error)
+                })
+            } catch (e) {
+                throw new Error(e.message)
+            }
+        });
+    }
 }
