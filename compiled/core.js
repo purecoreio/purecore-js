@@ -321,6 +321,59 @@ class Network extends Core {
             });
         });
     }
+    getPunishments() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/punishment/list/?key=" + key, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            var response = new Array();
+                            jsonresponse.forEach(punishmentData => {
+                                var punishment = new Punishment(new Core(key));
+                                response.push(punishment.fromArray(punishmentData));
+                            });
+                            resolve(response);
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
+}
+class Appeal extends Core {
+    constructor(core, uuid, punishment, content, staffResponse, staffMember, accepted) {
+        super(core.getKey());
+        this.uuid = uuid;
+        this.punishment = punishment;
+        this.content = content;
+        this.staffResponse = staffResponse;
+        this.staffMember = staffMember;
+        this.accepted = accepted;
+    }
+}
+class AppealStatus extends Core {
+    constructor(core, status, appealId) {
+        super(core.getKey());
+        this.status = status;
+        this.appealId = appealId;
+    }
+    getAppeal() {
+        // to-do
+    }
+    toString() {
+        return this.status;
+    }
 }
 class Offence extends Core {
     constructor(core, uuid, type, network, name, description, negativePoints) {
@@ -341,6 +394,18 @@ class Offence extends Core {
         this.description = array.description;
         this.negativePoints = parseInt(array.negativePoints);
         return this;
+    }
+    getType() {
+        return this.type;
+    }
+    getName() {
+        return this.name;
+    }
+    getDescription() {
+        return this.description;
+    }
+    getNegativePoints() {
+        return this.negativePoints;
     }
 }
 class OffenceAction extends Core {
@@ -369,7 +434,7 @@ class OffenceAction extends Core {
     }
 }
 class Punishment extends Core {
-    constructor(core, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes) {
+    constructor(core, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes, appealStatus) {
         super(core.getKey());
         this.core = core;
         this.player = player;
@@ -380,6 +445,49 @@ class Punishment extends Core {
         this.pointsGameplay = pointsGameplay;
         this.report = report;
         this.notes = notes;
+        this.appealStatus = appealStatus;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        var finalOffenceList = new Array();
+        array.offenceList.forEach(offenceArray => {
+            var offence = new Offence(this.core);
+            finalOffenceList.push(offence.fromArray(offenceArray));
+        });
+        this.offenceList = finalOffenceList;
+        this.moderator = new Player(this.core, array.createdBy.coreid, array.createdBy.username, array.createdBy.uuid, array.createdBy.verified);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.pointsChat = array.pointsAddedChat;
+        this.pointsGameplay = array.pointsAddedGameplay;
+        if (array.report == null) {
+            this.report = null;
+        }
+        else {
+            // to-do: report implementation
+        }
+        this.appealStatus = new AppealStatus(this.core, array.appealStatus.status, array.appealStatus.appealId);
+        return this;
+    }
+    getStatus() {
+        return this.appealStatus;
+    }
+    getPlayer() {
+        return this.player;
+    }
+    getOffenceList() {
+        return this.offenceList;
+    }
+    getPoints(type) {
+        if (type == "GMP") {
+            return this.pointsGameplay;
+        }
+        else if (type == "CHT") {
+            return this.pointsChat;
+        }
+        else {
+            throw new Error("invalid point selection type");
+        }
     }
 }
 class Report {

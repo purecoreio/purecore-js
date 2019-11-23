@@ -29,4 +29,20 @@ class Offence extends Core {
 
         return this;
     }
+
+    public getType() {
+        return this.type;
+    }
+
+    public getName() {
+        return this.name;
+    }
+
+    public getDescription() {
+        return this.description;
+    }
+
+    public getNegativePoints() {
+        return this.negativePoints;
+    }
 }

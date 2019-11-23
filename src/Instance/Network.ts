@@ -159,4 +159,36 @@ class Network extends Core {
             }
         });
     }
+
+    async getPunishments() {
+
+        var key = this.core.getKey();
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/punishment/list/?key=" + key, { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        var response = new Array<Punishment>();
+                        jsonresponse.forEach(punishmentData => {
+
+                            var punishment = new Punishment(new Core(key));
+                            response.push(punishment.fromArray(punishmentData))
+                            
+                        });
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+                    throw new Error(error)
+                })
+            } catch (e) {
+                throw new Error(e.message)
+            }
+        });
+    }
 }
