@@ -526,19 +526,17 @@ class Session extends Core {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var newSession = new Session(core);
                         newSession = newSession.fromArray(jsonresponse);
                         resolve(newSession);
                     }
-                }).catch(function (error) {
-                    throw new Error(error);
                 });
             }
             catch (e) {
-                throw new Error(e.message);
+                reject(new Error(e.message));
             }
         });
     }
