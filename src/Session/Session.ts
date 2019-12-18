@@ -8,9 +8,10 @@ class Session extends Core {
     usage: SessionUsage;
     network: Network;
     player: Player;
+    owner: Owner;
 
-    constructor(core: Core, uuid?: string, hash?: string, device?: SessionDevice, location?: SessionLocation, usage?: SessionUsage, network?: Network, player?: Player) {
-        super(core.getKey());
+    constructor(core: Core, uuid?: string, hash?: string, device?: SessionDevice, location?: SessionLocation, usage?: SessionUsage, network?: Network, user?) {
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.hash = hash;
@@ -18,18 +19,39 @@ class Session extends Core {
         this.location = location;
         this.usage = usage;
         this.network = network;
-        this.player = player;
+
+        if (user instanceof Player) {
+            this.player = user;
+        } else if (user instanceof Owner) {
+            this.owner = user;
+        }
+
+    }
+
+    getUser() {
+        if (this.player == undefined && this.owner != undefined) {
+            return this.owner;
+        } else {
+            return this.player;
+        }
     }
 
     fromArray(array) {
-
         this.uuid = array.uuid;
         this.hash = array.hash;
         this.device = new SessionDevice(array.device.brand, array.device.device, array.device.model, array.device.os);
         this.location = new SessionLocation(array.location.city, array.location.state, array.location.country_code);
         this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
-        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
-        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+
+        if ("network" in array) {
+            this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        }
+
+        if ("player" in array) {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        } else if ("owner" in array) {
+            this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
+        }
 
         return this;
 
@@ -73,4 +95,50 @@ class Session extends Core {
     getPlayer() {
         return this.player;
     }
+
+    getNetworks() {
+
+        var hash = this.hash;
+        var core = this.core;
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+
+                return fetch("https://api.purecore.io/rest/2/instance/network/list/?hash=" + hash, { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (response) {
+
+                    if ("error" in response) {
+
+                        throw new Error(response.error + ". " + response.msg)
+
+                    } else {
+
+                        var networks = [];
+
+                        response.forEach(network => {
+                            networks.push(new Network(core,new Instance(core,network.uuid,network.name,"NTW")))
+                        });
+
+                        resolve(networks)
+
+                    }
+
+                }).catch(function (error) {
+
+                    throw error
+
+                })
+            } catch (e) {
+
+                reject(e.message)
+
+            }
+        });
+
+    }
+
 }

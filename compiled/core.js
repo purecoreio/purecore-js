@@ -8,8 +8,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 class Core {
-    constructor(key) {
-        this.key = key;
+    constructor(tool) {
+        if (tool != undefined) {
+            if (typeof tool == "string") {
+                this.key = tool;
+            }
+            else if (typeof tool == "object") {
+                this.session = new Session(new Core()).fromArray(tool);
+            }
+            else {
+                if (tool instanceof Session) {
+                    this.session = tool;
+                }
+                else {
+                    this.key = null;
+                }
+            }
+        }
+        // if not start with fromdiscord or fromtoken
+    }
+    fromToken(GoogleToken) {
+        var obj = this;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/session/from/google/?token=" + GoogleToken, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (response) {
+                    if ("error" in response) {
+                        throw new Error(response.error + ". " + response.msg);
+                    }
+                    else {
+                        var session = new Session(new Core(null)).fromArray(response);
+                        obj.session = session;
+                        resolve(obj);
+                    }
+                }).catch(function (error) {
+                    throw error;
+                });
+            }
+            catch (e) {
+                reject(e.message);
+            }
+        });
+    }
+    getTool() {
+        if (this.key != null) {
+            return this.key;
+        }
+        else {
+            return this.session;
+        }
+    }
+    getCoreSession() {
+        return this.session;
     }
     getKey() {
         return this.key;
@@ -25,26 +76,29 @@ class Core {
             var obj = this;
             return new Promise(function (resolve, reject) {
                 try {
-                    var url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken;
+                    var params = "";
                     if (devkey == true) {
-                        url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
+                        params = "?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
                     }
-                    return fetch(url, { method: "GET" }).then(function (response) {
+                    else {
+                        params = "?guildid=" + guildId + "&token=" + botToken;
+                    }
+                    return fetch("https://api.purecore.io/rest/2/key/from/discord/?token=" + params, { method: "GET" }).then(function (response) {
                         return response.json();
-                    }).then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }).then(function (response) {
+                        if ("error" in response) {
+                            throw new Error(response.error + ". " + response.msg);
                         }
                         else {
-                            obj.key = jsonresponse.hash;
+                            obj.key = response.hash;
                             resolve(obj);
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        throw error;
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e.message);
                 }
             });
         });
@@ -169,10 +223,40 @@ class Instance extends Core {
 }
 class Network extends Core {
     constructor(core, instance) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.uuid = instance.getId();
         this.name = instance.getName();
+    }
+    getId() {
+        return this.uuid;
+    }
+    getServers() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var session = this.core.getCoreSession();
+            var network = this;
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch("https://api.purecore.io/rest/2/instance/server/list/?hash=" + session.getCoreSession().getHash() + "&network=" + network.getId(), { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        }
+                        else {
+                            var servers = [];
+                            jsonresponse.forEach(serverInstance => {
+                                servers.push(new Instance(this.core, serverInstance.uuid, serverInstance.name, "SVR"));
+                            });
+                            resolve(servers);
+                        }
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        });
     }
     setGuild(discordGuildId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -351,6 +435,10 @@ class Network extends Core {
         });
     }
 }
+class Machine {
+}
+class VirtualMachine {
+}
 class Appeal extends Core {
     constructor(core, uuid, punishment, content, staffResponse, staffMember, accepted) {
         super(core.getKey());
@@ -495,8 +583,8 @@ class Report {
     }
 }
 class Session extends Core {
-    constructor(core, uuid, hash, device, location, usage, network, player) {
-        super(core.getKey());
+    constructor(core, uuid, hash, device, location, usage, network, user) {
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.hash = hash;
@@ -504,7 +592,20 @@ class Session extends Core {
         this.location = location;
         this.usage = usage;
         this.network = network;
-        this.player = player;
+        if (user instanceof Player) {
+            this.player = user;
+        }
+        else if (user instanceof Owner) {
+            this.owner = user;
+        }
+    }
+    getUser() {
+        if (this.player == undefined && this.owner != undefined) {
+            return this.owner;
+        }
+        else {
+            return this.player;
+        }
     }
     fromArray(array) {
         this.uuid = array.uuid;
@@ -512,8 +613,15 @@ class Session extends Core {
         this.device = new SessionDevice(array.device.brand, array.device.device, array.device.model, array.device.os);
         this.location = new SessionLocation(array.location.city, array.location.state, array.location.country_code);
         this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
-        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
-        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        if ("network" in array) {
+            this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        }
+        if ("player" in array) {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        else if ("owner" in array) {
+            this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
+        }
         return this;
     }
     fromHash(sessionHash) {
@@ -548,6 +656,33 @@ class Session extends Core {
     }
     getPlayer() {
         return this.player;
+    }
+    getNetworks() {
+        var hash = this.hash;
+        var core = this.core;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/instance/network/list/?hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (response) {
+                    if ("error" in response) {
+                        throw new Error(response.error + ". " + response.msg);
+                    }
+                    else {
+                        var networks = [];
+                        response.forEach(network => {
+                            networks.push(new Network(core, new Instance(core, network.uuid, network.name, "NTW")));
+                        });
+                        resolve(networks);
+                    }
+                }).catch(function (error) {
+                    throw error;
+                });
+            }
+            catch (e) {
+                reject(e.message);
+            }
+        });
     }
 }
 class SessionDevice {
@@ -662,6 +797,19 @@ class PerkContextualized {
     constructor(perk, quantity) {
         this.perk = perk;
         this.quantity = quantity;
+    }
+}
+class Owner extends Core {
+    constructor(core, id, name, surname, email) {
+        super(core.getKey());
+        this.core = core;
+        this.id = id;
+        this.name = name;
+        this.surname = surname;
+        this.email = email;
+    }
+    getId() {
+        return this.id;
     }
 }
 class Player extends Core {

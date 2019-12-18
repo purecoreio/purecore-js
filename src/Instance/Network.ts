@@ -5,10 +5,55 @@ class Network extends Core {
     name: string;
 
     constructor(core: Core, instance: Instance) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.uuid = instance.getId();
         this.name = instance.getName();
+    }
+
+    getId() {
+        return this.uuid;
+    }
+
+    async getServers() {
+
+        var session = this.core.getCoreSession();
+        var key = this.core.getKey();
+        var network = this;
+        var url;
+        
+        if(this.core.getTool() instanceof Session){
+            url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + session.getCoreSession().getHash() + "&network=" + network.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + key + "&network=" + network.getId();
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var servers = [];
+
+                        jsonresponse.forEach(serverInstance => {
+                            servers.push(new Instance(this.core, serverInstance.uuid, serverInstance.name, "SVR"));
+                        });
+
+                        resolve(servers);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
     }
 
     async setGuild(discordGuildId: string) {
@@ -179,7 +224,7 @@ class Network extends Core {
 
                             var punishment = new Punishment(new Core(key));
                             response.push(punishment.fromArray(punishmentData))
-                            
+
                         });
                         resolve(response)
                     }

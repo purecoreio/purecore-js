@@ -1,9 +1,77 @@
 class Core {
 
     key: string;
+    session: Session;
 
-    constructor(key: string) {
-        this.key = key;
+    constructor(tool?: any) {
+        if (tool != undefined) {
+            if (typeof tool == "string") {
+                this.key = tool;
+            } else if (typeof tool == "object") {
+                this.session = new Session(new Core()).fromArray(tool);
+            } else {
+                if (tool instanceof Session) {
+                    this.session = tool;
+                } else {
+                    this.key = null;
+                }
+            }
+        }
+
+        // if not start with fromdiscord or fromtoken
+
+    }
+
+    public fromToken(GoogleToken: string) {
+
+        var obj = this;
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+
+                return fetch("https://api.purecore.io/rest/2/session/from/google/?token=" + GoogleToken, { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (response) {
+
+                    if ("error" in response) {
+
+                        throw new Error(response.error + ". " + response.msg);
+
+                    } else {
+
+                        var session = new Session(new Core(null)).fromArray(response)
+                        obj.session = session;
+                        resolve(obj);
+
+                    }
+
+                }).catch(function (error) {
+
+                    throw error
+
+                })
+            } catch (e) {
+
+                reject(e.message)
+
+            }
+        });
+
+    }
+
+    public getTool() {
+        if (this.key != null) {
+            return this.key;
+        } else {
+            return this.session;
+        }
+    }
+
+    public getCoreSession() {
+        return this.session;
     }
 
     public getKey() {
@@ -18,31 +86,48 @@ class Core {
         return new Instance(this, instanceId, name, type)
     }
 
-
     public async fromDiscord(guildId: string, botToken: string, devkey: boolean) {
 
         var obj = this;
+
         return new Promise(function (resolve, reject) {
 
             try {
-                var url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken
+
+                var params = ""
+
                 if (devkey == true) {
-                    url = "https://api.purecore.io/rest/2/key/from/discord/?guildid=" + guildId + "&token=" + botToken + "&devkey=true"
+                    params = "?guildid=" + guildId + "&token=" + botToken + "&devkey=true"
+                } else {
+                    params = "?guildid=" + guildId + "&token=" + botToken
                 }
-                return fetch(url, { method: "GET" }).then(function (response) {
+
+                return fetch("https://api.purecore.io/rest/2/key/from/discord/?token=" + params, { method: "GET" }).then(function (response) {
+
                     return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+
+                }).then(function (response) {
+
+                    if ("error" in response) {
+
+                        throw new Error(response.error + ". " + response.msg)
+
                     } else {
-                        obj.key = jsonresponse.hash
+
+                        obj.key = response.hash
                         resolve(obj)
+
                     }
+
                 }).catch(function (error) {
-                    throw new Error(error)
+
+                    throw error
+
                 })
             } catch (e) {
-                throw new Error(e.message)
+
+                reject(e.message)
+
             }
         });
     }
