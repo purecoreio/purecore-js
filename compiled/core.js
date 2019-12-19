@@ -14,18 +14,18 @@ class Core {
                 this.key = tool;
             }
             else if (typeof tool == "object") {
-                this.session = new Session(new Core()).fromArray(tool);
-            }
-            else {
                 if (tool instanceof Session) {
                     this.session = tool;
                 }
                 else {
-                    this.key = null;
+                    this.session = new Session(new Core()).fromArray(tool);
                 }
             }
         }
         // if not start with fromdiscord or fromtoken
+    }
+    getNetwork(uuid) {
+        return new Network(new Core(this.getTool()), new Instance(new Core(this.getTool()), uuid, "%", "NTW"));
     }
     fromToken(GoogleToken) {
         var obj = this;
@@ -233,11 +233,18 @@ class Network extends Core {
     }
     getServers() {
         return __awaiter(this, void 0, void 0, function* () {
-            var session = this.core.getCoreSession();
+            var core = this.core;
             var network = this;
+            var url;
+            if (this.core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + core.getKey() + "&network=" + network.getId();
+            }
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/instance/server/list/?hash=" + session.getCoreSession().getHash() + "&network=" + network.getId(), { method: "GET" }).then(function (response) {
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
@@ -246,7 +253,7 @@ class Network extends Core {
                         else {
                             var servers = [];
                             jsonresponse.forEach(serverInstance => {
-                                servers.push(new Instance(this.core, serverInstance.uuid, serverInstance.name, "SVR"));
+                                servers.push(new Instance(core, serverInstance.uuid, serverInstance.name, "SVR"));
                             });
                             resolve(servers);
                         }

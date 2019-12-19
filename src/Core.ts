@@ -8,18 +8,22 @@ class Core {
             if (typeof tool == "string") {
                 this.key = tool;
             } else if (typeof tool == "object") {
-                this.session = new Session(new Core()).fromArray(tool);
-            } else {
+
                 if (tool instanceof Session) {
                     this.session = tool;
                 } else {
-                    this.key = null;
+                    this.session = new Session(new Core()).fromArray(tool);
                 }
+
             }
         }
 
         // if not start with fromdiscord or fromtoken
 
+    }
+
+    public getNetwork(uuid: string) {
+        return new Network(new Core(this.getTool()), new Instance(new Core(this.getTool()), uuid, "%", "NTW"));
     }
 
     public fromToken(GoogleToken: string) {

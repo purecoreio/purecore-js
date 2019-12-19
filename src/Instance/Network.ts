@@ -17,15 +17,14 @@ class Network extends Core {
 
     async getServers() {
 
-        var session = this.core.getCoreSession();
-        var key = this.core.getKey();
+        var core = this.core;
         var network = this;
         var url;
-        
+
         if(this.core.getTool() instanceof Session){
-            url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + session.getCoreSession().getHash() + "&network=" + network.getId();
+            url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
         } else {
-            url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + key + "&network=" + network.getId();
+            url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + core.getKey() + "&network=" + network.getId();
         }
 
         return new Promise(function (resolve, reject) {
@@ -41,7 +40,7 @@ class Network extends Core {
                         var servers = [];
 
                         jsonresponse.forEach(serverInstance => {
-                            servers.push(new Instance(this.core, serverInstance.uuid, serverInstance.name, "SVR"));
+                            servers.push(new Instance(core, serverInstance.uuid, serverInstance.name, "SVR"));
                         });
 
                         resolve(servers);
@@ -54,6 +53,10 @@ class Network extends Core {
 
         });
 
+    }
+
+    async asInstance() {
+        return new Instance(this.core,this.uuid,this.name,"NTW");
     }
 
     async setGuild(discordGuildId: string) {
