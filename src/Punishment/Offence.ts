@@ -9,7 +9,7 @@ class Offence extends Core {
     public negativePoints;
 
     constructor(core: Core, uuid?: string, type?: string, network?: Network, name?: string, description?: string, negativePoints?) {
-        super(core.getKey())
+        super(core.getTool())
         this.core = core;
         this.uuid = uuid;
         this.type = type;

@@ -22,10 +22,6 @@ class Core {
 
     }
 
-    public getNetwork(uuid: string) {
-        return new Network(new Core(this.getTool()), new Instance(new Core(this.getTool()), uuid, "%", "NTW"));
-    }
-
     public fromToken(GoogleToken: string) {
 
         var obj = this;
@@ -67,7 +63,7 @@ class Core {
     }
 
     public getTool() {
-        if (this.key != null) {
+        if (this.key != null && this.key != undefined) {
             return this.key;
         } else {
             return this.session;
@@ -86,7 +82,7 @@ class Core {
         return new Elements(this);
     }
 
-    public getInstance(instanceId, name, type): Instance {
+    public getInstance(instanceId, name?, type?): Instance {
         return new Instance(this, instanceId, name, type)
     }
 

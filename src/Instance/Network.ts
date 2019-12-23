@@ -11,6 +11,10 @@ class Network extends Core {
         this.name = instance.getName();
     }
 
+    getStore(): Store {
+        return new Store(this);
+    }
+
     getId() {
         return this.uuid;
     }
@@ -21,7 +25,7 @@ class Network extends Core {
         var network = this;
         var url;
 
-        if(this.core.getTool() instanceof Session){
+        if (this.core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
         } else {
             url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + core.getKey() + "&network=" + network.getId();
@@ -55,8 +59,8 @@ class Network extends Core {
 
     }
 
-    async asInstance() {
-        return new Instance(this.core,this.uuid,this.name,"NTW");
+    asInstance() {
+        return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
     }
 
     async setGuild(discordGuildId: string) {
@@ -138,21 +142,29 @@ class Network extends Core {
                         resolve(response)
                     }
                 }).catch(function (error) {
-                    throw new Error(error)
+                    reject(error);
                 })
             } catch (e) {
-                throw new Error(e.message)
+                reject(e);
             }
         });
     }
 
     async getOffences() {
 
-        var key = this.core.getKey();
+        var url;
+        var core = this.core;
+
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/punishment/offence/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey() + "&network=" + this.getId();
+        }
+
         return new Promise(function (resolve, reject) {
 
             try {
-                return fetch("https://api.purecore.io/rest/2/punishment/offence/list/?key=" + key, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" }).then(function (response) {
 
                     return response.json();
 
@@ -163,27 +175,35 @@ class Network extends Core {
                         var response = new Array();
                         jsonresponse.forEach(offenceData => {
 
-                            var offence = new Offence(new Core(key));
+                            var offence = new Offence(core);
                             response.push(offence.fromArray(offenceData))
                         });
                         resolve(response)
                     }
                 }).catch(function (error) {
-                    throw new Error(error)
+                    reject(error);
                 })
             } catch (e) {
-                throw new Error(e.message)
+                reject(e);
             }
         });
     }
 
     async getOffenceActions() {
 
-        var key = this.core.getKey();
+        var url;
+        var core = this.core;
+
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/punishment/action/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/punishment/action/list/key=" + this.core.getKey() + "&network=" + this.getId();
+        }
+
         return new Promise(function (resolve, reject) {
 
             try {
-                return fetch("https://api.purecore.io/rest/2/punishment/action/list/?key=" + key, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" }).then(function (response) {
 
                     return response.json();
 
@@ -194,48 +214,57 @@ class Network extends Core {
                         var response = new Array();
                         jsonresponse.forEach(actionData => {
 
-                            var offence = new OffenceAction(new Core(key));
+                            var offence = new OffenceAction(core);
                             response.push(offence.fromArray(actionData))
                         });
                         resolve(response)
                     }
                 }).catch(function (error) {
-                    throw new Error(error)
+                    reject(error);
                 })
             } catch (e) {
-                throw new Error(e.message)
+                reject(e);
             }
         });
     }
 
     async getPunishments() {
 
+        var url;
+        var core = this.core;
+
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId();
+        }
+
         var key = this.core.getKey();
         return new Promise(function (resolve, reject) {
 
             try {
-                return fetch("https://api.purecore.io/rest/2/punishment/list/?key=" + key, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" }).then(function (response) {
 
                     return response.json();
 
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg))
                     } else {
                         var response = new Array<Punishment>();
                         jsonresponse.forEach(punishmentData => {
 
-                            var punishment = new Punishment(new Core(key));
+                            var punishment = new Punishment(core);
                             response.push(punishment.fromArray(punishmentData))
 
                         });
                         resolve(response)
                     }
                 }).catch(function (error) {
-                    throw new Error(error)
+                    reject(error);
                 })
             } catch (e) {
-                throw new Error(e.message)
+                reject(e);
             }
         });
     }

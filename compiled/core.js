@@ -24,9 +24,6 @@ class Core {
         }
         // if not start with fromdiscord or fromtoken
     }
-    getNetwork(uuid) {
-        return new Network(new Core(this.getTool()), new Instance(new Core(this.getTool()), uuid, "%", "NTW"));
-    }
     fromToken(GoogleToken) {
         var obj = this;
         return new Promise(function (resolve, reject) {
@@ -52,7 +49,7 @@ class Core {
         });
     }
     getTool() {
-        if (this.key != null) {
+        if (this.key != null && this.key != undefined) {
             return this.key;
         }
         else {
@@ -205,7 +202,7 @@ class Elements extends Core {
 }
 class Instance extends Core {
     constructor(core, uuid, name, type) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.name = name;
@@ -220,6 +217,44 @@ class Instance extends Core {
     asNetwork() {
         return new Network(this.core, this);
     }
+    update() {
+        var core = this.core;
+        var instance = this;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/info/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/instance/info/?key=" + core.getKey() + "&instance=" + instance.getId();
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        if (jsonresponse.server == null) {
+                            instance.type = "NTW";
+                            instance.uuid = jsonresponse.network.uuid;
+                            instance.name = jsonresponse.network.name;
+                        }
+                        else {
+                            instance.type = "SVR";
+                            instance.uuid = jsonresponse.server.uuid;
+                            instance.name = jsonresponse.server.name;
+                        }
+                        resolve(instance);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
 }
 class Network extends Core {
     constructor(core, instance) {
@@ -227,6 +262,9 @@ class Network extends Core {
         this.core = core;
         this.uuid = instance.getId();
         this.name = instance.getName();
+    }
+    getStore() {
+        return new Store(this);
     }
     getId() {
         return this.uuid;
@@ -264,6 +302,9 @@ class Network extends Core {
                 }
             });
         });
+    }
+    asInstance() {
+        return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
     }
     setGuild(discordGuildId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -345,21 +386,28 @@ class Network extends Core {
                             resolve(response);
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        reject(error);
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e);
                 }
             });
         });
     }
     getOffences() {
         return __awaiter(this, void 0, void 0, function* () {
-            var key = this.core.getKey();
+            var url;
+            var core = this.core;
+            if (this.core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/punishment/offence/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey() + "&network=" + this.getId();
+            }
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/punishment/offence/list/?key=" + key, { method: "GET" }).then(function (response) {
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
@@ -368,27 +416,34 @@ class Network extends Core {
                         else {
                             var response = new Array();
                             jsonresponse.forEach(offenceData => {
-                                var offence = new Offence(new Core(key));
+                                var offence = new Offence(core);
                                 response.push(offence.fromArray(offenceData));
                             });
                             resolve(response);
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        reject(error);
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e);
                 }
             });
         });
     }
     getOffenceActions() {
         return __awaiter(this, void 0, void 0, function* () {
-            var key = this.core.getKey();
+            var url;
+            var core = this.core;
+            if (this.core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/punishment/action/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/punishment/action/list/key=" + this.core.getKey() + "&network=" + this.getId();
+            }
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/punishment/action/list/?key=" + key, { method: "GET" }).then(function (response) {
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
@@ -397,46 +452,54 @@ class Network extends Core {
                         else {
                             var response = new Array();
                             jsonresponse.forEach(actionData => {
-                                var offence = new OffenceAction(new Core(key));
+                                var offence = new OffenceAction(core);
                                 response.push(offence.fromArray(actionData));
                             });
                             resolve(response);
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        reject(error);
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e);
                 }
             });
         });
     }
     getPunishments() {
         return __awaiter(this, void 0, void 0, function* () {
+            var url;
+            var core = this.core;
+            if (this.core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId();
+            }
             var key = this.core.getKey();
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/punishment/list/?key=" + key, { method: "GET" }).then(function (response) {
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                         }
                         else {
                             var response = new Array();
                             jsonresponse.forEach(punishmentData => {
-                                var punishment = new Punishment(new Core(key));
+                                var punishment = new Punishment(core);
                                 response.push(punishment.fromArray(punishmentData));
                             });
                             resolve(response);
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        reject(error);
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e);
                 }
             });
         });
@@ -448,7 +511,7 @@ class VirtualMachine {
 }
 class Appeal extends Core {
     constructor(core, uuid, punishment, content, staffResponse, staffMember, accepted) {
-        super(core.getKey());
+        super(core.getTool());
         this.uuid = uuid;
         this.punishment = punishment;
         this.content = content;
@@ -459,7 +522,7 @@ class Appeal extends Core {
 }
 class AppealStatus extends Core {
     constructor(core, status, appealId) {
-        super(core.getKey());
+        super(core.getTool());
         this.status = status;
         this.appealId = appealId;
     }
@@ -472,7 +535,7 @@ class AppealStatus extends Core {
 }
 class Offence extends Core {
     constructor(core, uuid, type, network, name, description, negativePoints) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.type = type;
@@ -505,7 +568,7 @@ class Offence extends Core {
 }
 class OffenceAction extends Core {
     constructor(core, uuid, cmd, requiredPoints, network, pointsType, punishmentType, name, description) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.cmd = cmd;
@@ -530,7 +593,7 @@ class OffenceAction extends Core {
 }
 class Punishment extends Core {
     constructor(core, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes, appealStatus) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.player = player;
         this.offenceList = offenceList;
@@ -760,31 +823,81 @@ class SessionUsage {
         this.uses = uses;
     }
 }
-class StoreCategory {
-    constructor(uuid, name, description, network, upgradable) {
+class StoreCategory extends Core {
+    constructor(core, uuid, name, description, network, upgradable) {
+        super(core.getTool());
+        this.core = core;
         this.uuid = uuid;
         this.name = name;
         this.description = description;
         this.network = network;
         this.upgradable = upgradable;
     }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.description = array.description;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.upgradable = array.upgradable;
+        return this;
+    }
+    getId() {
+        return this.uuid;
+    }
 }
-class StoreItem {
-    constructor(uuid, name, description, category, network, price, contextualizedPerks) {
+class StoreItem extends Core {
+    constructor(core, uuid, name, description, category, network, price, contextualizedPerks) {
+        super(core.getTool());
+        this.core = core;
         this.uuid = uuid;
         this.name = name;
         this.description = description;
         this.category = category;
         this.network = network;
         this.price = price;
-        this.perks = contextualizedPerks;
+        this.perks = new Array();
     }
     getId() {
         return this.uuid;
     }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.description = array.description;
+        this.category = new StoreCategory(this.core).fromArray(array.category);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.price = array.price;
+        array.perks.forEach(perkJson => {
+            this.perks.push(new PerkContextualized(this.core).fromArray(perkJson));
+        });
+        return this;
+    }
 }
-class Perk {
-    constructor(uuid, network, name, description, type, category) {
+class NestedItem extends Core {
+    constructor(core) {
+        super(core.getTool());
+        this.core = core;
+    }
+    fromArray(array) {
+        this.category = new StoreCategory(this.core).fromArray(array.category);
+        this.uuid = this.category.getId();
+        this.items = new Array();
+        array.products.forEach(product => {
+            this.items.push(new StoreItem(this.core).fromArray(product));
+        });
+        return this;
+    }
+    getCategory() {
+        return this.category;
+    }
+    getItems() {
+        return this.items;
+    }
+}
+class Perk extends Core {
+    constructor(core, uuid, network, name, description, type, category) {
+        super(core.getTool());
+        this.core = core;
         this.uuid = uuid;
         this.network = network;
         this.name = name;
@@ -792,18 +905,212 @@ class Perk {
         this.type = type;
         this.category = category;
     }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.name = array.name;
+        this.description = array.description;
+        this.type = array.type;
+        this.category = new PerkCategory(this.core).fromArray(array.category);
+        return this;
+    }
 }
-class PerkCategory {
-    constructor(uuid, name, network) {
+class PerkCategory extends Core {
+    constructor(core, uuid, name, network) {
+        super(core.getTool());
+        this.core = core;
         this.uuid = uuid;
         this.name = name;
         this.network = network;
     }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        try {
+            this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        }
+        catch (error) {
+            this.network = null;
+        }
+        return this;
+    }
 }
-class PerkContextualized {
-    constructor(perk, quantity) {
+class PerkContextualized extends Core {
+    constructor(core, perk, quantity) {
+        super(core.getTool());
+        this.core = core;
         this.perk = perk;
         this.quantity = quantity;
+    }
+    fromArray(array) {
+        this.perk = new Perk(this.core).fromArray(array.perk);
+        this.quantity = array.quantity;
+        return this;
+    }
+}
+class Store extends Network {
+    constructor(network) {
+        super(network.core, network.asInstance());
+        this.network = network;
+    }
+    getPayments(page) {
+        var core = this.network.core;
+        var instance = this.network.asInstance();
+        var queryPage = 0;
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + page;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + "&network=" + instance.getId() + "&page=" + page;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var payments = new Array();
+                        jsonresponse.forEach(paymentJson => {
+                            payments.push(new Payment(core).fromArray(paymentJson));
+                        });
+                        resolve(payments);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getPackages() {
+        var core = this.network.core;
+        var instance = this.network.asInstance();
+        var queryPage = 0;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/store/item/list/?key=" + core.getKey() + "&network=" + instance.getId();
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var response = new Array();
+                        jsonresponse.forEach(nestedData => {
+                            response.push(new NestedItem(core).fromArray(nestedData));
+                        });
+                        resolve(response);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+}
+class Discount {
+    constructor(type, uuid, description, amount) {
+        this.type = type;
+        this.uuid = uuid;
+        this.description = description;
+        this.amount = amount;
+    }
+}
+class Gateway {
+    constructor(name, url, color, logo) {
+        this.name = name;
+        this.url = url;
+        this.color = color;
+        this.logo = logo;
+    }
+}
+class Payment extends Core {
+    constructor(core, uuid, request, gateway, metadata, network, legacyUsername, player, sessions) {
+        super(core.getTool());
+        this.core = core;
+        this.uuid = uuid;
+        this.request = request;
+        this.gateway = gateway;
+        this.metadata = metadata;
+        this.network = network;
+        this.legacyUsername = legacyUsername;
+        this.player = player;
+        this.sessions = new Array();
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.request = new CorePaymentRequest(this.core).fromArray(array.request);
+        this.gateway = new Gateway(array.gateway.name, array.gateway.url, array.gateway.color, array.gateway.logo);
+        this.metadata = array.metadata;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.legacyUsername = array.legacyUsername;
+        try {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        catch (error) {
+            this.player = null;
+        }
+        // this.sessions = ... (TODO)
+        return this;
+    }
+}
+class CorePaymentRequest extends Core {
+    constructor(core) {
+        super(core.getTool());
+        this.core = new Core(core.getTool());
+        this.products = new Array();
+        this.sessionList = new Array();
+        this.warnings = new Array();
+        this.discounts = new Array();
+        this.gateways = new Array();
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.store = new Store(new Network(this.core, new Instance(this.core, array.store.network.uuid, array.store.network.name, "NTW")));
+        array.products.forEach(product => {
+            this.products.push(new StoreItem(this.core).fromArray(product));
+        });
+        this.username = array.username;
+        try {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        catch (error) {
+            this.player = null;
+        }
+        if (array.sessionList != null) {
+            array.sessionList.forEach(session => {
+                // TODO
+            });
+        }
+        if (array.gateways != null) {
+            array.gateways.forEach(gateway => {
+                this.gateways.push(new Gateway(gateway.name, gateway.url, gateway.color, gateway.logo));
+            });
+        }
+        this.due = array.due;
+        this.currency = array.currency;
+        return this;
+    }
+}
+class Warning {
+    constructor(cause, text) {
+        this.cause = cause;
+        this.text = text;
     }
 }
 class Owner extends Core {

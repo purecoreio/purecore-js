@@ -13,7 +13,7 @@ class Punishment extends Core {
     public appealStatus: AppealStatus;
 
     public constructor(core?: Core, player?: Player, offenceList?: Array<Offence>, moderator?: Player, network?: Network, pointsChat?, pointsGameplay?, report?: Report, notes?: string, appealStatus?: AppealStatus) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.player = player;
         this.offenceList = offenceList;

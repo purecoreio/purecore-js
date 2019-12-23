@@ -8,7 +8,7 @@ class Appeal extends Core {
     public accepted: boolean;
 
     constructor(core: Core, uuid?: string, punishment?: Punishment, content?: string, staffResponse?: string, staffMember?: Player, accepted?: boolean) {
-        super(core.getKey());
+        super(core.getTool());
         this.uuid = uuid;
         this.punishment = punishment;
         this.content = content;

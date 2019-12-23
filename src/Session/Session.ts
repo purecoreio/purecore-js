@@ -120,7 +120,7 @@ class Session extends Core {
                         var networks = [];
 
                         response.forEach(network => {
-                            networks.push(new Network(core,new Instance(core,network.uuid,network.name,"NTW")))
+                            networks.push(new Network(core, new Instance(core, network.uuid, network.name, "NTW")))
                         });
 
                         resolve(networks)

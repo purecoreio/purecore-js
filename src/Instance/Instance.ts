@@ -31,7 +31,7 @@ class Instance extends Core {
         var instance = this;
         var url;
 
-        if (this.core.getTool() instanceof Session) {
+        if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/instance/info/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
         } else {
             url = "https://api.purecore.io/rest/2/instance/info/?key=" + core.getKey() + "&instance=" + instance.getId();

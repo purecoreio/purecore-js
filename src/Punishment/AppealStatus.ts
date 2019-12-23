@@ -4,7 +4,7 @@ class AppealStatus extends Core {
     public appealId: string;
 
     public constructor(core: Core, status: string, appealId: string) {
-        super(core.getKey());
+        super(core.getTool());
         this.status = status;
         this.appealId = appealId;
     }
