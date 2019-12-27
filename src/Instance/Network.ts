@@ -228,15 +228,15 @@ class Network extends Core {
         });
     }
 
-    async getPunishments() {
+    async getPunishments(page = 0) {
 
         var url;
         var core = this.core;
 
         if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+            url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId() + "&page=" + page.toString();
         } else {
-            url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId();
+            url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId() + "&page=" + page.toString();
         }
 
         var key = this.core.getKey();

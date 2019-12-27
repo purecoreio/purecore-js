@@ -467,15 +467,15 @@ class Network extends Core {
             });
         });
     }
-    getPunishments() {
+    getPunishments(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
             var url;
             var core = this.core;
             if (this.core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
+                url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId() + "&page=" + page.toString();
             }
             else {
-                url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId();
+                url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId() + "&page=" + page.toString();
             }
             var key = this.core.getKey();
             return new Promise(function (resolve, reject) {
@@ -505,9 +505,176 @@ class Network extends Core {
         });
     }
 }
-class Machine {
+class BIOS {
+    constructor(vendor, version) {
+        this.vendor = vendor;
+        this.version = version;
+    }
+    fromArray(array) {
+        this.vendor = array.vendor;
+        this.version = array.version;
+        return this;
+    }
+    asArray() {
+        return { "vendor": this.vendor, "version": this.version };
+    }
 }
-class VirtualMachine {
+class CPU {
+    constructor(manufacturer, vendor, speed, maxSpeed, physicalCores, virtualCores) {
+        this.manufacturer = manufacturer;
+        this.vendor = vendor;
+        this.speed = speed;
+        this.maxSpeed = maxSpeed;
+        this.physicalCores = physicalCores;
+        this.virtualCores = virtualCores;
+    }
+    fromArray(array) {
+        this.manufacturer = array.manufacturer;
+        this.vendor = array.vendor;
+        this.speed = array.speed;
+        this.maxSpeed = array.maxSpeed;
+        this.physicalCores = array.physicalCores;
+        this.virtualCores = array.virtualCores;
+        return this;
+    }
+    asArray() {
+        return { "manufacturer": this.manufacturer, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores };
+    }
+}
+class Drive {
+    constructor(size, uuid, model, serial, mount) {
+        this.size = size;
+        this.uuid = uuid;
+        this.model = model;
+        this.serial = serial;
+        this.mount = mount;
+    }
+    fromArray(array) {
+        this.size = array.size;
+        this.uuid = array.uuid;
+        this.model = array.model;
+        this.serial = array.serial;
+        this.mount = array.mount;
+        return this;
+    }
+    asArray() {
+        return { "size": this.size, "uuid": this.uuid, "model": this.model, "serial": this.serial, "mount": this.mount };
+    }
+}
+class Machine {
+    constructor(uuid, hash, owner, ipv4, ipv6, port, motherboard, cpu, ram, drives, adapters) {
+        this.uuid = uuid;
+        this.hash = hash;
+        this.owner = owner;
+        this.ipv4 = ipv4;
+        this.ipv6 = ipv6;
+        this.port = port;
+        this.motherboard = motherboard;
+        this.cpu = cpu;
+        this.ram = ram;
+        this.drives = drives;
+        this.adapters = adapters;
+    }
+    updateComponents(motherboard, cpu, ram, drives, adapters) {
+        var updateParams = "";
+        var hash = this.hash;
+        var mainObj = this;
+        if (motherboard != null && motherboard != undefined) {
+            this.motherboard = motherboard;
+            updateParams += "&motherboard=" + JSON.stringify(motherboard.asArray());
+        }
+        if (cpu != null && cpu != undefined) {
+            this.cpu = cpu;
+            updateParams += "&cpu=" + JSON.stringify(cpu.asArray());
+        }
+        if (ram != null && ram != undefined) {
+            this.ram = ram;
+            var ramDims = [];
+            ram.forEach(ramDim => {
+                ramDims.push(ramDim.asArray());
+            });
+            updateParams += "&ram=" + JSON.stringify(ramDims);
+        }
+        if (drives != null && drives != undefined) {
+            this.drives = drives;
+            var drivesArray = [];
+            drives.forEach(drive => {
+                drivesArray.push(drive.asArray());
+            });
+            updateParams += "&drives=" + JSON.stringify(drivesArray);
+        }
+        if (adapters != null && adapters != undefined) {
+            this.adapters = adapters;
+            var adapterArray = [];
+            adapters.forEach(adapter => {
+                adapterArray.push(adapter.asArray());
+            });
+            updateParams += "&adapters=" + JSON.stringify(adapterArray);
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + updateParams, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(mainObj);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+}
+class Motherboard {
+    constructor(manufacturer, model) {
+        this.manufacturer = manufacturer;
+        this.model = model;
+    }
+    fromArray(array) {
+        this.manufacturer = array.manufacturer;
+        this.model = array.model;
+        return this;
+    }
+    asArray() {
+        return { "manufacturer": this.manufacturer, "model": this.model };
+    }
+}
+class NetworkAdapter {
+    constructor(speed, name) {
+        this.speed = speed;
+        this.name = name;
+    }
+    fromArray(array) {
+        this.speed = array.speed;
+        this.name = array.speed;
+        return this;
+    }
+    asArray() {
+        return { "speed": this.speed, "name": this.name };
+    }
+}
+class RAM {
+    constructor(size, clockSpeed, manufacturer, voltage) {
+        this.size = size;
+        this.clockSpeed = clockSpeed;
+        this.manufacturer = manufacturer;
+        this.voltage = voltage;
+    }
+    fromArray(array) {
+        this.size = array.size;
+        this.clockSpeed = array.clockSpeed;
+        this.manufacturer = array.manufacturer;
+        this.voltage = array.voltage;
+        return this;
+    }
+    asArray() {
+        return { "size": this.size, "clockSpeed": this.clockSpeed, "manufacturer": this.manufacturer, "voltage": this.voltage };
+    }
 }
 class Appeal extends Core {
     constructor(core, uuid, punishment, content, staffResponse, staffMember, accepted) {
@@ -992,7 +1159,6 @@ class Store extends Network {
     getPackages() {
         var core = this.network.core;
         var instance = this.network.asInstance();
-        var queryPage = 0;
         var url;
         if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
