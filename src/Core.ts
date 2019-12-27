@@ -22,6 +22,30 @@ class Core {
 
     }
 
+    public getMachine(hash) {
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/machine/?hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        resolve(new Machine().fromArray(jsonresponse));
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
     public fromToken(GoogleToken: string) {
 
         var obj = this;

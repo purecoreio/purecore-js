@@ -24,6 +24,25 @@ class Core {
         }
         // if not start with fromdiscord or fromtoken
     }
+    getMachine(hash) {
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/machine/?hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(new Machine().fromArray(jsonresponse));
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     fromToken(GoogleToken) {
         var obj = this;
         return new Promise(function (resolve, reject) {
@@ -562,23 +581,69 @@ class Drive {
     }
 }
 class Machine {
-    constructor(uuid, hash, owner, ipv4, ipv6, port, motherboard, cpu, ram, drives, adapters) {
+    constructor(uuid, hash, owner, ipv4, ipv6, port, bios, motherboard, cpu, ram, drives, adapters) {
         this.uuid = uuid;
         this.hash = hash;
         this.owner = owner;
         this.ipv4 = ipv4;
         this.ipv6 = ipv6;
         this.port = port;
+        this.bios = bios;
         this.motherboard = motherboard;
         this.cpu = cpu;
         this.ram = ram;
         this.drives = drives;
         this.adapters = adapters;
     }
-    updateComponents(motherboard, cpu, ram, drives, adapters) {
+    fromArray(array) {
+        if (array.uuid != null && array.uuid != undefined) {
+            this.uuid = array.uuid;
+        }
+        if (array.hash != null && array.hash != undefined) {
+            this.hash = array.hash;
+        }
+        if (array.owner != null && array.owner != undefined) {
+            this.owner = new Owner(null, array.id, array.name, array.surname, array.email);
+        }
+        if (array.ipv4 != null && array.ipv4 != undefined) {
+            this.ipv4 = array.ipv4;
+        }
+        if (array.ipv6 != null && array.ipv6 != undefined) {
+            this.ipv6 = array.ipv6;
+        }
+        if (array.port != null && array.port != undefined) {
+            this.port = array.port;
+        }
+        if (array.bios != null && array.bios != undefined) {
+            this.bios = new BIOS().fromArray(array.bios);
+        }
+        if (array.motherboard != null && array.motherboard != undefined) {
+            this.motherboard = new Motherboard().fromArray(array.motherboard);
+        }
+        if (array.cpu != null && array.cpu != undefined) {
+            this.cpu = new CPU().fromArray(array.cpu);
+        }
+        this.ram = new Array();
+        array.ram.forEach(ramDim => {
+            this.ram.push(new RAM().fromArray(ramDim));
+        });
+        this.drives = new Array();
+        array.drives.forEach(drive => {
+            this.drives.push(new Drive().fromArray(drive));
+        });
+        this.adapters = new Array();
+        array.adapters.forEach(adapter => {
+            this.adapters.push(new NetworkAdapter().fromArray(adapter));
+        });
+    }
+    updateComponents(bios, motherboard, cpu, ram, drives, adapters) {
         var updateParams = "";
         var hash = this.hash;
         var mainObj = this;
+        if (bios != null && bios != undefined) {
+            this.bios = bios;
+            updateParams += "&bios=" + JSON.stringify(bios.asArray());
+        }
         if (motherboard != null && motherboard != undefined) {
             this.motherboard = motherboard;
             updateParams += "&motherboard=" + JSON.stringify(motherboard.asArray());
