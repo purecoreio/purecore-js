@@ -228,6 +228,133 @@ class Network extends Core {
         });
     }
 
+    searchPlayers(username?: string, uuid?: string, coreid?: string) {
+        if (username != null) {
+
+            var networkid = this.uuid;
+            var core = this.core;
+            var url;
+
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/player/minecraft/username/search/?hash=" + core.getCoreSession().getHash() + "&network=" + networkid + "&username=" + username;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/minecraft/username/search/?key=" + core.getKey() + "&username=" + username;
+            }
+
+            return new Promise(function (resolve, reject) {
+
+                try {
+                    return fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        } else {
+
+                            var finalPlayerList = new Array<Player>();
+                            jsonresponse.forEach(playerData => {
+                                var player = new Player(core, playerData.coreid, playerData.username, playerData.uuid, playerData.verified);
+                                finalPlayerList.push(player);
+                            });
+                            resolve(finalPlayerList);
+
+                        }
+                    });
+                } catch (e) {
+                    reject(e);
+                }
+
+            });
+
+        } else {
+            return new Array<Player>();
+        }
+    }
+
+    getPlayer(coreid: string) {
+
+
+        var networkid = this.uuid;
+        var core = this.core;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&instance=" + networkid + "&player=" + coreid;
+        } else {
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var player = new Player(core, jsonresponse.coreid, jsonresponse.username, jsonresponse.uuid, jsonresponse.verified);
+                        resolve(player);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
+    getPlayers(page?) {
+
+        var core = this.core;
+        var instance = this.asInstance();
+
+        var queryPage = 0;
+        if (page != undefined && page != null) {
+            queryPage = page;
+        }
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/network/list/players/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + queryPage;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/network/list/players/?key=" + core.getKey() + "&page=" + queryPage;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var players = new Array<Player>();
+
+                        jsonresponse.forEach(playerJson => {
+
+                            var player = new Player(core, playerJson.coreid, playerJson.username, playerJson.uuid, playerJson.verified);
+                            players.push(player);
+
+                        });
+
+                        resolve(players);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     async getPunishments(page = 0) {
 
         var url;

@@ -1,14 +1,16 @@
 class CPU {
 
     public manufacturer: string
+    public brand: string
     public vendor: string
     public speed: string
     public maxSpeed: string
     public physicalCores: string
     public virtualCores: string
 
-    constructor(manufacturer?: string, vendor?: string, speed?, maxSpeed?, physicalCores?, virtualCores?) {
+    constructor(manufacturer?: string, brand?: string, vendor?: string, speed?, maxSpeed?, physicalCores?, virtualCores?) {
         this.manufacturer = manufacturer;
+        this.brand = brand;
         this.vendor = vendor;
         this.speed = speed;
         this.maxSpeed = maxSpeed;
@@ -18,6 +20,7 @@ class CPU {
 
     public fromArray(array): CPU {
         this.manufacturer = array.manufacturer;
+        this.brand = array.brand;
         this.vendor = array.vendor;
         this.speed = array.speed;
         this.maxSpeed = array.maxSpeed;
@@ -27,7 +30,7 @@ class CPU {
     }
 
     public asArray() {
-        return { "manufacturer": this.manufacturer, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores }
+        return { "manufacturer": this.manufacturer, "brand": this.brand, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores }
     }
 
 }

@@ -133,6 +133,25 @@ class Command {
         this.network = network;
     }
 }
+class Connection extends Core {
+    constructor(core, player, instance, location, status, uuid) {
+        super(core.getTool());
+        this.core = core;
+        this.player = player;
+        this.instance = instance;
+        this.location = location;
+        this.status = status;
+        this.uuid = uuid;
+    }
+    fromArray(array) {
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
+        this.location = new ConnectionLocation().fromArray(array.location);
+        this.status = new ConnectionStatus().fromArray(array.status);
+        this.uuid = array.uuid;
+        return this;
+    }
+}
 class ConnectionHash extends Core {
     constructor(core, network, uuid, hash, player) {
         super(core.getKey());
@@ -186,6 +205,34 @@ class ConnectionHash extends Core {
                 }
             });
         });
+    }
+}
+class ConnectionLocation {
+    constructor(city, region, country, lat, long) {
+        this.city = city;
+        this.region = region;
+        this.country = country;
+        this.lat = lat;
+        this.long = long;
+    }
+    fromArray(array) {
+        this.city = array.city;
+        this.region = array.region;
+        this.country = array.country;
+        this.lat = array.lat;
+        this.long = array.long;
+        return this;
+    }
+}
+class ConnectionStatus {
+    constructor(openedOn, closedOn) {
+        this.openedOn = openedOn;
+        this.closedOn = closedOn;
+    }
+    fromArray(array) {
+        this.openedOn = array.openedOn;
+        this.closedOn = array.closedOn;
+        return this;
     }
 }
 class CheckoutElement extends Core {
@@ -486,6 +533,72 @@ class Network extends Core {
             });
         });
     }
+    getPlayer(coreid) {
+        var networkid = this.uuid;
+        var core = this.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&instance=" + networkid + "&player=" + coreid;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var player = new Player(core, jsonresponse.coreid, jsonresponse.username, jsonresponse.uuid, jsonresponse.verified);
+                        resolve(player);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getPlayers(page) {
+        var core = this.core;
+        var instance = this.asInstance();
+        var queryPage = 0;
+        if (page != undefined && page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/network/list/players/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + queryPage;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/instance/network/list/players/?key=" + core.getKey() + "&page=" + queryPage;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var players = new Array();
+                        jsonresponse.forEach(playerJson => {
+                            var player = new Player(core, playerJson.coreid, playerJson.username, playerJson.uuid, playerJson.verified);
+                            players.push(player);
+                        });
+                        resolve(players);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     getPunishments(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
             var url;
@@ -539,8 +652,9 @@ class BIOS {
     }
 }
 class CPU {
-    constructor(manufacturer, vendor, speed, maxSpeed, physicalCores, virtualCores) {
+    constructor(manufacturer, brand, vendor, speed, maxSpeed, physicalCores, virtualCores) {
         this.manufacturer = manufacturer;
+        this.brand = brand;
         this.vendor = vendor;
         this.speed = speed;
         this.maxSpeed = maxSpeed;
@@ -549,6 +663,7 @@ class CPU {
     }
     fromArray(array) {
         this.manufacturer = array.manufacturer;
+        this.brand = array.brand;
         this.vendor = array.vendor;
         this.speed = array.speed;
         this.maxSpeed = array.maxSpeed;
@@ -557,27 +672,27 @@ class CPU {
         return this;
     }
     asArray() {
-        return { "manufacturer": this.manufacturer, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores };
+        return { "manufacturer": this.manufacturer, "brand": this.brand, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores };
     }
 }
 class Drive {
-    constructor(size, uuid, model, serial, mount) {
+    constructor(size, name, type, interfaceType, serialNum) {
         this.size = size;
-        this.uuid = uuid;
-        this.model = model;
-        this.serial = serial;
-        this.mount = mount;
+        this.name = name;
+        this.type = type;
+        this.interfaceType = interfaceType;
+        this.serialNum = serialNum;
     }
     fromArray(array) {
         this.size = array.size;
-        this.uuid = array.uuid;
-        this.model = array.model;
-        this.serial = array.serial;
-        this.mount = array.mount;
+        this.name = array.name;
+        this.type = array.type;
+        this.interfaceType = array.interfaceType;
+        this.serialNum = array.serialNum;
         return this;
     }
     asArray() {
-        return { "size": this.size, "uuid": this.uuid, "model": this.model, "serial": this.serial, "mount": this.mount };
+        return { "size": this.size, "name": this.name, "type": this.type, "interfaceType": this.interfaceType, "serialNum": this.serialNum };
     }
 }
 class Machine {
@@ -595,6 +710,46 @@ class Machine {
         this.drives = drives;
         this.adapters = adapters;
     }
+    setIPV6(ip) {
+        var hash = this.hash;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + "&ipv6=" + ip), { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(ip);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    setIPV4(ip) {
+        var hash = this.hash;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + "&ipv4=" + ip), { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(ip);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     fromArray(array) {
         if (array.uuid != null && array.uuid != undefined) {
             this.uuid = array.uuid;
@@ -603,7 +758,7 @@ class Machine {
             this.hash = array.hash;
         }
         if (array.owner != null && array.owner != undefined) {
-            this.owner = new Owner(null, array.id, array.name, array.surname, array.email);
+            this.owner = new Owner(new Core(), array.id, array.name, array.surname, array.email);
         }
         if (array.ipv4 != null && array.ipv4 != undefined) {
             this.ipv4 = array.ipv4;
@@ -635,11 +790,29 @@ class Machine {
         array.adapters.forEach(adapter => {
             this.adapters.push(new NetworkAdapter().fromArray(adapter));
         });
+        return this;
     }
-    updateComponents(bios, motherboard, cpu, ram, drives, adapters) {
+    updateComponents(si, bios, motherboard, cpu, ram, drives, adapters) {
         var updateParams = "";
         var hash = this.hash;
         var mainObj = this;
+        if (si != null) {
+            bios = new BIOS(si.bios.vendor, si.bios.version);
+            motherboard = new Motherboard(si.baseboard.manufacturer, si.baseboard.model);
+            cpu = new CPU(si.cpu.manufacturer, si.cpu.brand, si.cpu.vendor, si.cpu.speed, si.cpu.speedmax, si.cpu.physicalCores, si.cpu.cores);
+            ram = new Array();
+            si.memLayout.forEach(ramStick => {
+                ram.push(new RAM(ramStick.size, ramStick.clockSpeed, ramStick.manufacturer));
+            });
+            drives = new Array();
+            si.diskLayout.forEach(disk => {
+                drives.push(new Drive(disk.size, disk.name, disk.type, disk.interfaceType, disk.serialNum));
+            });
+            adapters = new Array();
+            si.net.forEach(adapter => {
+                adapters.push(new NetworkAdapter(adapter.speed, adapter.ifaceName));
+            });
+        }
         if (bios != null && bios != undefined) {
             this.bios = bios;
             updateParams += "&bios=" + JSON.stringify(bios.asArray());
@@ -678,7 +851,7 @@ class Machine {
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + updateParams, { method: "GET" }).then(function (response) {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + updateParams), { method: "GET" }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
@@ -716,7 +889,7 @@ class NetworkAdapter {
     }
     fromArray(array) {
         this.speed = array.speed;
-        this.name = array.speed;
+        this.name = array.name;
         return this;
     }
     asArray() {
@@ -958,6 +1131,30 @@ class Session extends Core {
     }
     getPlayer() {
         return this.player;
+    }
+    getMachines() {
+        var hash = this.hash;
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/machine/list/?hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var machines = [];
+                        jsonresponse.forEach(machineJSON => {
+                            machines.push(new Machine().fromArray(machineJSON));
+                        });
+                        resolve(machines);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getNetworks() {
         var hash = this.hash;
@@ -1365,6 +1562,45 @@ class Player extends Core {
         this.username = username;
         this.uuid = uuid;
         this.verified = verified;
+    }
+    getConnections(instance, page) {
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+            ;
+        }
+        console.log(url);
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        console.log(jsonresponse);
+                        var connections = new Array();
+                        jsonresponse.forEach(connectionJson => {
+                            connections.push(new Connection(core).fromArray(connectionJson));
+                        });
+                        resolve(connections);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getId() {
         return this.id;

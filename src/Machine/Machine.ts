@@ -28,7 +28,59 @@ class Machine {
         this.adapters = adapters;
     }
 
-    public fromArray(array) {
+    public setIPV6(ip: string) {
+
+        var hash = this.hash;
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + "&ipv6=" + ip), { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        resolve(ip);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
+    public setIPV4(ip: string) {
+
+        var hash = this.hash;
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + "&ipv4=" + ip), { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        resolve(ip);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
+    public fromArray(array): Machine {
 
         if (array.uuid != null && array.uuid != undefined) {
             this.uuid = array.uuid;
@@ -39,7 +91,7 @@ class Machine {
         }
 
         if (array.owner != null && array.owner != undefined) {
-            this.owner = new Owner(null, array.id, array.name, array.surname, array.email);
+            this.owner = new Owner(new Core(), array.id, array.name, array.surname, array.email);
         }
 
         if (array.ipv4 != null && array.ipv4 != undefined) {
@@ -81,13 +133,39 @@ class Machine {
             this.adapters.push(new NetworkAdapter().fromArray(adapter))
         });
 
+        return this;
+
     }
 
-    public updateComponents(bios?: BIOS, motherboard?: Motherboard, cpu?: CPU, ram?: Array<RAM>, drives?: Array<Drive>, adapters?: Array<NetworkAdapter>) {
+    public updateComponents(si?, bios?: BIOS, motherboard?: Motherboard, cpu?: CPU, ram?: Array<RAM>, drives?: Array<Drive>, adapters?: Array<NetworkAdapter>) {
 
         var updateParams = ""
         var hash = this.hash;
         var mainObj = this;
+
+        if (si != null) {
+            bios = new BIOS(si.bios.vendor, si.bios.version)
+
+            motherboard = new Motherboard(si.baseboard.manufacturer, si.baseboard.model)
+
+            cpu = new CPU(si.cpu.manufacturer, si.cpu.brand, si.cpu.vendor, si.cpu.speed, si.cpu.speedmax, si.cpu.physicalCores, si.cpu.cores)
+
+            ram = new Array<RAM>();
+            si.memLayout.forEach(ramStick => {
+                ram.push(new RAM(ramStick.size, ramStick.clockSpeed, ramStick.manufacturer))
+            });
+
+            drives = new Array<Drive>();
+            si.diskLayout.forEach(disk => {
+                drives.push(new Drive(disk.size, disk.name, disk.type, disk.interfaceType, disk.serialNum))
+            });
+
+            adapters = new Array<NetworkAdapter>();
+            si.net.forEach(adapter => {
+                adapters.push(new NetworkAdapter(adapter.speed, adapter.ifaceName))
+            });
+
+        }
 
         if (bios != null && bios != undefined) {
             this.bios = bios;
@@ -139,7 +217,7 @@ class Machine {
         return new Promise(function (resolve, reject) {
 
             try {
-                return fetch("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + updateParams, { method: "GET" }).then(function (response) {
+                return fetch(encodeURI("https://api.purecore.io/rest/2/machine/update/?hash=" + hash + updateParams), { method: "GET" }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {

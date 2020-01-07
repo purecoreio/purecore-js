@@ -1,30 +1,30 @@
 class Drive {
 
     public size;
-    public uuid: string;
-    public model: string;
-    public serial: string;
-    public mount: string;
+    public name: string;
+    public type: string;
+    public interfaceType: string;
+    public serialNum: string;
 
-    public constructor(size?, uuid?: string, model?: string, serial?: string, mount?: string) {
+    public constructor(size?, name?: string, type?: string, interfaceType?: string, serialNum?: string) {
         this.size = size;
-        this.uuid = uuid;
-        this.model = model;
-        this.serial = serial;
-        this.mount = mount;
+        this.name = name;
+        this.type = type;
+        this.interfaceType = interfaceType;
+        this.serialNum = serialNum;
     }
 
     public fromArray(array): Drive {
         this.size = array.size;
-        this.uuid = array.uuid;
-        this.model = array.model;
-        this.serial = array.serial;
-        this.mount = array.mount;
+        this.name = array.name;
+        this.type = array.type;
+        this.interfaceType = array.interfaceType;
+        this.serialNum = array.serialNum;
         return this;
     }
 
     public asArray() {
-        return { "size": this.size, "uuid": this.uuid, "model": this.model, "serial": this.serial, "mount": this.mount }
+        return { "size": this.size, "name": this.name, "type": this.type, "interfaceType": this.interfaceType, "serialNum": this.serialNum }
     }
 
 }

@@ -96,6 +96,38 @@ class Session extends Core {
         return this.player;
     }
 
+    getMachines() {
+
+        var hash = this.hash;
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch("https://api.purecore.io/rest/2/machine/list/?hash=" + hash, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var machines = [];
+
+                        jsonresponse.forEach(machineJSON => {
+                            machines.push(new Machine().fromArray(machineJSON));
+                        });
+
+                        resolve(machines);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
     getNetworks() {
 
         var hash = this.hash;

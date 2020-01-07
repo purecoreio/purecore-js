@@ -10,7 +10,7 @@ class NetworkAdapter {
 
     public fromArray(array): NetworkAdapter {
         this.speed = array.speed;
-        this.name = array.speed;
+        this.name = array.name;
         return this;
     }
 
