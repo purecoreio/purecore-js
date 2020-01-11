@@ -9,6 +9,10 @@ class Store extends Network {
 
     }
 
+    getNetwork(): Network {
+        return this.network;
+    }
+
     getPayments(page?) {
 
         var core = this.network.core;

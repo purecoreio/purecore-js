@@ -236,9 +236,9 @@ class Network extends Core {
             var url;
 
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/player/minecraft/username/search/?hash=" + core.getCoreSession().getHash() + "&network=" + networkid + "&username=" + username;
+                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?hash=" + core.getCoreSession().getHash() + "&network=" + networkid + "&username=" + username;
             } else {
-                url = "https://api.purecore.io/rest/2/player/minecraft/username/search/?key=" + core.getKey() + "&username=" + username;
+                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?key=" + core.getKey() + "&username=" + username;
             }
 
             return new Promise(function (resolve, reject) {

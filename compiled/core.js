@@ -18,7 +18,7 @@ class Core {
                     this.session = tool;
                 }
                 else {
-                    this.session = new Session(new Core()).fromArray(tool);
+                    this.session = new Session(new Core(this.session)).fromArray(tool);
                 }
             }
         }
@@ -532,6 +532,44 @@ class Network extends Core {
                 }
             });
         });
+    }
+    searchPlayers(username, uuid, coreid) {
+        if (username != null) {
+            var networkid = this.uuid;
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?hash=" + core.getCoreSession().getHash() + "&network=" + networkid + "&username=" + username;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?key=" + core.getKey() + "&username=" + username;
+            }
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        }
+                        else {
+                            var finalPlayerList = new Array();
+                            jsonresponse.forEach(playerData => {
+                                var player = new Player(core, playerData.coreid, playerData.username, playerData.uuid, playerData.verified);
+                                finalPlayerList.push(player);
+                            });
+                            resolve(finalPlayerList);
+                        }
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        }
+        else {
+            return new Array();
+        }
     }
     getPlayer(coreid) {
         var networkid = this.uuid;
@@ -1076,10 +1114,10 @@ class Session extends Core {
     }
     getUser() {
         if (this.player == undefined && this.owner != undefined) {
-            return this.owner;
+            return new Owner(this.core, this.owner.getId(), this.owner.getName(), this.owner.getSurname(), this.owner.getEmail());
         }
         else {
-            return this.player;
+            return new Player(this.core, this.player.getId(), this.player.getUsername(), this.player.getUuid(), this.player.verified);
         }
     }
     fromArray(array) {
@@ -1097,6 +1135,7 @@ class Session extends Core {
         else if ("owner" in array) {
             this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
         }
+        this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, this.network, this.getUser()));
         return this;
     }
     fromHash(sessionHash) {
@@ -1382,6 +1421,9 @@ class Store extends Network {
         super(network.core, network.asInstance());
         this.network = network;
     }
+    getNetwork() {
+        return this.network;
+    }
     getPayments(page) {
         var core = this.network.core;
         var instance = this.network.asInstance();
@@ -1543,15 +1585,65 @@ class Warning {
 }
 class Owner extends Core {
     constructor(core, id, name, surname, email) {
-        super(core.getKey());
+        super(core.getTool());
         this.core = core;
         this.id = id;
         this.name = name;
         this.surname = surname;
         this.email = email;
     }
+    getName() {
+        return this.name;
+    }
+    getSurname() {
+        return this.surname;
+    }
+    getEmail() {
+        return this.email;
+    }
     getId() {
         return this.id;
+    }
+    getSession() {
+        return this.core.getTool();
+    }
+    createNetwork(name, game, cname, ip, port) {
+        if (this.core.getTool() instanceof Session) {
+            var core = this.core;
+            var url;
+            if (ip == null) {
+                url = "https://api.purecore.io/rest/2/instance/network/create/?hash=" + core.getCoreSession().getHash() + "&name=" + name + "&game=" + game + "&cname=" + cname;
+            }
+            else {
+                if (port == null) {
+                    url = "https://api.purecore.io/rest/2/instance/network/create/?hash=" + core.getCoreSession().getHash() + "&name=" + name + "&game=" + game + "&cname=" + cname + "&ip=" + ip;
+                }
+                else {
+                    url = "https://api.purecore.io/rest/2/instance/network/create/?hash=" + core.getCoreSession().getHash() + "&name=" + name + "&game=" + game + "&cname=" + cname + "&ip=" + ip + "&port=" + port;
+                }
+            }
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        }
+                        else {
+                            var network = new Network(core, new Instance(core, jsonresponse.uuid, jsonresponse.name, "NTW"));
+                            resolve(network);
+                        }
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        }
+        else {
+            throw new Error("Invalid tool type, got: " + core.getTool());
+        }
     }
 }
 class Player extends Core {
@@ -1562,6 +1654,80 @@ class Player extends Core {
         this.username = username;
         this.uuid = uuid;
         this.verified = verified;
+    }
+    getPunishments(network, page) {
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+            ;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var punishments = new Array();
+                        jsonresponse.forEach(punishmentJson => {
+                            punishments.push(new Punishment(core).fromArray(punishmentJson));
+                        });
+                        resolve(punishments);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getPayments(store, page) {
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/player/payment/list/?key=" + core.getKey() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;
+            ;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var payments = new Array();
+                        jsonresponse.forEach(paymentJson => {
+                            payments.push(new Payment(core).fromArray(paymentJson));
+                        });
+                        resolve(payments);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getConnections(instance, page) {
         var id = this.id;
@@ -1578,7 +1744,6 @@ class Player extends Core {
             url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
             ;
         }
-        console.log(url);
         return new Promise(function (resolve, reject) {
             try {
                 return fetch(url, { method: "GET" }).then(function (response) {
@@ -1588,7 +1753,6 @@ class Player extends Core {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
-                        console.log(jsonresponse);
                         var connections = new Array();
                         jsonresponse.forEach(connectionJson => {
                             connections.push(new Connection(core).fromArray(connectionJson));

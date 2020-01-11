@@ -15,6 +15,100 @@ class Player extends Core {
         this.verified = verified;
     }
 
+    getPunishments(network: Network, page?) {
+
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+        } else {
+            url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var punishments = new Array<Punishment>();
+
+                        jsonresponse.forEach(punishmentJson => {
+
+                            punishments.push(new Punishment(core).fromArray(punishmentJson));
+
+                        });
+
+                        resolve(punishments);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
+    getPayments(store: Store, page?) {
+
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;
+        } else {
+            url = "https://api.purecore.io/rest/2/player/payment/list/?key=" + core.getKey() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var payments = new Array<Payment>();
+
+                        jsonresponse.forEach(paymentJson => {
+
+                            payments.push(new Payment(core).fromArray(paymentJson));
+
+                        });
+
+                        resolve(payments);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     getConnections(instance: Instance, page?) {
 
         var id = this.id;
@@ -28,12 +122,10 @@ class Player extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player="+id;
+            url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
         } else {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player="+id;;
+            url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;;
         }
-
-        console.log(url)
 
         return new Promise(function (resolve, reject) {
 
@@ -45,7 +137,6 @@ class Player extends Core {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     } else {
 
-                        console.log(jsonresponse);
                         var connections = new Array<Connection>();
 
                         jsonresponse.forEach(connectionJson => {

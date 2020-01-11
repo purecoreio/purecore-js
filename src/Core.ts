@@ -12,7 +12,7 @@ class Core {
                 if (tool instanceof Session) {
                     this.session = tool;
                 } else {
-                    this.session = new Session(new Core()).fromArray(tool);
+                    this.session = new Session(new Core(this.session)).fromArray(tool);
                 }
 
             }
