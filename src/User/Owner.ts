@@ -50,7 +50,7 @@ class Owner extends Core {
                     url = "https://api.purecore.io/rest/2/instance/network/create/?hash=" + core.getCoreSession().getHash() + "&name=" + name + "&game=" + game + "&cname=" + cname + "&ip=" + ip + "&port=" + port;
                 }
             }
-
+            
             return new Promise(function (resolve, reject) {
 
                 try {
