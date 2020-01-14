@@ -19,6 +19,40 @@ class Network extends Core {
         return this.uuid;
     }
 
+    async createServer(name: string) {
+
+        var core = this.core;
+        var network = this;
+        var url;
+
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/server/create/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&name=" + name;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/server/create/?key=" + core.getKey() + "&name=" + name;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    } else {
+
+                        resolve(new Instance(core, jsonresponse.uuid, jsonresponse.name, "SVR"));
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
     async getServers() {
 
         var core = this.core;

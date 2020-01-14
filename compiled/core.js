@@ -335,6 +335,36 @@ class Network extends Core {
     getId() {
         return this.uuid;
     }
+    createServer(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var network = this;
+            var url;
+            if (this.core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/server/create/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&name=" + name;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/instance/server/create/?key=" + core.getKey() + "&name=" + name;
+            }
+            return new Promise(function (resolve, reject) {
+                try {
+                    return fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        }
+                        else {
+                            resolve(new Instance(core, jsonresponse.uuid, jsonresponse.name, "SVR"));
+                        }
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+        });
+    }
     getServers() {
         return __awaiter(this, void 0, void 0, function* () {
             var core = this.core;
