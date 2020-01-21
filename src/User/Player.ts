@@ -6,7 +6,7 @@ class Player extends Core {
     uuid: string;
     verified;
 
-    constructor(core: Core, id: string, username: string, uuid: string, verified) {
+    constructor(core: Core, id: string, username?: string, uuid?: string, verified?) {
         super(core.getKey())
         this.core = core;
         this.id = id;
@@ -146,6 +146,63 @@ class Player extends Core {
                         });
 
                         resolve(connections);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
+    getMatchingConnections(instance: Instance, page?, playerList?: Array<Player>) {
+
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+        var playerListIds = [];
+        playerList.forEach(player => {
+            playerListIds.push(player.getId());
+        });
+
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+        } else {
+            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+
+                        var activityMatch = new Array<ActivityMatch>();
+
+                        jsonresponse.forEach(activity => {
+
+                            var matchingRanges = new Array<MatchingRange>();
+                            activity.matchList.forEach(matchingRangeJson => {
+                                var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn), new Date(matchingRangeJson.finishedOn), matchingRange.matchWith)
+                                matchingRanges.push(matchingRange);
+                            });
+
+                            activityMatch.push(new ActivityMatch(new Date(activity.startedOn), new Date(activity.finishedOn), activity.activity, matchingRanges));
+
+                        });
+
+                        resolve(activityMatch);
 
                     }
                 });

@@ -352,7 +352,7 @@ class Network extends Core {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
-                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                            reject(new Error(jsonresponse.error));
                         }
                         else {
                             resolve(new Instance(core, jsonresponse.uuid, jsonresponse.name, "SVR"));
@@ -1658,7 +1658,7 @@ class Owner extends Core {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
-                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                            reject(new Error(jsonresponse.error));
                         }
                         else {
                             var network = new Network(core, new Instance(core, jsonresponse.uuid, jsonresponse.name, "NTW"));

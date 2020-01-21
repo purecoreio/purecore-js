@@ -22,6 +22,14 @@ class Core {
 
     }
 
+    public getPlayersFromIds(ids): Array<Player> {
+        var playerList = new Array<Player>();
+        ids.forEach(id => {
+            playerList.push(new Player(this, id));
+        });
+        return playerList;
+    }
+
     public getMachine(hash) {
 
         return new Promise(function (resolve, reject) {
