@@ -426,6 +426,34 @@ class Instance extends Core {
         this.name = name;
         this.type = type;
     }
+    delete() {
+        var core = this.core;
+        var instance = this;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/delete/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/instance/delete/?key=" + core.getKey() + "&instance=" + instance.getId();
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    }
+                    else {
+                        resolve(true);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     getKeys() {
         var core = this.core;
         var instance = this;
