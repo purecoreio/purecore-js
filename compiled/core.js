@@ -442,7 +442,7 @@ class Instance extends Core {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error);
+                        reject(new Error(jsonresponse.error));
                     }
                     else {
                         resolve(true);
@@ -470,7 +470,7 @@ class Instance extends Core {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error);
+                        reject(new Error(jsonresponse.error));
                     }
                     else {
                         var keyList = new Array();
