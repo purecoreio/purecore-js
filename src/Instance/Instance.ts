@@ -13,6 +13,44 @@ class Instance extends Core {
         this.type = type;
     }
 
+    public getKeys() {
+
+        var core = this.core;
+        var instance = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/key/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/key/list/?key=" + core.getKey() + "&instance=" + instance.getId();
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error)
+                    } else {
+
+                        var keyList = new Array<Key>();
+                        jsonresponse.forEach(jsonKey => {
+                            keyList.push(new Key(core).fromArray(jsonKey))
+                        });
+
+                        resolve(keyList);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     getName() {
         return this.name;
     }

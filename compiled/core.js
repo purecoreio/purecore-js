@@ -426,6 +426,38 @@ class Instance extends Core {
         this.name = name;
         this.type = type;
     }
+    getKeys() {
+        var core = this.core;
+        var instance = this;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/key/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/instance/key/list/?key=" + core.getKey() + "&instance=" + instance.getId();
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    }
+                    else {
+                        var keyList = new Array();
+                        jsonresponse.forEach(jsonKey => {
+                            keyList.push(new Key(core).fromArray(jsonKey));
+                        });
+                        resolve(keyList);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     getName() {
         return this.name;
     }
@@ -859,6 +891,23 @@ class Network extends Core {
                 }
             });
         });
+    }
+}
+class Key extends Core {
+    constructor(core, type, uuid, hash, instance) {
+        super(core.getTool());
+        this.core = core;
+        this.type = type;
+        this.uuid = uuid;
+        this.hash = hash;
+        this.instance = instance;
+    }
+    fromArray(array) {
+        this.type = array.type;
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
+        return this;
     }
 }
 class BIOS {
@@ -1646,6 +1695,39 @@ class Store extends Network {
     constructor(network) {
         super(network.core, network.asInstance());
         this.network = network;
+    }
+    requestPayment(itemList, username) {
+        var core = this.network.core;
+        var instance = this.network.asInstance();
+        var idList = [];
+        itemList.forEach(item => {
+            idList.push(item.uuid);
+        });
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/payment/request/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    }
+                    else {
+                        var paymentRequest = new CorePaymentRequest(core).fromArray(jsonresponse);
+                        resolve(paymentRequest);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getNetwork() {
         return this.network;
