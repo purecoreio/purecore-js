@@ -11,11 +11,136 @@
 <body>
 
     <h2>Testing</h2>
-
+    <div id="chart"></div>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="../compiled/core.js"></script>
     <script>
         var core = new Core("10997ff01578fb86e266c704795fc11cb703bda3da7ab82f6b83efa8e7041977");
+        var coress = new Core({ "core": {}, "uuid": "0adba250e44c4d6f", "hash": "76fcbbf9613af8ecb3fdbcb31f631d6c6deed494972b5efe248932a41eb5bb23", "device": { "brand": "", "device": "desktop", "model": "", "os": "Windows 10 x64" }, "location": { "city": "Sant Feliu de Llobregat", "state": "Barcelona", "country_code": "ES" }, "usage": { "creation": 1578576048, "uses": null }, "owner": { "core": {}, "name": "Quique", "surname": "Osuna García", "email": "quiquelhappy@gmail.com" } });
+        coress.getInstance("7279390962ba3b09").asNetwork().getPlayer("96e916041747d907").then(function (data) {
+            // ["7451b10649414987", "b491fbb4473e73c3", "86887f77524113b7", "79e34b795bbef9ad","3aa9521a271ac69b"]
+            data.getMatchingConnections(coress.getInstance("7279390962ba3b09"), 0, coress.getPlayersFromIds([])).then(function (act) {
+
+                var playerMatch = []
+                var groupAll = false;
+
+                act.forEach(matchingActivity => {
+
+                    // main obj timeline
+                    if (groupAll) {
+                        referenceId = "Game Session"
+                    } else {
+                        referenceId = matchingActivity.activity.instance.name;
+                    }
+
+                    if (matchingActivity.activity.player.coreid in playerMatch) {
+
+                        playerMatch[matchingActivity.activity.player.coreid].data.push(
+                            {
+                                x: referenceId,
+                                y: [
+                                    matchingActivity.startedOn.getTime(),
+                                    matchingActivity.finishedOn.getTime()
+                                ]
+                            }
+                        )
+                    } else {
+                        playerMatch[matchingActivity.activity.player.coreid] = {
+                            name: matchingActivity.activity.player.username,
+                            data: [
+                                {
+                                    x: referenceId,
+                                    y: [
+                                        matchingActivity.startedOn.getTime(),
+                                        matchingActivity.finishedOn.getTime()
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+
+                    // second obj timeline
+
+                    matchingActivity.matchList.forEach(matchingRange => {
+
+                        if (matchingRange.matchWith.player.coreid in playerMatch) {
+
+                            playerMatch[matchingRange.matchWith.player.coreid].data.push(
+                                {
+                                    x: referenceId,
+                                    y: [
+                                        matchingRange.startedOn.getTime(),
+                                        matchingRange.finishedOn.getTime()
+                                    ]
+                                }
+                            )
+                        } else {
+                            playerMatch[matchingRange.matchWith.player.coreid] = {
+                                name: matchingRange.matchWith.player.username,
+                                data: [
+                                    {
+                                        x: referenceId,
+                                        y: [
+                                            matchingRange.startedOn.getTime(),
+                                            matchingRange.finishedOn.getTime()
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+
+                    });
+
+                });
+
+                var finalArray = [];
+                for (var k in playerMatch) {
+                    finalArray.push(playerMatch[k])
+                }
+
+                console.log(finalArray)
+
+                var options = {
+                    series: finalArray,
+                    chart: {
+                        height: 450,
+                        type: 'rangeBar'
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            barHeight: '80%'
+                        }
+                    },
+                    xaxis: {
+                        type: 'datetime'
+                    },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shade: 'light',
+                            type: 'vertical',
+                            shadeIntensity: 0.25,
+                            gradientToColors: undefined,
+                            inverseColors: true,
+                            opacityFrom: 1,
+                            opacityTo: 1,
+                            stops: [50, 0, 100, 100]
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'left'
+                    }
+                };
+
+                var chart = new ApexCharts(document.querySelector("#chart"), options);
+                chart.render();
+
+
+            })
+        })
     </script>
 
 </body>

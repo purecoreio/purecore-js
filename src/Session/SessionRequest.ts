@@ -40,19 +40,25 @@ class SessionRequest extends Core {
         return new Promise(function (resolve, reject) {
 
             try {
-                return fetch("https://api.purecore.io/rest/2/session/hash/token/exchange/?key=" + key + "&token=" + token, { method: "GET" }).then(function (response) {
+
+                var url = "https://api.purecore.io/rest/2/session/hash/token/exchange/?key=" + key + "&token=" + token;
+                if (key == null) {
+                    url = "https://api.purecore.io/rest/2/session/hash/token/exchange/?token=" + token;
+                }
+
+                return fetch(url, { method: "GET" }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                        throw new Error(jsonresponse.error)
                     } else {
                         resolve(new Session(core).fromArray(jsonresponse))
                     }
                 }).catch(function (error) {
-                    throw new Error(error)
+                    reject(error);
                 })
             } catch (e) {
-                throw new Error(e.message)
+                reject(e);
             }
         });
     }

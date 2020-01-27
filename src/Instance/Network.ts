@@ -308,14 +308,17 @@ class Network extends Core {
     getPlayer(coreid: string) {
 
 
-        var networkid = this.uuid;
         var core = this.core;
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&instance=" + networkid + "&player=" + coreid;
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&player=" + coreid;
         } else {
-            url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+            if (core.getKey() != null) {
+                url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/from/core/id/?player=" + coreid;
+            }
         }
 
         return new Promise(function (resolve, reject) {

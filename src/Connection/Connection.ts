@@ -28,4 +28,12 @@ class Connection extends Core {
 
     }
 
+    public getStatus(): ConnectionStatus {
+        return this.status;
+    }
+
+    public getInstance(): Instance {
+        return this.instance;
+    }
+
 }

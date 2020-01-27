@@ -18,4 +18,8 @@ class MatchingRange {
         return this.finishedOn;
     }
 
+    public getMatchWith() {
+        return this.matchWith;
+    }
+
 }

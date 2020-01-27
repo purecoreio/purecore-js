@@ -15,7 +15,7 @@ class Player extends Core {
         this.verified = verified;
     }
 
-    getPunishments(network: Network, page?) {
+    getPunishments(network?: Network, page?) {
 
         var id = this.id;
         var core = this.core;
@@ -28,9 +28,17 @@ class Player extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+            if (network == null || network == undefined) {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+            }
         } else {
-            url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;;
+            if (network == null || network == undefined) {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;;
+            }
         }
 
         return new Promise(function (resolve, reject) {
@@ -122,9 +130,19 @@ class Player extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+
+            if (instance == null) {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+            }
+
         } else {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;;
+            if (instance == null) {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;;
+            } else {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;;
+            }
         }
 
         return new Promise(function (resolve, reject) {
@@ -194,11 +212,11 @@ class Player extends Core {
 
                             var matchingRanges = new Array<MatchingRange>();
                             activity.matchList.forEach(matchingRangeJson => {
-                                var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn), new Date(matchingRangeJson.finishedOn), matchingRange.matchWith)
+                                var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn * 1000), new Date(matchingRangeJson.finishedOn * 1000), matchingRangeJson.matchWith)
                                 matchingRanges.push(matchingRange);
                             });
 
-                            activityMatch.push(new ActivityMatch(new Date(activity.startedOn), new Date(activity.finishedOn), activity.activity, matchingRanges));
+                            activityMatch.push(new ActivityMatch(new Date(activity.startedOn * 1000), new Date(activity.finishedOn * 1000), activity.activity, matchingRanges));
 
                         });
 

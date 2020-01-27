@@ -38,6 +38,36 @@ class StoreItem extends Core {
         });
 
         return this;
+    }
+
+    getOrganizedPerks(): Array<OrganizedPerkCategory> {
+
+        var perkOrganized = [];
+        this.perks.forEach(perk => {
+            if (perk.perk.category.uuid in perkOrganized) {
+                perkOrganized[perk.perk.category.uuid].push(perk)
+            } else {
+                perkOrganized[perk.perk.category.uuid] = new Array<PerkContextualized>();
+                perkOrganized[perk.perk.category.uuid].push(perk)
+            }
+        });
+
+        var organizedPerkCategories = new Array<OrganizedPerkCategory>();
+
+        for (const key in perkOrganized) {
+
+            var category = null;
+            perkOrganized[key].forEach(conperk => {
+                if (conperk.perk.category.uuid == key) {
+                    category = conperk.perk.category;
+                }
+            });
+
+            var organizedCat = new OrganizedPerkCategory(category, perkOrganized[key])
+            organizedPerkCategories.push(organizedCat);
+        }
+
+        return organizedPerkCategories;
 
     }
 

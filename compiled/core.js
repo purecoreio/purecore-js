@@ -24,6 +24,39 @@ class Core {
         }
         // if not start with fromdiscord or fromtoken
     }
+    requestGlobalHash() {
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/session/hash/list/", { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    }
+                    else {
+                        var response = new Array();
+                        jsonresponse.forEach(hashData => {
+                            var hash = new ConnectionHashGlobal(new Core());
+                            response.push(hash.fromArray(hashData));
+                        });
+                        resolve(response);
+                    }
+                }).catch(function (error) {
+                    reject(error);
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getPlayersFromIds(ids) {
+        var playerList = new Array();
+        ids.forEach(id => {
+            playerList.push(new Player(this, id));
+        });
+        return playerList;
+    }
     getMachine(hash) {
         return new Promise(function (resolve, reject) {
             try {
@@ -79,7 +112,12 @@ class Core {
         return this.session;
     }
     getKey() {
-        return this.key;
+        if (this.key == undefined) {
+            return null;
+        }
+        else {
+            return this.key;
+        }
     }
     getElements() {
         return new Elements(this);
@@ -133,6 +171,23 @@ class Command {
         this.network = network;
     }
 }
+class ActivityMatch {
+    constructor(startedOn, finishedOn, activity, matchList) {
+        this.startedOn = startedOn;
+        this.finishedOn = finishedOn;
+        this.activity = activity;
+        this.matchList = matchList;
+    }
+    getStart() {
+        return this.startedOn;
+    }
+    getFinish() {
+        return this.finishedOn;
+    }
+    getMatchList() {
+        return this.matchList;
+    }
+}
 class Connection extends Core {
     constructor(core, player, instance, location, status, uuid) {
         super(core.getTool());
@@ -150,6 +205,12 @@ class Connection extends Core {
         this.status = new ConnectionStatus().fromArray(array.status);
         this.uuid = array.uuid;
         return this;
+    }
+    getStatus() {
+        return this.status;
+    }
+    getInstance() {
+        return this.instance;
     }
 }
 class ConnectionHash extends Core {
@@ -207,6 +268,64 @@ class ConnectionHash extends Core {
         });
     }
 }
+class ConnectionHashGlobal extends Core {
+    constructor(core, hash, player) {
+        super(core.getKey());
+        this.core = core;
+        this.hash = hash;
+        this.player = player;
+    }
+    fromArray(array) {
+        this.hash = array.hash;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        return this;
+    }
+    getPlayer() {
+        return this.player;
+    }
+    getHash() {
+        return this.hash;
+    }
+    requestSession() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            var core = this.core;
+            var hash = this.hash;
+            return new Promise(function (resolve, reject) {
+                try {
+                    var url = "https://api.purecore.io/rest/2/session/hash/token/?key=" + key + "&hash=" + hash;
+                    if (key == null) {
+                        url = "https://api.purecore.io/rest/2/session/hash/token/?hash=" + hash;
+                    }
+                    return fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            var player = new Player(core, jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified);
+                            if (key != null) {
+                                var instance = new Network(core, new Instance(core, jsonresponse.network.uuid, jsonresponse.network.name, "NTW"));
+                                var sessionRequest = new SessionRequest(core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, instance, "player");
+                                resolve(sessionRequest);
+                            }
+                            else {
+                                var sessionRequest = new SessionRequest(core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, null, "masterplayer");
+                                resolve(sessionRequest);
+                            }
+                        }
+                    }).catch(function (error) {
+                        throw new Error(error);
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            });
+        });
+    }
+}
 class ConnectionLocation {
     constructor(city, region, country, lat, long) {
         this.city = city;
@@ -230,9 +349,42 @@ class ConnectionStatus {
         this.closedOn = closedOn;
     }
     fromArray(array) {
-        this.openedOn = array.openedOn;
-        this.closedOn = array.closedOn;
+        this.openedOn = new Date(array.openedOn * 1000);
+        this.closedOn = new Date(array.closedOn * 1000);
         return this;
+    }
+    getOpenedOn() {
+        return this.openedOn;
+    }
+    isActive() {
+        if (this.closedOn == undefined || this.closedOn == null) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    isClosed() {
+        return !this.isActive();
+    }
+    getClosedOn() {
+        return this.closedOn;
+    }
+}
+class MatchingRange {
+    constructor(startedOn, finishedOn, matchWith) {
+        this.startedOn = startedOn;
+        this.finishedOn = finishedOn;
+        this.matchWith = matchWith;
+    }
+    getStart() {
+        return this.startedOn;
+    }
+    getFinish() {
+        return this.finishedOn;
+    }
+    getMatchWith() {
+        return this.matchWith;
     }
 }
 class CheckoutElement extends Core {
@@ -602,14 +754,18 @@ class Network extends Core {
         }
     }
     getPlayer(coreid) {
-        var networkid = this.uuid;
         var core = this.core;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&instance=" + networkid + "&player=" + coreid;
+            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&player=" + coreid;
         }
         else {
-            url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+            if (core.getKey() != null) {
+                url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/from/core/id/?player=" + coreid;
+            }
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1295,21 +1451,25 @@ class SessionRequest extends Core {
             var token = this.token;
             return new Promise(function (resolve, reject) {
                 try {
-                    return fetch("https://api.purecore.io/rest/2/session/hash/token/exchange/?key=" + key + "&token=" + token, { method: "GET" }).then(function (response) {
+                    var url = "https://api.purecore.io/rest/2/session/hash/token/exchange/?key=" + key + "&token=" + token;
+                    if (key == null) {
+                        url = "https://api.purecore.io/rest/2/session/hash/token/exchange/?token=" + token;
+                    }
+                    return fetch(url, { method: "GET" }).then(function (response) {
                         return response.json();
                     }).then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                            throw new Error(jsonresponse.error);
                         }
                         else {
                             resolve(new Session(core).fromArray(jsonresponse));
                         }
                     }).catch(function (error) {
-                        throw new Error(error);
+                        reject(error);
                     });
                 }
                 catch (e) {
-                    throw new Error(e.message);
+                    reject(e);
                 }
             });
         });
@@ -1370,6 +1530,30 @@ class StoreItem extends Core {
         });
         return this;
     }
+    getOrganizedPerks() {
+        var perkOrganized = [];
+        this.perks.forEach(perk => {
+            if (perk.perk.category.uuid in perkOrganized) {
+                perkOrganized[perk.perk.category.uuid].push(perk);
+            }
+            else {
+                perkOrganized[perk.perk.category.uuid] = new Array();
+                perkOrganized[perk.perk.category.uuid].push(perk);
+            }
+        });
+        var organizedPerkCategories = new Array();
+        for (const key in perkOrganized) {
+            var category = null;
+            perkOrganized[key].forEach(conperk => {
+                if (conperk.perk.category.uuid == key) {
+                    category = conperk.perk.category;
+                }
+            });
+            var organizedCat = new OrganizedPerkCategory(category, perkOrganized[key]);
+            organizedPerkCategories.push(organizedCat);
+        }
+        return organizedPerkCategories;
+    }
 }
 class NestedItem extends Core {
     constructor(core) {
@@ -1390,6 +1574,18 @@ class NestedItem extends Core {
     }
     getItems() {
         return this.items;
+    }
+}
+class OrganizedPerkCategory {
+    constructor(category, perk) {
+        this.perkCategory = category;
+        this.perkList = perk;
+    }
+    getPerks() {
+        return this.perkList;
+    }
+    getCategory() {
+        return this.perkCategory;
     }
 }
 class Perk extends Core {
@@ -1506,7 +1702,7 @@ class Store extends Network {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        throw new Error(jsonresponse.error);
                     }
                     else {
                         var response = new Array();
@@ -1515,6 +1711,8 @@ class Store extends Network {
                         });
                         resolve(response);
                     }
+                }).catch(function (err) {
+                    reject(err);
                 });
             }
             catch (e) {
@@ -1694,11 +1892,22 @@ class Player extends Core {
         }
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+            if (network == null || network == undefined) {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+            }
         }
         else {
-            url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
-            ;
+            if (network == null || network == undefined) {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;
+                ;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+                ;
+            }
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1768,11 +1977,22 @@ class Player extends Core {
         }
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+            if (instance == null) {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+            }
         }
         else {
-            url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
-            ;
+            if (instance == null) {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;
+                ;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+                ;
+            }
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1788,6 +2008,51 @@ class Player extends Core {
                             connections.push(new Connection(core).fromArray(connectionJson));
                         });
                         resolve(connections);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getMatchingConnections(instance, page, playerList) {
+        var id = this.id;
+        var core = this.core;
+        var queryPage = 0;
+        var playerListIds = [];
+        playerList.forEach(player => {
+            playerListIds.push(player.getId());
+        });
+        if (page != undefined || page != null) {
+            queryPage = page;
+        }
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        var activityMatch = new Array();
+                        jsonresponse.forEach(activity => {
+                            var matchingRanges = new Array();
+                            activity.matchList.forEach(matchingRangeJson => {
+                                var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn * 1000), new Date(matchingRangeJson.finishedOn * 1000), matchingRangeJson.matchWith);
+                                matchingRanges.push(matchingRange);
+                            });
+                            activityMatch.push(new ActivityMatch(new Date(activity.startedOn * 1000), new Date(activity.finishedOn * 1000), activity.activity, matchingRanges));
+                        });
+                        resolve(activityMatch);
                     }
                 });
             }

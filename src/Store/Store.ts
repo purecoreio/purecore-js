@@ -9,6 +9,45 @@ class Store extends Network {
 
     }
 
+    requestPayment(itemList: Array<StoreItem>, username: string) {
+
+        var core = this.network.core;
+        var instance = this.network.asInstance();
+        var idList = [];
+        itemList.forEach(item => {
+            idList.push(item.uuid);
+        });
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/payment/request/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+        } else {
+            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    } else {
+
+                        var paymentRequest = new CorePaymentRequest(core).fromArray(jsonresponse);
+                        resolve(paymentRequest);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     getNetwork(): Network {
         return this.network;
     }
@@ -81,7 +120,7 @@ class Store extends Network {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                        throw new Error(jsonresponse.error)
                     } else {
 
                         var response = new Array<NestedItem>();
@@ -95,6 +134,8 @@ class Store extends Network {
                         resolve(response);
 
                     }
+                }).catch(function (err) {
+                    reject(err);
                 });
             } catch (e) {
                 reject(e);

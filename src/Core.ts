@@ -22,6 +22,49 @@ class Core {
 
     }
 
+    public requestGlobalHash() {
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+
+                return fetch("https://api.purecore.io/rest/2/session/hash/list/", { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+
+                        throw new Error(jsonresponse.error)
+
+                    } else {
+
+                        var response = new Array();
+
+                        jsonresponse.forEach(hashData => {
+
+                            var hash = new ConnectionHashGlobal(new Core());
+                            response.push(hash.fromArray(hashData))
+
+                        });
+
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+
+                    reject(error);
+
+                })
+
+            } catch (e) {
+
+                reject(e);
+
+            }
+        });
+
+    }
+
     public getPlayersFromIds(ids): Array<Player> {
         var playerList = new Array<Player>();
         ids.forEach(id => {
@@ -107,7 +150,11 @@ class Core {
     }
 
     public getKey() {
-        return this.key;
+        if (this.key == undefined) {
+            return null;
+        } else {
+            return this.key;
+        }
     }
 
     public getElements() {
