@@ -14,6 +14,7 @@ class Store extends Network {
         var core = this.network.core;
         var instance = this.network.asInstance();
         var idList = [];
+        
         itemList.forEach(item => {
             idList.push(item.uuid);
         });
