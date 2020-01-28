@@ -1745,19 +1745,39 @@ class Store extends Network {
         itemList.forEach(item => {
             idList.push(item.uuid);
         });
-        var url;
+        var args;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/payment/request/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+            args = {
+                hash: core.getCoreSession().getHash(),
+                network: instance.getId(),
+                products: JSON.stringify(idList),
+                username: username
+            };
         }
         else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/payment/request/?key=" + core.getKey() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+            args = {
+                key: core.getKey(),
+                products: JSON.stringify(idList),
+                username: username
+            };
         }
         else {
-            url = "https://api.purecore.io/rest/2/payment/request/?network=" + instance.getId() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+            args = {
+                network: instance.getId(),
+                products: JSON.stringify(idList),
+                username: username
+            };
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch("https://api.purecore.io/rest/2/payment/request/", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(args)
+                }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
