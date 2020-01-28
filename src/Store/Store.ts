@@ -17,6 +17,14 @@ class Store extends Network {
         return finalList;
     }
 
+    public itemIdListFromJSON(json): Array<StoreItem> {
+        var finalList = new Array<StoreItem>();
+        json.forEach(item => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
+    }
+
     requestPayment(itemList: Array<StoreItem>, username: string) {
 
         var core = this.network.core;

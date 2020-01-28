@@ -1731,6 +1731,13 @@ class Store extends Network {
         });
         return finalList;
     }
+    itemIdListFromJSON(json) {
+        var finalList = new Array();
+        json.forEach(item => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
+    }
     requestPayment(itemList, username) {
         var core = this.network.core;
         var instance = this.network.asInstance();
