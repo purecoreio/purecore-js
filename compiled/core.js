@@ -1724,6 +1724,13 @@ class Store extends Network {
         super(network.core, network.asInstance());
         this.network = network;
     }
+    itemIdList(list) {
+        var finalList = new Array();
+        list.forEach(item => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
+    }
     requestPayment(itemList, username) {
         var core = this.network.core;
         var instance = this.network.asInstance();

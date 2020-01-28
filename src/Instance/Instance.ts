@@ -24,7 +24,7 @@ class Instance extends Core {
         } else {
             url = "https://api.purecore.io/rest/2/instance/delete/?key=" + core.getKey() + "&instance=" + instance.getId();
         }
-
+        
         return new Promise(function (resolve, reject) {
 
             try {

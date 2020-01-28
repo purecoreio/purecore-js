@@ -9,12 +9,20 @@ class Store extends Network {
 
     }
 
+    public itemIdList(list: Array<StoreItem>): Array<StoreItem> {
+        var finalList = new Array<StoreItem>();
+        list.forEach(item => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
+    }
+
     requestPayment(itemList: Array<StoreItem>, username: string) {
 
         var core = this.network.core;
         var instance = this.network.asInstance();
         var idList = [];
-        
+
         itemList.forEach(item => {
             idList.push(item.uuid);
         });
