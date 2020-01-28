@@ -1749,8 +1749,11 @@ class Store extends Network {
         if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/payment/request/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
         }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/payment/request/?key=" + core.getKey() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+        }
         else {
-            url = "https://api.purecore.io/rest/2/payment/request/?key=" + core.getKey() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+            url = "https://api.purecore.io/rest/2/payment/request/?network=" + instance.getId() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
         }
         return new Promise(function (resolve, reject) {
             try {
