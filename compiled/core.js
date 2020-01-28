@@ -1750,7 +1750,7 @@ class Store extends Network {
             url = "https://api.purecore.io/rest/2/payment/request/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
         }
         else {
-            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
+            url = "https://api.purecore.io/rest/2/payment/request/?key=" + core.getKey() + instance.getId() + "&products=" + JSON.stringify(idList) + "&username=" + username;
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1758,7 +1758,7 @@ class Store extends Network {
                     return response.json();
                 }).then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error);
+                        reject(new Error(jsonresponse.error));
                     }
                     else {
                         var paymentRequest = new CorePaymentRequest(core).fromArray(jsonresponse);
