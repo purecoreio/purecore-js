@@ -35,32 +35,20 @@ class Store extends Network {
             idList.push(item.uuid);
         });
 
-        var args;
+        var body = "";
 
         if (core.getTool() instanceof Session) {
 
-            args = {
-                hash:core.getCoreSession().getHash(),
-                network: instance.getId(),
-                products: JSON.stringify(idList),
-                username: username
-            }
+            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
 
         } else if (core.getKey() != null) {
 
-            args = {
-                key: core.getKey(),
-                products: JSON.stringify(idList),
-                username: username
-            }
+            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
 
         } else {
 
-            args = {
-                network: instance.getId(),
-                products: JSON.stringify(idList),
-                username: username
-            }
+            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
+
         }
 
         return new Promise(function (resolve, reject) {
@@ -69,10 +57,10 @@ class Store extends Network {
                 return fetch("https://api.purecore.io/rest/2/payment/request/", {
                     method: 'POST',
                     headers: {
-                      'Accept': 'application/json',
-                      'Content-Type': 'application/json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: JSON.stringify(args)
+                    body: body
                 }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {

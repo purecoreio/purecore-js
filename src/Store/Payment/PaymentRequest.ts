@@ -32,6 +32,7 @@ class CorePaymentRequest extends Core {
         });
 
         this.username = array.username;
+
         try {
             this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
         } catch (error) {
@@ -44,6 +45,18 @@ class CorePaymentRequest extends Core {
 
                 // TODO
 
+            });
+
+        }
+
+        if (array.warnings != null) {
+
+            array.warnings.forEach(warning => {
+                try {
+                    this.warnings.push(new Warning(warning.cause, warning.text));
+                } catch (error) {
+                    // ignore
+                }
             });
 
         }

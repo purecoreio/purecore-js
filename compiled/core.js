@@ -1745,28 +1745,15 @@ class Store extends Network {
         itemList.forEach(item => {
             idList.push(item.uuid);
         });
-        var args;
+        var body = "";
         if (core.getTool() instanceof Session) {
-            args = {
-                hash: core.getCoreSession().getHash(),
-                network: instance.getId(),
-                products: JSON.stringify(idList),
-                username: username
-            };
+            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
         }
         else if (core.getKey() != null) {
-            args = {
-                key: core.getKey(),
-                products: JSON.stringify(idList),
-                username: username
-            };
+            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
         }
         else {
-            args = {
-                network: instance.getId(),
-                products: JSON.stringify(idList),
-                username: username
-            };
+            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1774,9 +1761,9 @@ class Store extends Network {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: JSON.stringify(args)
+                    body: body
                 }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
@@ -1940,6 +1927,16 @@ class CorePaymentRequest extends Core {
         if (array.sessionList != null) {
             array.sessionList.forEach(session => {
                 // TODO
+            });
+        }
+        if (array.warnings != null) {
+            array.warnings.forEach(warning => {
+                try {
+                    this.warnings.push(new Warning(warning.cause, warning.text));
+                }
+                catch (error) {
+                    // ignore
+                }
             });
         }
         if (array.gateways != null) {
