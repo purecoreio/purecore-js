@@ -1925,7 +1925,7 @@ class CorePaymentRequest extends Core {
             url = "https://api.purecore.io/rest/2/payment/request/isPaid/?key=" + core.getKey() + "&request=" + request;
         }
         else {
-            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?network=" + request;
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?request=" + request;
         }
         return new Promise(function (resolve, reject) {
             try {
