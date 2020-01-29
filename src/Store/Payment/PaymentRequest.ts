@@ -23,6 +23,44 @@ class CorePaymentRequest extends Core {
         this.gateways = new Array<Gateway>();
     }
 
+    isPaid() {
+
+        var core = this.core;
+        var request = this.uuid;
+
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?hash=" + core.getCoreSession().getHash() + "&request=" + request;
+        } else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?key=" + core.getKey() + "&request=" + request;
+        } else {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?network=" + request;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error))
+                    } else {
+
+                        resolve(jsonresponse.paid);
+
+                    }
+                }).catch(function (err) {
+                    reject(err);
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     fromArray(array): CorePaymentRequest {
         this.uuid = array.uuid;
         this.store = new Store(new Network(this.core, new Instance(this.core, array.store.network.uuid, array.store.network.name, "NTW")));

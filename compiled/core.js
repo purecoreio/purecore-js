@@ -1827,8 +1827,11 @@ class Store extends Network {
         if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
         }
-        else {
+        else if (core.getKey() != null) {
             url = "https://api.purecore.io/rest/2/store/item/list/?key=" + core.getKey() + "&network=" + instance.getId();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/store/item/list/?network=" + instance.getId();
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -1910,6 +1913,39 @@ class CorePaymentRequest extends Core {
         this.warnings = new Array();
         this.discounts = new Array();
         this.gateways = new Array();
+    }
+    isPaid() {
+        var core = this.core;
+        var request = this.uuid;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?hash=" + core.getCoreSession().getHash() + "&request=" + request;
+        }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?key=" + core.getKey() + "&request=" + request;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/payment/request/isPaid/?network=" + request;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        resolve(jsonresponse.paid);
+                    }
+                }).catch(function (err) {
+                    reject(err);
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     fromArray(array) {
         this.uuid = array.uuid;
