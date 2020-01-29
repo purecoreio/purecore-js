@@ -141,8 +141,10 @@ class Store extends Network {
 
         if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
-        } else {
+        } else if (core.getKey() != null) {
             url = "https://api.purecore.io/rest/2/store/item/list/?key=" + core.getKey() + "&network=" + instance.getId();
+        } else {
+            url = "https://api.purecore.io/rest/2/store/item/list/?network=" + instance.getId();
         }
 
         return new Promise(function (resolve, reject) {
