@@ -1939,6 +1939,16 @@ class CorePaymentRequest extends Core {
                 }
             });
         }
+        if (array.discounts != null) {
+            array.discounts.forEach(discount => {
+                try {
+                    this.discounts.push(new Discount(discount.type, discount.id, discount.description, discount.amount));
+                }
+                catch (error) {
+                    // ignore
+                }
+            });
+        }
         if (array.gateways != null) {
             array.gateways.forEach(gateway => {
                 this.gateways.push(new Gateway(gateway.name, gateway.url, gateway.color, gateway.logo));
