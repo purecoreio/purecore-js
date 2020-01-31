@@ -15,6 +15,10 @@ class Network extends Core {
         return new Store(this);
     }
 
+    getForum(): Forum {
+        return new Forum(this);
+    }
+
     getId() {
         return this.uuid;
     }
