@@ -26,6 +26,50 @@ class ForumCategory extends Core {
         return this;
     }
 
+    public getPosts(page = 0) {
+
+        if (page == null || page == undefined) {
+            page = 0;
+        }
+        
+        var catid = this.uuid;
+        var core = this.network.core;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?hash=" + core.getCoreSession().getHash() + "&category=" + catid + "&page=" + page;
+        } else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?key=" + core.getKey() + "&category=" + catid + "&page=" + page;
+        } else {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?category=" + catid + "&page=" + page;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    } else {
+
+                        var finalResponse = new Array<ForumPost>();
+                        jsonresponse.forEach(postJSON => {
+                            finalResponse.push(new ForumPost(core).fromArray(postJSON));
+                        });
+
+                        resolve(finalResponse);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
 
     public createPost(title, content, player: Player) {
 

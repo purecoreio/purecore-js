@@ -15,6 +15,47 @@ class ForumSection extends Core {
         this.network = network;
     }
 
+    public getCategories() {
+
+        var secid = this.uuid;
+        var core = this.network.core;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?hash=" + core.getCoreSession().getHash() + "&section=" + secid;
+        } else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?key=" + core.getKey() + "&section=" + secid;
+        } else {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?section=" + secid;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    } else {
+
+                        var finalResponse = new Array<ForumCategory>();
+                        jsonresponse.forEach(categoryJSON => {
+                            finalResponse.push(new ForumCategory(core).fromArray(categoryJSON));
+                        });
+
+                        resolve(finalResponse);
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
     public fromArray(array): ForumSection {
         this.uuid = array.uuid;
         this.name = array.name;

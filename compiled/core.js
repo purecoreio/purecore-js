@@ -436,6 +436,44 @@ class ForumCategory extends Core {
         this.section = new ForumSection(this.core).fromArray(array.section);
         return this;
     }
+    getPosts(page = 0) {
+        if (page == null || page == undefined) {
+            page = 0;
+        }
+        var catid = this.uuid;
+        var core = this.network.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?hash=" + core.getCoreSession().getHash() + "&category=" + catid + "&page=" + page;
+        }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?key=" + core.getKey() + "&category=" + catid + "&page=" + page;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/forum/get/post/list/?category=" + catid + "&page=" + page;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        var finalResponse = new Array();
+                        jsonresponse.forEach(postJSON => {
+                            finalResponse.push(new ForumPost(core).fromArray(postJSON));
+                        });
+                        resolve(finalResponse);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     createPost(title, content, player) {
         var core = this.core;
         var playerid = player.getId();
@@ -473,6 +511,41 @@ class ForumCategory extends Core {
 class Forum {
     constructor(network) {
         this.network = network;
+    }
+    getSections() {
+        var core = this.network.core;
+        var network = this.network;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
+        }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?key=" + core.getKey();
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?network=" + network.getId();
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        var finalResponse = new Array();
+                        jsonresponse.forEach(sectionJSON => {
+                            finalResponse.push(new ForumSection(core).fromArray(sectionJSON));
+                        });
+                        resolve(finalResponse);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     createSection(name, description) {
         var core = this.network.core;
@@ -539,6 +612,41 @@ class ForumSection extends Core {
         this.name = name;
         this.description = description;
         this.network = network;
+    }
+    getCategories() {
+        var secid = this.uuid;
+        var core = this.network.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?hash=" + core.getCoreSession().getHash() + "&section=" + secid;
+        }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?key=" + core.getKey() + "&section=" + secid;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/forum/get/section/list/?section=" + secid;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        var finalResponse = new Array();
+                        jsonresponse.forEach(categoryJSON => {
+                            finalResponse.push(new ForumCategory(core).fromArray(categoryJSON));
+                        });
+                        resolve(finalResponse);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     fromArray(array) {
         this.uuid = array.uuid;
