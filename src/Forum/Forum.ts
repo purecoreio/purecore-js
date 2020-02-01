@@ -47,6 +47,40 @@ class Forum {
 
     }
 
+    public getCategory(catid) {
+
+        var core = this.network.core;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/category/?hash=" + core.getCoreSession().getHash() + "&category=" + catid;
+        } else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/category/?key=" + core.getKey() + "&category=" + catid;
+        } else {
+            url = "https://api.purecore.io/rest/2/forum/get/category/?category=" + catid;
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    } else {
+                        resolve(new ForumCategory(core).fromArray(jsonresponse));
+
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+
+    }
+
     public createSection(name, description) {
 
         var core = this.network.core;
