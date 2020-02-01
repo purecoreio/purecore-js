@@ -1013,8 +1013,11 @@ class Network extends Core {
             if (this.core.getTool() instanceof Session) {
                 url = "https://api.purecore.io/rest/2/punishment/offence/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
             }
+            else if (this.core.getKey() != null) {
+                url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey();
+            }
             else {
-                url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey() + "&network=" + this.getId();
+                url = "https://api.purecore.io/rest/2/punishment/offence/list/?network=" + this.getId();
             }
             return new Promise(function (resolve, reject) {
                 try {
