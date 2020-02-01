@@ -618,13 +618,13 @@ class ForumSection extends Core {
         var core = this.network.core;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?hash=" + core.getCoreSession().getHash() + "&section=" + secid;
+            url = "https://api.purecore.io/rest/2/forum/get/category/list/?hash=" + core.getCoreSession().getHash() + "&section=" + secid;
         }
         else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?key=" + core.getKey() + "&section=" + secid;
+            url = "https://api.purecore.io/rest/2/forum/get/category/list/?key=" + core.getKey() + "&section=" + secid;
         }
         else {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?section=" + secid;
+            url = "https://api.purecore.io/rest/2/forum/get/category/list/?section=" + secid;
         }
         return new Promise(function (resolve, reject) {
             try {
