@@ -478,9 +478,7 @@ class ForumCategory extends Core {
         var core = this.core;
         var url;
         if (core.getTool() instanceof Session) {
-            var player = this.core.getCoreSession().getPlayer();
-            var playerid = player.getId();
-            url = "https://api.purecore.io/rest/2/forum/create/post/?hash=" + core.getCoreSession().getHash() + "&category=" + this.uuid + "&title=" + title + "&player=" + playerid + "&content=" + escape(content);
+            url = "https://api.purecore.io/rest/2/forum/create/post/?hash=" + core.getCoreSession().getHash() + "&category=" + this.uuid + "&title=" + title + "&content=" + escape(content);
         }
         else {
             throw new Error("You're not logged in");
