@@ -657,6 +657,33 @@ class ForumPost extends Core {
         this.category = new ForumCategory(this.core).fromArray(array.category);
         return this;
     }
+    createReply(content) {
+        var core = this.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/reply/post/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
+        }
+        else {
+            throw new Error("You're not logged in");
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        resolve(new ForumReply(core).fromArray(jsonresponse));
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     getReplies(page = 0) {
         if (page == null || page == undefined) {
             page = 0;
@@ -718,6 +745,33 @@ class ForumReply extends Core {
             this.replyingTo = new ForumReply(this.core).fromArray(array.replyingTo);
         }
         return this;
+    }
+    createReply(content) {
+        var core = this.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/reply/post/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
+        }
+        else {
+            throw new Error("You're not logged in");
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        resolve(new ForumReply(core).fromArray(jsonresponse));
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getReplies(page = 0) {
         if (page == null || page == undefined) {
