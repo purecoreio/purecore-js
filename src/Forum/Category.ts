@@ -31,7 +31,7 @@ class ForumCategory extends Core {
         if (page == null || page == undefined) {
             page = 0;
         }
-        
+
         var catid = this.uuid;
         var core = this.network.core;
         var url;
@@ -71,18 +71,19 @@ class ForumCategory extends Core {
 
     }
 
-    public createPost(title, content, player: Player) {
+    public createPost(title, content) {
 
         var core = this.core;
-        var playerid = player.getId();
         var url;
 
         if (core.getTool() instanceof Session) {
+
+            var player = this.core.getCoreSession().getPlayer();
+            var playerid = player.getId();
+
             url = "https://api.purecore.io/rest/2/forum/create/post/?hash=" + core.getCoreSession().getHash() + "&category=" + this.uuid + "&title=" + title + "&player=" + playerid + "&content=" + escape(content);
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/create/post/?key=" + core.getKey() + "&category=" + this.uuid + "&title=" + title + "&player=" + playerid + "&content=" + escape(content);;
         } else {
-            url = "https://api.purecore.io/rest/2/forum/create/post/?category=" + this.uuid + "&title=" + title + "&player=" + playerid + "&content=" + escape(content);;
+            throw new Error("You're not logged in");
         }
 
         return new Promise(function (resolve, reject) {
