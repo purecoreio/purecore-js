@@ -1,34 +1,32 @@
-class ForumPost extends Core {
+class ForumReply extends Core {
 
     public core: Core;
     public uuid;
-    public title;
     public content;
     public player: Player;
-    public open: boolean;
     public network: Network;
-    public category: ForumCategory;
+    public replyingTo;
 
-    public constructor(core: Core, uuid?: string, title?: string, content?: string, player?: Player, open?: boolean, network?: Network, category?: ForumCategory) {
+    public constructor(core: Core, uuid?: string, content?: string, player?: Player, network?: Network, replyingTo?: ForumCategory) {
         super(core.getTool());
         this.core = core;
         this.uuid = uuid;
-        this.title = title;
         this.content = content;
         this.player = player;
-        this.open = open;
         this.network = network;
-        this.category = category;
+        this.replyingTo = replyingTo;
     }
 
-    public fromArray(array): ForumPost {
+    public fromArray(array): ForumReply {
         this.uuid = array.uuid;
-        this.title = array.title;
         this.content = array.content;
         this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
-        this.open = array.open;
         this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
-        this.category = new ForumCategory(this.core).fromArray(array.category);
+        if ("title" in array.replyingTo) {
+            this.replyingTo = new ForumPost(this.core).fromArray(array.replyingTo);
+        } else {
+            this.replyingTo = new ForumReply(this.core).fromArray(array.replyingTo);
+        }
         return this;
     }
 
