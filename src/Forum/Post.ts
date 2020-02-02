@@ -38,7 +38,7 @@ class ForumPost extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/reply/post/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
+            url = "https://api.purecore.io/rest/2/forum/create/reply/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
         } else {
             throw new Error("You're not logged in");
         }

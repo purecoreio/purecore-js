@@ -661,7 +661,7 @@ class ForumPost extends Core {
         var core = this.core;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/reply/post/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
+            url = "https://api.purecore.io/rest/2/forum/create/reply/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
         }
         else {
             throw new Error("You're not logged in");
@@ -738,11 +738,11 @@ class ForumReply extends Core {
         this.content = array.content;
         this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
         this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
-        if ("title" in array.replyingTo) {
-            this.replyingTo = new ForumPost(this.core).fromArray(array.replyingTo);
+        if ("title" in array.responseTo) {
+            this.replyingTo = new ForumPost(this.core).fromArray(array.responseTo);
         }
         else {
-            this.replyingTo = new ForumReply(this.core).fromArray(array.replyingTo);
+            this.replyingTo = new ForumReply(this.core).fromArray(array.responseTo);
         }
         return this;
     }
@@ -750,7 +750,7 @@ class ForumReply extends Core {
         var core = this.core;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/reply/post/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
+            url = "https://api.purecore.io/rest/2/forum/create/reply/?hash=" + core.getCoreSession().getHash() + "&object=" + this.uuid + "&content=" + escape(content);
         }
         else {
             throw new Error("You're not logged in");
