@@ -571,6 +571,36 @@ class Forum {
             }
         });
     }
+    getPost(postid) {
+        var core = this.network.core;
+        var url;
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/?hash=" + core.getCoreSession().getHash() + "&post=" + postid;
+        }
+        else if (core.getKey() != null) {
+            url = "https://api.purecore.io/rest/2/forum/get/post/?key=" + core.getKey() + "&post=" + postid;
+        }
+        else {
+            url = "https://api.purecore.io/rest/2/forum/get/post/?post=" + postid;
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        resolve(new ForumPost(core).fromArray(jsonresponse));
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     createSection(name, description) {
         var core = this.network.core;
         var network = this.network;
