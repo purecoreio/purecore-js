@@ -2208,6 +2208,37 @@ class Store extends Network {
         super(network.core, network.asInstance());
         this.network = network;
     }
+    getGateways() {
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/store/gateway/list/", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: "hash=" + this.network.core.getCoreSession().getHash() + "&network=" + this.network.getId()
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error));
+                    }
+                    else {
+                        var methods = [];
+                        jsonresponse.forEach(gtw => {
+                            var gtf = new Gateway(gtw.name, null, null, null);
+                            methods.push(gtf);
+                        });
+                        resolve(methods);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     itemIdList(list) {
         var finalList = new Array();
         list.forEach(item => {
