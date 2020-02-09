@@ -25,6 +25,12 @@ class Store extends Network {
         return finalList;
     }
 
+    getStripeWalletLink() {
+        var hash = this.network.core.getCoreSession().getHash();
+        var ntwid = this.network.getId();
+        return "https://api.purecore.io/link/stripe/wallet/?hash=" + hash + "&network=" + ntwid
+    }
+
     requestPayment(itemList: Array<StoreItem>, username: string) {
 
         var core = this.network.core;

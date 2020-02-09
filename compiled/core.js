@@ -2222,6 +2222,11 @@ class Store extends Network {
         });
         return finalList;
     }
+    getStripeWalletLink() {
+        var hash = this.network.core.getCoreSession().getHash();
+        var ntwid = this.network.getId();
+        return "https://api.purecore.io/link/stripe/wallet/?hash=" + hash + "&network=" + ntwid;
+    }
     requestPayment(itemList, username) {
         var core = this.network.core;
         var instance = this.network.asInstance();
