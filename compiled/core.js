@@ -2209,6 +2209,8 @@ class Store extends Network {
         this.network = network;
     }
     getGateways() {
+        let hash = this.network.core.getCoreSession().getHash();
+        let ntwid = this.network.getId();
         return new Promise(function (resolve, reject) {
             try {
                 return fetch("https://api.purecore.io/rest/2/store/gateway/list/", {
@@ -2217,7 +2219,7 @@ class Store extends Network {
                         'Accept': 'application/json',
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: "hash=" + this.network.core.getCoreSession().getHash() + "&network=" + this.network.getId()
+                    body: "hash=" + hash + "&network=" + ntwid
                 }).then(function (response) {
                     return response.json();
                 }).then(function (jsonresponse) {
@@ -2257,6 +2259,11 @@ class Store extends Network {
         var hash = this.network.core.getCoreSession().getHash();
         var ntwid = this.network.getId();
         return "https://api.purecore.io/link/stripe/wallet/?hash=" + hash + "&network=" + ntwid;
+    }
+    getPayPalWalletLink() {
+        var hash = this.network.core.getCoreSession().getHash();
+        var ntwid = this.network.getId();
+        return "https://api.purecore.io/link/paypal/wallet/?hash=" + hash + "&network=" + ntwid;
     }
     requestPayment(itemList, username) {
         var core = this.network.core;
