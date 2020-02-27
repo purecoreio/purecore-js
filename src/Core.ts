@@ -22,6 +22,49 @@ class Core {
 
     }
 
+    public getPlans() {
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+
+                return fetch("https://api.purecore.io/rest/2/plan/list/", { method: "GET" }).then(function (response) {
+
+                    return response.json();
+
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+
+                        throw new Error(jsonresponse.error)
+
+                    } else {
+
+                        var response = new Array<Plan>();
+
+                        jsonresponse.forEach(planData => {
+
+                            var plan = new Plan().fromArray(planData);
+                            response.push(plan)
+
+                        });
+
+                        resolve(response)
+                    }
+                }).catch(function (error) {
+
+                    reject(error);
+
+                })
+
+            } catch (e) {
+
+                reject(e);
+
+            }
+        });
+
+    }
+
     public requestGlobalHash() {
 
         return new Promise(function (resolve, reject) {

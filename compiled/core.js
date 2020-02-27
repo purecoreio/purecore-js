@@ -24,6 +24,32 @@ class Core {
         }
         // if not start with fromdiscord or fromtoken
     }
+    getPlans() {
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch("https://api.purecore.io/rest/2/plan/list/", { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error);
+                    }
+                    else {
+                        var response = new Array();
+                        jsonresponse.forEach(planData => {
+                            var plan = new Plan().fromArray(planData);
+                            response.push(plan);
+                        });
+                        resolve(response);
+                    }
+                }).catch(function (error) {
+                    reject(error);
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
     requestGlobalHash() {
         return new Promise(function (resolve, reject) {
             try {
@@ -163,6 +189,55 @@ try {
 }
 catch (error) {
     console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available");
+}
+class Plan {
+    constructor(uuid, name, price, features) {
+        this.uuid = uuid;
+        this.name = name;
+        this.price = price;
+        this.features = features;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.price = array.price;
+        this.features = new Array();
+        array.features.forEach(planSectionJSON => {
+            var planSection = new PlanSection().fromArray(planSectionJSON);
+            this.features.push(planSection);
+        });
+        return this;
+    }
+}
+class PlanFeature {
+    constructor(technicalName, value, displayValue, name) {
+        this.technicalName = technicalName;
+        this.value = value;
+        this.displayValue = displayValue;
+        this.name = name;
+    }
+    fromArray(array) {
+        this.technicalName = array.technical_name;
+        this.value = array.value;
+        this.displayValue = array.displayValue;
+        this.name = array.name;
+        return this;
+    }
+}
+class PlanSection {
+    constructor(name, features) {
+        this.name = name;
+        this.features = features;
+    }
+    fromArray(array) {
+        this.name = array.name;
+        this.features = new Array();
+        array.features.forEach(planFeatureJSON => {
+            var planFeature = new PlanFeature().fromArray(planFeatureJSON);
+            this.features.push(planFeature);
+        });
+        return this;
+    }
 }
 class Command {
     constructor(uuid, cmd, network) {
