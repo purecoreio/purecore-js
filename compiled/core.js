@@ -462,6 +462,19 @@ class MatchingRange {
         return this.matchWith;
     }
 }
+class DiscordGuild {
+    constructor(network, name, uuid, memberCount) {
+        this.network = network;
+        this.name = name;
+        this.uuid = uuid;
+        this.memberCount = memberCount;
+    }
+    fromArray(array) {
+        this.name = array.name;
+        this.uuid = array.uuid;
+        this.memberCount = array.memberCount;
+    }
+}
 class CheckoutElement extends Core {
     constructor(core, products, successFunction) {
         super(core.getKey());
@@ -1169,6 +1182,34 @@ class Network extends Core {
     }
     asInstance() {
         return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
+    }
+    getGuild() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?key=" + core.getKey();
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new DiscordGuild(main).fromArray(jsonresponse);
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
     }
     setGuild(discordGuildId) {
         return __awaiter(this, void 0, void 0, function* () {

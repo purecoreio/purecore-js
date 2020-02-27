@@ -101,6 +101,33 @@ class Network extends Core {
         return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
     }
 
+    async getGuild() {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?key=" + core.getKey();
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new DiscordGuild(main).fromArray(jsonresponse);
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     async setGuild(discordGuildId: string) {
 
         var key = this.core.getKey();
@@ -195,7 +222,7 @@ class Network extends Core {
 
         if (this.core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/punishment/offence/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
-        } else if (this.core.getKey()!=null) {
+        } else if (this.core.getKey() != null) {
             url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey();
         } else {
             url = "https://api.purecore.io/rest/2/punishment/offence/list/?network=" + this.getId();
