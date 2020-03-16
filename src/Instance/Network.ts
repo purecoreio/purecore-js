@@ -101,6 +101,87 @@ class Network extends Core {
         return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
     }
 
+    async getVotingSites() {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/?key=" + core.getKey();
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    var siteArray = new Array<VotingSite>();
+                    jsonresponse.forEach(votingSite => {
+                        var site = new VotingSite(core).fromArray(votingSite);
+                        siteArray.push(site);
+                    });
+                    return siteArray;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
+    async getSetupVotingSites(displaySetup: boolean = true) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (displaySetup) {
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+            } else {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?key=" + core.getKey();
+            }
+        } else {
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+            } else {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?key=" + core.getKey();
+            }
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    if (displaySetup) {
+                        var configArray = new Array<VotingSiteConfig>();
+                        jsonresponse.forEach(votingSite => {
+                            var siteConfig = new VotingSiteConfig(core).fromArray(votingSite);
+                            configArray.push(siteConfig);
+                        });
+                        return configArray;
+                    } else {
+                        var siteArray = new Array<VotingSite>();
+                        jsonresponse.forEach(votingSite => {
+                            var site = new VotingSite(core).fromArray(votingSite);
+                            siteArray.push(site);
+                        });
+                        return siteArray;
+                    }
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     async getGuild() {
 
         var core = this.core;

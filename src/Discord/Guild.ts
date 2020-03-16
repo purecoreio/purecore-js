@@ -12,9 +12,10 @@ class DiscordGuild {
         this.memberCount = memberCount;
     }
 
-    public fromArray(array) {
+    public fromArray(array): DiscordGuild {
         this.name = array.name;
         this.uuid = array.uuid;
         this.memberCount = array.memberCount;
+        return this;
     }
 }

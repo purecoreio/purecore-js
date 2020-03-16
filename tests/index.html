@@ -17,11 +17,11 @@
     <script src="../compiled/core.js"></script>
     <script>
         var core = new Core("10997ff01578fb86e266c704795fc11cb703bda3da7ab82f6b83efa8e7041977");
-        var coress = new Core({ "core": {}, "uuid": "0adba250e44c4d6f", "hash": "76fcbbf9613af8ecb3fdbcb31f631d6c6deed494972b5efe248932a41eb5bb23", "device": { "brand": "", "device": "desktop", "model": "", "os": "Windows 10 x64" }, "location": { "city": "Sant Feliu de Llobregat", "state": "Barcelona", "country_code": "ES" }, "usage": { "creation": 1578576048, "uses": null }, "owner": { "core": {}, "name": "Quique", "surname": "Osuna García", "email": "quiquelhappy@gmail.com" } });
-        coress.getInstance("7279390962ba3b09").asNetwork().getPlayer("96e916041747d907").then(function (data) {
+        core.getInstance("7279390962ba3b09").asNetwork().getPlayer("96e916041747d907").then(function (data) {
             // ["7451b10649414987", "b491fbb4473e73c3", "86887f77524113b7", "79e34b795bbef9ad","3aa9521a271ac69b"]
-            data.getMatchingConnections(coress.getInstance("7279390962ba3b09"), 0, coress.getPlayersFromIds([])).then(function (act) {
+            data.getMatchingConnections(core.getInstance("7279390962ba3b09"), 0, core.getPlayersFromIds(["7451b10649414987", "b491fbb4473e73c3", "86887f77524113b7", "79e34b795bbef9ad","3aa9521a271ac69b"])).then(function (act) {
 
+                console.log(act)
                 var playerMatch = []
                 var groupAll = false;
 
@@ -139,6 +139,8 @@
                 chart.render();
 
 
+            }).catch(function (err) {
+                console.log(err);
             })
         })
     </script>
