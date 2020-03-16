@@ -1226,16 +1226,22 @@ class Network extends Core {
                 if (core.getTool() instanceof Session) {
                     url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
                 }
-                else {
+                else if (core.getKey() != null) {
                     url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?key=" + core.getKey();
+                }
+                else {
+                    url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?network=" + main.getId();
                 }
             }
             else {
                 if (core.getTool() instanceof Session) {
                     url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
                 }
-                else {
+                else if (core.getKey() != null) {
                     url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?key=" + core.getKey();
+                }
+                else {
+                    url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?network=" + main.getId();
                 }
             }
             try {
