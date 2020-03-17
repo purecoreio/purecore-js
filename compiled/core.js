@@ -126,6 +126,35 @@ class Core {
             }
         });
     }
+    pushFCM(token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this;
+            var url;
+            if (core.getCoreSession() != null) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/push/fcm/?hash=" + core.getCoreSession().getHash() + "&token=" + token;
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            return true;
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
     getTool() {
         if (this.key != null && this.key != undefined) {
             return this.key;

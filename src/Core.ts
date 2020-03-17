@@ -180,6 +180,37 @@ class Core {
 
     }
 
+    public async pushFCM(token: string) {
+
+        var core = this;
+        var url;
+
+        if(core.getCoreSession()!=null){
+
+            if (this.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/account/push/fcm/?hash=" + core.getCoreSession().getHash() + "&token=" + token;
+            }
+    
+            try {
+                return await fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        return true;
+                    }
+                });
+            } catch (e) {
+                throw new Error(e.message)
+            }
+
+        } else {
+            throw new Error("invalid account");
+        }
+        
+    }
+
     public getTool() {
         if (this.key != null && this.key != undefined) {
             return this.key;
