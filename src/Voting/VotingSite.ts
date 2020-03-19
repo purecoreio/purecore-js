@@ -31,8 +31,13 @@ class VotingSite extends Core {
         return this;
     }
 
-    public async getConfig(network: Network) {
-        // to-do
+    public async getConfig(network: Network, empty: boolean = true) {
+        if (empty) {
+            return new VotingSiteConfig(this.core, network, this, null);
+        } else {
+            throw new Error("to be implemented");
+            // to-do fetch from server
+        }
     }
 
 }

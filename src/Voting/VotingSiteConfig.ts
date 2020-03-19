@@ -26,9 +26,9 @@ class VotingSiteConfig extends Core {
         let main = this;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.getId() + "&url=" + url;
+            url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.getId() + "&url=" + url + "&site=" + main.votingSite.uuid;
         } else {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?key=" + core.getKey() + "&url=" + url;
+            url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?key=" + core.getKey() + "&url=" + url + "&site=" + main.votingSite.uuid;
         }
 
         try {

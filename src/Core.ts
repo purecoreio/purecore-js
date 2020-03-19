@@ -180,17 +180,21 @@ class Core {
 
     }
 
+    public getWorkbench(): Workbench {
+        return new Workbench();
+    }
+
     public async pushFCM(token: string) {
 
         var core = this;
         var url;
 
-        if(core.getCoreSession()!=null){
+        if (core.getCoreSession() != null) {
 
             if (this.getTool() instanceof Session) {
                 url = "https://api.purecore.io/rest/2/account/push/fcm/?hash=" + core.getCoreSession().getHash() + "&token=" + token;
             }
-    
+
             try {
                 return await fetch(url, { method: "GET" }).then(function (response) {
                     return response.json();
@@ -208,7 +212,7 @@ class Core {
         } else {
             throw new Error("invalid account");
         }
-        
+
     }
 
     public getTool() {

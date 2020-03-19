@@ -126,6 +126,9 @@ class Core {
             }
         });
     }
+    getWorkbench() {
+        return new Workbench();
+    }
     pushFCM(token) {
         return __awaiter(this, void 0, void 0, function* () {
             var core = this;
@@ -218,6 +221,217 @@ try {
 }
 catch (error) {
     console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available");
+}
+class Analytic {
+    constructor(timestamp, original, fields) {
+        this.timestamp = timestamp;
+        this.original = original;
+        this.fields = fields;
+    }
+    getTimestamp() {
+        return this.timestamp;
+    }
+    getOriginal() {
+        return this.original;
+    }
+    getFields() {
+        return this.fields;
+    }
+    setFields(fields) {
+        this.fields = fields;
+    }
+}
+class AnalyticField {
+    constructor(value, name, technicalName) {
+        this.value = value;
+        this.name = name;
+        this.technicalName = technicalName;
+    }
+    getTechnicalName() {
+        return this.technicalName;
+    }
+    getName() {
+        return this.name;
+    }
+    getValue() {
+        return this.value;
+    }
+}
+class GrowthAnalytic {
+    constructor(uuid = null, instance = null, newPlayers = 0, activePlayers = 0, inactivePlayers = 0, timestamp = 0) {
+        this.uuid = uuid;
+        this.instance = instance;
+        this.newPlayers = newPlayers;
+        this.activePlayers = activePlayers;
+        this.inactivePlayers = inactivePlayers;
+        this.timestamp = timestamp;
+    }
+    getLegacy() {
+        return new Analytic(this.timestamp, this, this.getFields());
+    }
+    fromArray(array) {
+        this.uuid = null;
+        this.instance = null;
+        this.newPlayers = array.newPlayers;
+        this.activePlayers = array.activePlayers;
+        this.inactivePlayers = array.inactivePlayers;
+        this.timestamp = array.timestamp;
+        return this;
+    }
+    getFields() {
+        var result = new Array();
+        result.push(new AnalyticField(this.newPlayers, "New Players", "newPlayers"));
+        result.push(new AnalyticField(this.activePlayers, "Active Players", "activePlayers"));
+        result.push(new AnalyticField(this.inactivePlayers, "Inactive Players", "inactivePlayers"));
+        return result;
+    }
+}
+class IncomeAnalytic {
+    constructor(uuid = null, store = null, finalIncome = 0, payments = 0, potentialIncome = 0, paymentRequests = 0, timestamp = 0) {
+        this.uuid = uuid;
+        this.store = store;
+        this.finalIncome = finalIncome;
+        this.payments = payments;
+        this.potentialIncome = potentialIncome;
+        this.paymentRequests = paymentRequests;
+        this.timestamp = timestamp;
+    }
+    getLegacy() {
+        return new Analytic(this.timestamp, this, this.getFields());
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.store = null;
+        this.finalIncome = array.finalIncome;
+        this.payments = array.payments;
+        this.potentialIncome = array.potentialIncome;
+        this.paymentRequests = array.paymentRequests;
+        this.timestamp = array.creation;
+        return this;
+    }
+    getFields() {
+        var result = new Array();
+        result.push(new AnalyticField(this.finalIncome, "Income", "income"));
+        result.push(new AnalyticField(this.payments, "Payment Count", "paymentCount"));
+        result.push(new AnalyticField(this.potentialIncome, "Potential Income", "potentialIncome"));
+        result.push(new AnalyticField(this.paymentRequests, "Potential Payment Count", "potentialPaymentCount"));
+        return result;
+    }
+}
+class VoteAnalytic {
+    constructor(uuid = null, network = null, voteCount = 0, voterCount = 0, timestamp = 0) {
+        this.uuid = uuid;
+        this.network = network;
+        this.voteCount = voteCount;
+        this.voterCount = voterCount;
+        this.timestamp = timestamp;
+    }
+    fromArray(array) {
+        this.uuid = array.uuid;
+        this.network = null;
+        this.voteCount = array.voteCount;
+        this.voterCount = array.voterCount;
+        this.timestamp = array.timestamp;
+        return this;
+    }
+    getLegacy() {
+        return new Analytic(this.timestamp, this, this.getFields());
+    }
+    getFields() {
+        var result = new Array();
+        result.push(new AnalyticField(this.voteCount, "Vote count", "voteCount"));
+        result.push(new AnalyticField(this.voterCount, "Voter count", "voterCount"));
+        return result;
+    }
+}
+class Workbench {
+    arrayToLegacy(array) {
+        var final = new Array();
+        array.forEach(element => {
+            var analytic = element.toLegacy();
+            final.push(analytic);
+        });
+        return final;
+    }
+    stack(analytics = new Array(), maxSeconds = 0) {
+        var finalAnalytics = new Array();
+        var timestampStart = null;
+        var itemBeingWorkedOn = null;
+        analytics.forEach(analytic => {
+            if (timestampStart == null) {
+                timestampStart = analytic.getTimestamp();
+                itemBeingWorkedOn = analytic;
+            }
+            else {
+                if ((timestampStart - analytic.getTimestamp()) >= maxSeconds) {
+                    finalAnalytics.push(itemBeingWorkedOn);
+                    itemBeingWorkedOn = analytic;
+                    timestampStart = analytic.getTimestamp();
+                }
+                else {
+                    if (itemBeingWorkedOn.getOriginal() instanceof VoteAnalytic || itemBeingWorkedOn.getOriginal() instanceof IncomeAnalytic) {
+                        var fields = itemBeingWorkedOn.getFields();
+                        var newFields = new Array();
+                        fields.forEach(field => {
+                            analytic.getFields().forEach(fieldTemporal => {
+                                if (field.getTechnicalName() == fieldTemporal.getTechnicalName()) {
+                                    var newField = new AnalyticField(field.value + fieldTemporal.value, field.name, field.technicalName);
+                                    newFields.push(newField);
+                                }
+                            });
+                        });
+                        itemBeingWorkedOn.setFields(newFields);
+                    }
+                    else if (itemBeingWorkedOn.getOriginal() instanceof GrowthAnalytic) {
+                        var fields = itemBeingWorkedOn.getFields();
+                        var newFields = new Array();
+                        fields.forEach(field => {
+                            analytic.getFields().forEach(fieldTemporal => {
+                                if (field.getTechnicalName() == fieldTemporal.getTechnicalName()) {
+                                    var newField = new AnalyticField(field.value, field.name, field.technicalName);
+                                    newFields.push(newField);
+                                }
+                            });
+                        });
+                        itemBeingWorkedOn.setFields(newFields);
+                    }
+                }
+            }
+        });
+        if (!finalAnalytics.includes(itemBeingWorkedOn)) {
+            finalAnalytics.push(itemBeingWorkedOn);
+        }
+        return finalAnalytics;
+    }
+    toApexSeries(analyticArray) {
+        var fieldData = [];
+        analyticArray.forEach(analytic => {
+            var timestamp = analytic.getTimestamp();
+            analytic.getFields().forEach(field => {
+                if (!(field.getTechnicalName() in fieldData)) {
+                    fieldData[field.getTechnicalName()] = {};
+                    fieldData[field.getTechnicalName()]["values"] = [];
+                    fieldData[field.getTechnicalName()]["name"] = field.getName();
+                }
+                fieldData[field.getTechnicalName()].values.push({
+                    x: timestamp,
+                    y: field.getValue()
+                });
+            });
+        });
+        var finalSeries = [];
+        for (const key in fieldData) {
+            if (fieldData.hasOwnProperty(key)) {
+                const element = fieldData[key];
+                var finalSerie = {
+                    name: element.name,
+                    data: element.values
+                };
+                finalSeries.push(finalSerie);
+            }
+        }
+        return finalSeries;
+    }
 }
 class Plan {
     constructor(uuid, name, price, features) {
@@ -1022,6 +1236,39 @@ class Instance extends Core {
         this.name = name;
         this.type = type;
     }
+    getGrowthAnalytics(span = 3600 * 24) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/growth/analytics/?hash=" + core.getCoreSession().getHash() + "&instance=" + main.uuid + "&span=" + span;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/instance/growth/analytics/?key=" + core.getKey() + "&span=" + span;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var growthAnalytics = new Array();
+                        jsonresponse.forEach(growthAnalyticJSON => {
+                            var growthAnalytic = new GrowthAnalytic().fromArray(growthAnalyticJSON);
+                            growthAnalytics.push(growthAnalytic);
+                        });
+                        return growthAnalytics;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
     delete() {
         var core = this.core;
         var instance = this;
@@ -1212,6 +1459,39 @@ class Network extends Core {
     }
     asInstance() {
         return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
+    }
+    getVotingAnalytics(span = 3600 * 24) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?key=" + core.getKey() + "&span=" + span;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var votingAnalytics = new Array();
+                        jsonresponse.forEach(votingAnalyticJSON => {
+                            var votingAnalytic = new VoteAnalytic().fromArray(votingAnalyticJSON);
+                            votingAnalytics.push(votingAnalytic);
+                        });
+                        return votingAnalytics;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
     }
     getVotingSites() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2446,6 +2726,39 @@ class Store extends Network {
         super(network.core, network.asInstance());
         this.network = network;
     }
+    getIncomeAnalytics(span = 3600 * 24) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/income/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/income/analytics/?key=" + core.getKey() + "&span=" + span;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var IncomeAnalytics = new Array();
+                        jsonresponse.forEach(IncomeAnalyticJSON => {
+                            var IncomeAnalyticD = new IncomeAnalytic().fromArray(IncomeAnalyticJSON);
+                            IncomeAnalytics.push(IncomeAnalyticD);
+                        });
+                        return IncomeAnalytics;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
     getGateways() {
         let hash = this.network.core.getCoreSession().getHash();
         let ntwid = this.network.getId();
@@ -3047,9 +3360,15 @@ class VotingSite extends Core {
         this.technicalName = array.technicalName;
         return this;
     }
-    getConfig(network) {
+    getConfig(network, empty = true) {
         return __awaiter(this, void 0, void 0, function* () {
-            // to-do
+            if (empty) {
+                return new VotingSiteConfig(this.core, network, this, null);
+            }
+            else {
+                throw new Error("to be implemented");
+                // to-do fetch from server
+            }
         });
     }
 }
@@ -3072,10 +3391,10 @@ class VotingSiteConfig extends Core {
             var core = this.core;
             let main = this;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.getId() + "&url=" + url;
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.getId() + "&url=" + url + "&site=" + main.votingSite.uuid;
             }
             else {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?key=" + core.getKey() + "&url=" + url;
+                url = "https://api.purecore.io/rest/2/instance/network/voting/site/setup/?key=" + core.getKey() + "&url=" + url + "&site=" + main.votingSite.uuid;
             }
             try {
                 return yield fetch(url, { method: "GET" }).then(function (response) {

@@ -101,6 +101,38 @@ class Network extends Core {
         return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
     }
 
+    async getVotingAnalytics(span = 3600 * 24) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?key=" + core.getKey() + "&span=" + span;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    var votingAnalytics = new Array<VoteAnalytic>();
+                    jsonresponse.forEach(votingAnalyticJSON => {
+                        var votingAnalytic = new VoteAnalytic().fromArray(votingAnalyticJSON);
+                        votingAnalytics.push(votingAnalytic);
+                    });
+                    return votingAnalytics;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     async getVotingSites() {
 
         var core = this.core;

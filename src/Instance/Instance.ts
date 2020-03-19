@@ -13,6 +13,38 @@ class Instance extends Core {
         this.type = type;
     }
 
+    async getGrowthAnalytics(span = 3600 * 24) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/instance/growth/analytics/?hash=" + core.getCoreSession().getHash() + "&instance=" + main.uuid + "&span=" + span;
+        } else {
+            url = "https://api.purecore.io/rest/2/instance/growth/analytics/?key=" + core.getKey() + "&span=" + span;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    var growthAnalytics = new Array<GrowthAnalytic>();
+                    jsonresponse.forEach(growthAnalyticJSON => {
+                        var growthAnalytic = new GrowthAnalytic().fromArray(growthAnalyticJSON);
+                        growthAnalytics.push(growthAnalytic);
+                    });
+                    return growthAnalytics;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     public delete() {
 
         var core = this.core;
@@ -24,7 +56,7 @@ class Instance extends Core {
         } else {
             url = "https://api.purecore.io/rest/2/instance/delete/?key=" + core.getKey() + "&instance=" + instance.getId();
         }
-        
+
         return new Promise(function (resolve, reject) {
 
             try {

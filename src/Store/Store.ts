@@ -9,6 +9,40 @@ class Store extends Network {
 
     }
 
+
+
+    async getIncomeAnalytics(span = 3600 * 24) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/income/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/income/analytics/?key=" + core.getKey() + "&span=" + span;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    var IncomeAnalytics = new Array<IncomeAnalytic>();
+                    jsonresponse.forEach(IncomeAnalyticJSON => {
+                        var IncomeAnalyticD = new IncomeAnalytic().fromArray(IncomeAnalyticJSON);
+                        IncomeAnalytics.push(IncomeAnalyticD);
+                    });
+                    return IncomeAnalytics;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     public getGateways() {
 
         let hash = this.network.core.getCoreSession().getHash();
