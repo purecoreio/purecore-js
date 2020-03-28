@@ -15,7 +15,7 @@ class IncomeAnalytic {
         this.payments = payments;
         this.potentialIncome = potentialIncome;
         this.paymentRequests = paymentRequests;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp * 1000;
     }
 
     public getLegacy(): Analytic {
@@ -29,7 +29,7 @@ class IncomeAnalytic {
         this.payments = array.payments;
         this.potentialIncome = array.potentialIncome;
         this.paymentRequests = array.paymentRequests;
-        this.timestamp = array.creation;
+        this.timestamp = array.timestamp * 1000;
         return this;
     }
 

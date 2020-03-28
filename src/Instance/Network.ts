@@ -98,7 +98,7 @@ class Network extends Core {
     }
 
     asInstance() {
-        return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
+        return new Instance(this.core, this.uuid, this.name, "NTW");
     }
 
     async getVotingAnalytics(span = 3600 * 24) {

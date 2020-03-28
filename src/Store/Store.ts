@@ -9,8 +9,6 @@ class Store extends Network {
 
     }
 
-
-
     async getIncomeAnalytics(span = 3600 * 24) {
 
         var core = this.core;

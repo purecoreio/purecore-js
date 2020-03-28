@@ -234,8 +234,23 @@ class Analytic {
     getOriginal() {
         return this.original;
     }
-    getFields() {
-        return this.fields;
+    getFields(onlyrelative = false) {
+        var final = new Array();
+        if (onlyrelative) {
+            this.fields.forEach(element => {
+                if (element.getName().includes("%")) {
+                    final.push(element);
+                }
+            });
+        }
+        else {
+            this.fields.forEach(element => {
+                if (!element.getName().includes("%")) {
+                    final.push(element);
+                }
+            });
+        }
+        return final;
     }
     setFields(fields) {
         this.fields = fields;
@@ -258,12 +273,15 @@ class AnalyticField {
     }
 }
 class GrowthAnalytic {
-    constructor(uuid = null, instance = null, newPlayers = 0, activePlayers = 0, inactivePlayers = 0, timestamp = 0) {
+    constructor(uuid = null, instance = null, newPlayers = 0, activePlayers = 0, inactivePlayers = 0, newPlayersRelative = 0, activePlayersRelative = 0, inactivePlayersRelative = 0, timestamp = 0) {
         this.uuid = uuid;
         this.instance = instance;
         this.newPlayers = newPlayers;
         this.activePlayers = activePlayers;
         this.inactivePlayers = inactivePlayers;
+        this.newPlayersRelative = newPlayersRelative;
+        this.activePlayersRelative = activePlayersRelative;
+        this.inactivePlayersRelative = inactivePlayersRelative;
         this.timestamp = timestamp;
     }
     getLegacy() {
@@ -275,7 +293,10 @@ class GrowthAnalytic {
         this.newPlayers = array.newPlayers;
         this.activePlayers = array.activePlayers;
         this.inactivePlayers = array.inactivePlayers;
-        this.timestamp = array.timestamp;
+        this.newPlayersRelative = array.newPlayersRelative;
+        this.activePlayersRelative = array.activePlayersRelative;
+        this.inactivePlayersRelative = array.inactivePlayersRelative;
+        this.timestamp = array.timestamp * 1000;
         return this;
     }
     getFields() {
@@ -283,6 +304,9 @@ class GrowthAnalytic {
         result.push(new AnalyticField(this.newPlayers, "New Players", "newPlayers"));
         result.push(new AnalyticField(this.activePlayers, "Active Players", "activePlayers"));
         result.push(new AnalyticField(this.inactivePlayers, "Inactive Players", "inactivePlayers"));
+        result.push(new AnalyticField((this.newPlayersRelative * 100).toFixed(2), "New Players %", "newPlayersRelative"));
+        result.push(new AnalyticField((this.activePlayersRelative * 100).toFixed(2), "Active Players %", "activePlayersRelative"));
+        result.push(new AnalyticField((this.inactivePlayersRelative * 100).toFixed(2), "Inactive Players %", "inactivePlayersRelative"));
         return result;
     }
 }
@@ -294,7 +318,7 @@ class IncomeAnalytic {
         this.payments = payments;
         this.potentialIncome = potentialIncome;
         this.paymentRequests = paymentRequests;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp * 1000;
     }
     getLegacy() {
         return new Analytic(this.timestamp, this, this.getFields());
@@ -306,7 +330,7 @@ class IncomeAnalytic {
         this.payments = array.payments;
         this.potentialIncome = array.potentialIncome;
         this.paymentRequests = array.paymentRequests;
-        this.timestamp = array.creation;
+        this.timestamp = array.timestamp * 1000;
         return this;
     }
     getFields() {
@@ -324,14 +348,14 @@ class VoteAnalytic {
         this.network = network;
         this.voteCount = voteCount;
         this.voterCount = voterCount;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp * 1000;
     }
     fromArray(array) {
         this.uuid = array.uuid;
         this.network = null;
         this.voteCount = array.voteCount;
         this.voterCount = array.voterCount;
-        this.timestamp = array.timestamp;
+        this.timestamp = array.timestamp * 1000;
         return this;
     }
     getLegacy() {
@@ -348,7 +372,7 @@ class Workbench {
     arrayToLegacy(array) {
         var final = new Array();
         array.forEach(element => {
-            var analytic = element.toLegacy();
+            var analytic = element.getLegacy();
             final.push(analytic);
         });
         return final;
@@ -363,7 +387,7 @@ class Workbench {
                 itemBeingWorkedOn = analytic;
             }
             else {
-                if ((timestampStart - analytic.getTimestamp()) >= maxSeconds) {
+                if ((analytic.getTimestamp() - timestampStart) >= maxSeconds) {
                     finalAnalytics.push(itemBeingWorkedOn);
                     itemBeingWorkedOn = analytic;
                     timestampStart = analytic.getTimestamp();
@@ -403,11 +427,11 @@ class Workbench {
         }
         return finalAnalytics;
     }
-    toApexSeries(analyticArray) {
+    toApexSeries(analyticArray, onlyRelative = false) {
         var fieldData = [];
         analyticArray.forEach(analytic => {
             var timestamp = analytic.getTimestamp();
-            analytic.getFields().forEach(field => {
+            analytic.getFields(onlyRelative).forEach(field => {
                 if (!(field.getTechnicalName() in fieldData)) {
                     fieldData[field.getTechnicalName()] = {};
                     fieldData[field.getTechnicalName()]["values"] = [];
@@ -1458,7 +1482,7 @@ class Network extends Core {
         });
     }
     asInstance() {
-        return new Instance(new Core(this.core.getTool()), this.uuid, this.name, "NTW");
+        return new Instance(this.core, this.uuid, this.name, "NTW");
     }
     getVotingAnalytics(span = 3600 * 24) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2400,7 +2424,14 @@ class Session extends Core {
         else if ("owner" in array) {
             this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
         }
-        this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, this.network, this.getUser()));
+        this.core = new Core();
+        this.core.session = this;
+        if ("player" in array) {
+            this.player.core.session = this;
+        }
+        else if ("owner" in array) {
+            this.owner.core.session = this;
+        }
         return this;
     }
     fromHash(sessionHash) {
@@ -3228,6 +3259,32 @@ class Player extends Core {
                             payments.push(new Payment(core).fromArray(paymentJson));
                         });
                         resolve(payments);
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
+    }
+    getDiscordId() {
+        var url = "";
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/get/discord/id/?hash=" + this.core.getCoreSession().getHash();
+        }
+        else {
+            throw new Error("only sessions are supported in this call");
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(jsonresponse.id);
                     }
                 });
             }

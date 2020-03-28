@@ -5,18 +5,292 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Testing</title>
+    <link href="https://fonts.googleapis.com/css?family=Barlow&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://daneden.github.io/animate.css/animate.min.css">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Barlow', sans-serif;
+        }
+
+        p {
+            font-size: 40px;
+            margin: 0px;
+        }
+
+        small {
+            font-size: 20px;
+            color: gray;
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+    </style>
 </head>
 
 <body>
-
-    <h2>Testing</h2>
-    <div id="chart"></div>
+    <center>
+        <input value="24" id="input" type="number"><button
+            onclick="getAnalytics(document.getElementById('input').value*3600)">update</button>
+    </center>
+    <div id="container" class="animated fadeOut">
+        <div style="width: 1200px; margin: auto;" id="chart0"></div>
+        <center>
+            <div style="display: inline-block; width: 400px">
+                <p id="income"></p>
+                <small>Income</small>
+            </div>
+            <div style="display: inline-block; width: 400px">
+                <p id="payments"></p>
+                <small>Payments</small>
+            </div>
+            <div style="display: inline-block; width: 400px">
+                <p id="potential"></p>
+                <small>Potential Payments</small>
+            </div>
+        </center>
+        <div style="width: 1200px; margin: auto; margin-top: 40px;" id="chart"></div>
+        <div style="width: 1200px; margin: auto; margin-top: 40px;" id="chart1"></div>
+        <center>
+            <div style="display: inline-block; width: 400px">
+                <p id="inactivePlayers"></p>
+                <small>inactive players</small>
+            </div>
+            <div style="display: inline-block; width: 400px">
+                <p id="newPlayers"></p>
+                <small>new players</small>
+            </div>
+            <div style="display: inline-block; width: 400px">
+                <p id="activePlayers"></p>
+                <small>returning players</small>
+            </div>
+        </center>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="../compiled/core.js"></script>
     <script>
+
         var core = new Core("10997ff01578fb86e266c704795fc11cb703bda3da7ab82f6b83efa8e7041977");
+        function percentColor(value) {
+            if ((value * 100).toFixed(2) > 0) {
+                return "<span style='color:#00e676'>+" + (value * 100).toFixed(2) + "%</span>";
+            } else if ((value * 100).toFixed(2) == 0) {
+                return "<span style='color:gray'>—</span>";
+            } else {
+                return "<span style='color:#F44336'>" + (value * 100).toFixed(2) + "%</span>";
+            }
+        }
+
+        function getAnalytics(span) {
+
+            document.getElementById("container").classList.add("fadeOut")
+            document.getElementById("container").classList.remove("fadeIn")
+
+            core.getInstance("7279390962ba3b09", null, null).asNetwork().getVotingAnalytics(span).then(function (data) {
+
+                var options = {
+                    title: {
+                        text: 'Votes',
+                        offsetX: 0,
+                        style: {
+                            fontSize: '24px',
+                            color: "gray",
+                            fontFamily: 'barlow'
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        followCursor: false,
+                        fillSeriesColor: true,
+                        theme: false,
+                        style: {
+                            fontSize: "12px"
+                        },
+                        x: {
+                            show: true,
+                            format: "dd MMM"
+                        }
+                    },
+                    chart: {
+                        id: 'line-1',
+                        group: 'server',
+                        type: "line",
+                        height: 200,
+                        sparkline: {
+                            enabled: true
+                        }
+                    },
+                    stroke: {
+                        curve: "straight"
+                    },
+                    fill: {
+                        opacity: 1
+                    },
+                    xaxis: {
+                        crosshairs: {
+                            width: 1
+                        }
+                    },
+                    yaxis: {
+                        min: -1,
+                        labels: {
+                            minWidth: 40
+                        }
+                    },
+                    series: core.getWorkbench().toApexSeries(core.getWorkbench().arrayToLegacy(data), false),
+
+                };
+
+                var chart2 = new ApexCharts(document.querySelector("#chart"), options);
+
+                core.getInstance("7279390962ba3b09", null, null).asNetwork().asInstance().getGrowthAnalytics(span).then(function (data) {
+
+
+                    document.getElementById("inactivePlayers").innerHTML = data[data.length - 1].inactivePlayers.toLocaleString() + " " + percentColor(data[data.length - 1].inactivePlayersRelative)
+                    document.getElementById("newPlayers").innerHTML = data[data.length - 1].newPlayers.toLocaleString() + " " + percentColor(data[data.length - 1].newPlayersRelative)
+                    document.getElementById("activePlayers").innerHTML = data[data.length - 1].activePlayers.toLocaleString() + " " + percentColor(data[data.length - 1].activePlayersRelative)
+
+                    var options = {
+                        title: {
+                            text: 'Growth %',
+                            offsetX: 0,
+                            style: {
+                                fontSize: '24px',
+                                color: "gray",
+                                fontFamily: 'barlow'
+                            }
+                        },
+                        tooltip: {
+                            enabled: true,
+                            followCursor: false,
+                            fillSeriesColor: true,
+                            theme: false,
+                            style: {
+                                fontSize: "12px"
+                            },
+                            x: {
+                                show: true,
+                                format: "dd MMM"
+                            }
+                        },
+                        chart: {
+                            group: 'server',
+                            id: 'line-2',
+                            type: "line",
+                            height: 200,
+                            sparkline: {
+                                enabled: true
+                            }
+                        },
+                        stroke: {
+                            curve: "straight"
+                        },
+                        fill: {
+                            opacity: 1
+                        },
+                        xaxis: {
+                            crosshairs: {
+                                width: 1
+                            }
+                        },
+                        yaxis: {
+                            min: -1,
+                            labels: {
+                                minWidth: 40
+                            }
+                        },
+                        series: core.getWorkbench().toApexSeries(core.getWorkbench().arrayToLegacy(data), true),
+
+                    };
+
+                    var chart = new ApexCharts(document.querySelector("#chart1"), options);
+
+                    core.getInstance("7279390962ba3b09", null, null).asNetwork().getStore().getIncomeAnalytics(span).then(function (data) {
+
+                        console.log(data);
+
+                        var potential = 0;
+                        var income = 0;
+                        var payments = 0;
+
+                        data.forEach(element => {
+                            potential += element.paymentRequests;
+                            income += element.finalIncome;
+                            payments += element.payments;
+                        });
+
+                        document.getElementById("payments").innerHTML = payments
+                        document.getElementById("income").innerHTML = income + "€"
+                        document.getElementById("potential").innerHTML = potential
+
+                        var options = {
+                            title: {
+                                text: 'Income',
+                                offsetX: 0,
+                                style: {
+                                    fontSize: '24px',
+                                    color: "gray",
+                                    fontFamily: 'barlow'
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                followCursor: false,
+                                fillSeriesColor: true,
+                                theme: false,
+                                style: {
+                                    fontSize: "12px"
+                                },
+                                x: {
+                                    show: true,
+                                    format: "dd MMM"
+                                }
+                            },
+                            chart: {
+                                group: 'server',
+                                id: 'line-3',
+                                type: "line",
+                                height: 200,
+                                sparkline: {
+                                    enabled: true
+                                }
+                            },
+                            stroke: {
+                                curve: "straight"
+                            },
+                            fill: {
+                                opacity: 1
+                            },
+                            xaxis: {
+                                crosshairs: {
+                                    width: 1
+                                }
+                            },
+                            yaxis: {
+                                min: -1,
+                                labels: {
+                                    minWidth: 40
+                                }
+                            },
+                            series: core.getWorkbench().toApexSeries(core.getWorkbench().arrayToLegacy(data), false),
+
+                        };
+
+                        var chart3 = new ApexCharts(document.querySelector("#chart0"), options);
+                        chart.render();
+                        chart2.render();
+                        chart3.render();
+                        document.getElementById("container").classList.remove("fadeOut")
+                        document.getElementById("container").classList.add("fadeIn")
+                    })
+                })
+            })
+        }
+
+        /*
         core.getInstance("7279390962ba3b09").asNetwork().getPlayer("96e916041747d907").then(function (data) {
             // ["7451b10649414987", "b491fbb4473e73c3", "86887f77524113b7", "79e34b795bbef9ad","3aa9521a271ac69b"]
             data.getMatchingConnections(core.getInstance("7279390962ba3b09"), 0, core.getPlayersFromIds(["7451b10649414987", "b491fbb4473e73c3", "86887f77524113b7", "79e34b795bbef9ad","3aa9521a271ac69b"])).then(function (act) {
@@ -142,7 +416,7 @@
             }).catch(function (err) {
                 console.log(err);
             })
-        })
+        })*/
     </script>
 
 </body>

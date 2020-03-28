@@ -3,7 +3,7 @@ class Workbench {
     public arrayToLegacy(array): Array<Analytic> {
         var final = new Array<Analytic>();
         array.forEach(element => {
-            var analytic = element.toLegacy();
+            var analytic = element.getLegacy();
             final.push(analytic);
         });
         return final;
@@ -21,7 +21,7 @@ class Workbench {
                 timestampStart = analytic.getTimestamp();
                 itemBeingWorkedOn = analytic;
             } else {
-                if ((timestampStart - analytic.getTimestamp()) >= maxSeconds) {
+                if ((analytic.getTimestamp() - timestampStart) >= maxSeconds) {
                     finalAnalytics.push(itemBeingWorkedOn);
                     itemBeingWorkedOn = analytic;
                     timestampStart = analytic.getTimestamp();
@@ -68,11 +68,11 @@ class Workbench {
 
     }
 
-    public toApexSeries(analyticArray: Array<Analytic>) {
+    public toApexSeries(analyticArray: Array<Analytic>, onlyRelative = false) {
         var fieldData = [];
         analyticArray.forEach(analytic => {
             var timestamp = analytic.getTimestamp();
-            analytic.getFields().forEach(field => {
+            analytic.getFields(onlyRelative).forEach(field => {
                 if (!(field.getTechnicalName() in fieldData)) {
                     fieldData[field.getTechnicalName()] = {};
                     fieldData[field.getTechnicalName()]["values"] = [];

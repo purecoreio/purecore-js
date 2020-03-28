@@ -117,6 +117,34 @@ class Player extends Core {
         });
     }
 
+    getDiscordId() {
+
+        var url = "";
+        if (this.core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/get/discord/id/?hash=" + this.core.getCoreSession().getHash();
+        } else {
+            throw new Error("only sessions are supported in this call");
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+                        resolve(jsonresponse.id);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     getConnections(instance: Instance, page?) {
 
         var id = this.id;

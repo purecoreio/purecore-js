@@ -30,9 +30,9 @@ class Session extends Core {
 
     getUser() {
         if (this.player == undefined && this.owner != undefined) {
-            return new Owner(this.core,this.owner.getId(),this.owner.getName(),this.owner.getSurname(),this.owner.getEmail());
+            return new Owner(this.core, this.owner.getId(), this.owner.getName(), this.owner.getSurname(), this.owner.getEmail());
         } else {
-            return new Player(this.core,this.player.getId(),this.player.getUsername(),this.player.getUuid(),this.player.verified);
+            return new Player(this.core, this.player.getId(), this.player.getUsername(), this.player.getUuid(), this.player.verified);
         }
     }
 
@@ -53,8 +53,15 @@ class Session extends Core {
             this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
         }
 
-        this.core = new Core(new Session(new Core(),this.uuid,this.hash,this.device,this.location,this.usage,this.network,this.getUser()))
-        
+        this.core = new Core();
+        this.core.session = this;
+
+        if ("player" in array) {
+            this.player.core.session = this;
+        } else if ("owner" in array) {
+            this.owner.core.session = this;
+        }
+
         return this;
 
     }

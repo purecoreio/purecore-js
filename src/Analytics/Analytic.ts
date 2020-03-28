@@ -18,8 +18,22 @@ class Analytic {
         return this.original;
     }
 
-    public getFields(): Array<AnalyticField> {
-        return this.fields;
+    public getFields(onlyrelative = false): Array<AnalyticField> {
+        var final = new Array<AnalyticField>();
+        if (onlyrelative) {
+            this.fields.forEach(element => {
+                if (element.getName().includes("%")) {
+                    final.push(element);
+                }
+            });
+        } else {
+            this.fields.forEach(element => {
+                if (!element.getName().includes("%")) {
+                    final.push(element);
+                }
+            });
+        }
+        return final;
     }
 
     public setFields(fields: Array<AnalyticField>) {

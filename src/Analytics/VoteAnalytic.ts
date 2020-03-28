@@ -11,7 +11,7 @@ class VoteAnalytic {
         this.network = network;
         this.voteCount = voteCount;
         this.voterCount = voterCount;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp * 1000;
     }
 
     public fromArray(array): VoteAnalytic {
@@ -19,7 +19,7 @@ class VoteAnalytic {
         this.network = null;
         this.voteCount = array.voteCount;
         this.voterCount = array.voterCount;
-        this.timestamp = array.timestamp;
+        this.timestamp = array.timestamp * 1000;
         return this;
     }
 
