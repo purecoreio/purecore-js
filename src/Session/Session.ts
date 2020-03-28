@@ -56,12 +56,6 @@ class Session extends Core {
         this.core = new Core();
         this.core.session = this;
 
-        if ("player" in array) {
-            this.player.core.session = this;
-        } else if ("owner" in array) {
-            this.owner.core.session = this;
-        }
-
         return this;
 
     }
@@ -102,6 +96,9 @@ class Session extends Core {
     }
 
     getPlayer() {
+        let session = this;
+        session.player = new Player(new Core(""), null, null, null, false);
+        this.player.core = new Core(session);
         return this.player;
     }
 

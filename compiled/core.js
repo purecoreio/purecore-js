@@ -2426,12 +2426,6 @@ class Session extends Core {
         }
         this.core = new Core();
         this.core.session = this;
-        if ("player" in array) {
-            this.player.core.session = this;
-        }
-        else if ("owner" in array) {
-            this.owner.core.session = this;
-        }
         return this;
     }
     fromHash(sessionHash) {
@@ -2465,6 +2459,9 @@ class Session extends Core {
         return this.hash;
     }
     getPlayer() {
+        let session = this;
+        session.player = new Player(new Core(""), null, null, null, false);
+        this.player.core = new Core(session);
         return this.player;
     }
     getMachines() {
