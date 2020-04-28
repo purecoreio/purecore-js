@@ -732,6 +732,25 @@ class MatchingRange {
         return this.matchWith;
     }
 }
+var Service;
+(function (Service) {
+    Service[Service["MINECRAFT"] = 0] = "MINECRAFT";
+})(Service || (Service = {}));
+class InstanceConsole {
+}
+class ConsoleLine {
+    constructor(date, type, message) {
+        this.date = date;
+        this.type = type;
+        this.message = message;
+    }
+}
+var LineType;
+(function (LineType) {
+    LineType[LineType["INFO"] = 0] = "INFO";
+    LineType[LineType["WARNING"] = 1] = "WARNING";
+    LineType[LineType["ERROR"] = 2] = "ERROR";
+})(LineType || (LineType = {}));
 class DiscordGuild {
     constructor(network, name, uuid, memberCount) {
         this.network = network;
@@ -1404,6 +1423,8 @@ class Instance extends Core {
         });
     }
 }
+class InstanceVital {
+}
 class Network extends Core {
     constructor(core, instance) {
         super(core.getTool());
@@ -2005,6 +2026,13 @@ class CPU {
         return { "manufacturer": this.manufacturer, "brand": this.brand, "vendor": this.vendor, "speed": this.speed, "maxSpeed": this.maxSpeed, "physicalCores": this.physicalCores, "virtualCores": this.virtualCores };
     }
 }
+class CPUUsage {
+    constructor(clockSpeed, relativeUsage, mainThreadSlip) {
+        this.clockSpeed = clockSpeed;
+        this.relativeUsage = relativeUsage;
+        this.mainThreadSlip = mainThreadSlip;
+    }
+}
 class Drive {
     constructor(size, name, type, interfaceType, serialNum) {
         this.size = size;
@@ -2023,6 +2051,12 @@ class Drive {
     }
     asArray() {
         return { "size": this.size, "name": this.name, "type": this.type, "interfaceType": this.interfaceType, "serialNum": this.serialNum };
+    }
+}
+class DriveUsage {
+    constructor(max, used) {
+        this.max = max;
+        this.used = used;
     }
 }
 class Machine {
@@ -2242,6 +2276,12 @@ class RAM {
     }
     asArray() {
         return { "size": this.size, "clockSpeed": this.clockSpeed, "manufacturer": this.manufacturer, "voltage": this.voltage };
+    }
+}
+class RAMUsage {
+    constructor(max, used) {
+        this.max = max;
+        this.used = used;
     }
 }
 class Appeal extends Core {
@@ -2696,7 +2736,7 @@ class OrganizedPerkCategory {
     }
 }
 class Perk extends Core {
-    constructor(core, uuid, network, name, description, type, category) {
+    constructor(core, uuid, network, name, description, type, category, commands) {
         super(core.getTool());
         this.core = core;
         this.uuid = uuid;
@@ -2705,6 +2745,7 @@ class Perk extends Core {
         this.description = description;
         this.type = type;
         this.category = category;
+        this.commands = commands;
     }
     fromArray(array) {
         this.uuid = array.uuid;
@@ -2713,6 +2754,7 @@ class Perk extends Core {
         this.description = array.description;
         this.type = array.type;
         this.category = new PerkCategory(this.core).fromArray(array.category);
+        var commands = new Array();
         return this;
     }
 }
@@ -2779,6 +2821,66 @@ class Store extends Network {
                             IncomeAnalytics.push(IncomeAnalyticD);
                         });
                         return IncomeAnalytics;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    getItem(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/item/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&item=" + id;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/item/?key=" + core.getKey() + "&item=" + id;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new StoreItem(core).fromArray(jsonresponse);
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    getPerks() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/perk/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var perklist = new Array();
+                        jsonresponse.forEach(element => {
+                            perklist.push(new Perk(core).fromArray(element));
+                        });
+                        return new StoreItem(core).fromArray(jsonresponse);
                     }
                 });
             }
@@ -2965,6 +3067,42 @@ class Store extends Network {
                 reject(e);
             }
         });
+    }
+}
+class StoreCommand extends Core {
+    constructor(core, network, cmd, needsOnline, executeOn, listId) {
+        super(core.getTool());
+        this.core = core;
+        this.network = network;
+        this.cmd = cmd;
+        this.needsOnline = needsOnline;
+        this.executeOn = executeOn;
+        this.listId = listId;
+    }
+    fromArray(array) {
+        this.network = new Instance(this.core, array.network.uuid, array.network.name, "NTW").asNetwork();
+        if (typeof array.cmd == "string") {
+            array.cmd = new Command(array.cmd, null, this.network);
+        }
+        else {
+            array.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+        }
+        this.needsOnline = array.needs_online;
+        var instances = new Array();
+        array.execute_on.forEach(instance => {
+            if (typeof instance == "string") {
+                instances.push(new Instance(this.core, instance, null, "UNK"));
+            }
+            else {
+                instances.push(new Instance(this.core, instance.uuid, instance.name, "UNK"));
+            }
+        });
+        this.executeOn = instances;
+        this.listId = array.lisdid;
+        return this;
+    }
+    getCommand() {
+        return this.cmd;
     }
 }
 class BillingAddress {

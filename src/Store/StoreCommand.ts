@@ -28,10 +28,14 @@ class StoreCommand extends Core {
 
         var instances = new Array<Instance>();
 
-        /* to be updated: full instance data */
+        array.execute_on.forEach(instance => {
 
-        array.execute_on.forEach(instanceId => {
-            instances.push(new Instance(this.core, instanceId, null, "UNK"));
+            if (typeof instance == "string") {
+                instances.push(new Instance(this.core, instance, null, "UNK"));
+            } else {
+                instances.push(new Instance(this.core, instance.uuid, instance.name, "UNK"));
+            }
+
         });
         this.executeOn = instances;
         this.listId = array.lisdid;
