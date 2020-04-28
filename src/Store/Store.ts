@@ -41,6 +41,66 @@ class Store extends Network {
         }
     }
 
+    public async getItem(id: string) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/item/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&item=" + id;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/item/?key=" + core.getKey() + "&item=" + id;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new StoreItem(core).fromArray(jsonresponse);
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+
+    }
+
+    public async getPerks() {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/perk/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    var perklist = new Array<Perk>();
+                    jsonresponse.forEach(element => {
+                        perklist.push(new Perk(core).fromArray(element))
+                    });
+                    return new StoreItem(core).fromArray(jsonresponse);
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+
+    }
+
     public getGateways() {
 
         let hash = this.network.core.getCoreSession().getHash();
@@ -107,7 +167,11 @@ class Store extends Network {
         return "https://api.purecore.io/link/paypal/wallet/?hash=" + hash + "&network=" + ntwid
     }
 
-    requestPayment(itemList: Array<StoreItem>, username: string) {
+    requestPayment(itemList: Array<StoreItem>, username: string, billingAddress?) {
+
+        if (billingAddress == null) {
+            billingAddress = new BillingAddress();
+        }
 
         var core = this.network.core;
         var instance = this.network.asInstance();
@@ -118,19 +182,12 @@ class Store extends Network {
         });
 
         var body = "";
-
         if (core.getTool() instanceof Session) {
-
-            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
-
+            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         } else if (core.getKey() != null) {
-
-            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
-
+            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         } else {
-
-            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
-
+            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         }
 
         return new Promise(function (resolve, reject) {
@@ -149,10 +206,8 @@ class Store extends Network {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error));
                     } else {
-
                         var paymentRequest = new CorePaymentRequest(core).fromArray(jsonresponse);
                         resolve(paymentRequest);
-
                     }
                 });
             } catch (e) {

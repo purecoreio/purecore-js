@@ -43,8 +43,12 @@ class Session extends Core {
         this.location = new SessionLocation(array.location.city, array.location.state, array.location.country_code);
         this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
 
+
         if ("network" in array) {
             this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+            this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, this.network, null));
+        } else {
+            this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, null, null));
         }
 
         if ("player" in array) {
@@ -52,9 +56,6 @@ class Session extends Core {
         } else if ("owner" in array) {
             this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
         }
-
-        this.core = new Core();
-        this.core.session = this;
 
         return this;
 
@@ -75,9 +76,7 @@ class Session extends Core {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     } else {
-                        var newSession = new Session(core);
-                        newSession = newSession.fromArray(jsonresponse);
-                        resolve(newSession)
+                        resolve(new Session(core).fromArray(jsonresponse))
                     }
                 })
             } catch (e) {
@@ -96,9 +95,6 @@ class Session extends Core {
     }
 
     getPlayer() {
-        let session = this;
-        session.player = new Player(new Core(""), null, null, null, false);
-        this.player.core = new Core(session);
         return this.player;
     }
 

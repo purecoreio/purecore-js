@@ -1,0 +1,3 @@
+enum Service {
+    MINECRAFT
+}

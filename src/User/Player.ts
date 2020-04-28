@@ -15,6 +15,36 @@ class Player extends Core {
         this.verified = verified;
     }
 
+    getBillingAddress() {
+
+        var core = this.core;
+        var url = "";
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/billing/get/?hash=" + core.getCoreSession().getHash();
+        } else {
+            throw new Error("unsupported");
+        }
+
+        return new Promise(function (resolve, reject) {
+
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    } else {
+                        resolve(new BillingAddress().fromArray(jsonresponse));
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+        });
+    }
+
     getPunishments(network?: Network, page?) {
 
         var id = this.id;

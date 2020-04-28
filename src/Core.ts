@@ -180,6 +180,10 @@ class Core {
 
     }
 
+    public asBillingAddress(array): BillingAddress {
+        return new BillingAddress().fromArray(array);
+    }
+
     public getWorkbench(): Workbench {
         return new Workbench();
     }

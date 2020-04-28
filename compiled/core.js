@@ -126,6 +126,9 @@ class Core {
             }
         });
     }
+    asBillingAddress(array) {
+        return new BillingAddress().fromArray(array);
+    }
     getWorkbench() {
         return new Workbench();
     }
@@ -2417,6 +2420,10 @@ class Session extends Core {
         this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
         if ("network" in array) {
             this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+            this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, this.network, null));
+        }
+        else {
+            this.core = new Core(new Session(new Core(), this.uuid, this.hash, this.device, this.location, this.usage, null, null));
         }
         if ("player" in array) {
             this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
@@ -2424,8 +2431,6 @@ class Session extends Core {
         else if ("owner" in array) {
             this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
         }
-        this.core = new Core();
-        this.core.session = this;
         return this;
     }
     fromHash(sessionHash) {
@@ -2441,9 +2446,7 @@ class Session extends Core {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
-                        var newSession = new Session(core);
-                        newSession = newSession.fromArray(jsonresponse);
-                        resolve(newSession);
+                        resolve(new Session(core).fromArray(jsonresponse));
                     }
                 });
             }
@@ -2459,9 +2462,6 @@ class Session extends Core {
         return this.hash;
     }
     getPlayer() {
-        let session = this;
-        session.player = new Player(new Core(""), null, null, null, false);
-        this.player.core = new Core(session);
         return this.player;
     }
     getMachines() {
@@ -2844,7 +2844,10 @@ class Store extends Network {
         var ntwid = this.network.getId();
         return "https://api.purecore.io/link/paypal/wallet/?hash=" + hash + "&network=" + ntwid;
     }
-    requestPayment(itemList, username) {
+    requestPayment(itemList, username, billingAddress) {
+        if (billingAddress == null) {
+            billingAddress = new BillingAddress();
+        }
         var core = this.network.core;
         var instance = this.network.asInstance();
         var idList = [];
@@ -2853,13 +2856,13 @@ class Store extends Network {
         });
         var body = "";
         if (core.getTool() instanceof Session) {
-            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
+            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         }
         else if (core.getKey() != null) {
-            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
+            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         }
         else {
-            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username;
+            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
         }
         return new Promise(function (resolve, reject) {
             try {
@@ -2962,6 +2965,34 @@ class Store extends Network {
                 reject(e);
             }
         });
+    }
+}
+class BillingAddress {
+    constructor(name, email, country, state, city, postalcode, line1, line2) {
+        this.name = name;
+        this.email = email;
+        this.city = city;
+        this.country = country;
+        this.state = state;
+        this.postalcode = postalcode;
+        this.line1 = line1;
+        this.line2 = line2;
+    }
+    fromArray(array) {
+        this.name = array.name;
+        this.email = array.email;
+        this.country = array.country;
+        this.state = array.state;
+        this.city = array.city;
+        this.postalcode = array.postalcode;
+        this.line1 = array.line1;
+        if (array.line2 != null && array.line2 != "") {
+            this.line2 = array.line2;
+        }
+        else {
+            this.line2 = null;
+        }
+        return this;
     }
 }
 class Discount {
@@ -3178,6 +3209,33 @@ class Player extends Core {
         this.username = username;
         this.uuid = uuid;
         this.verified = verified;
+    }
+    getBillingAddress() {
+        var core = this.core;
+        var url = "";
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/player/billing/get/?hash=" + core.getCoreSession().getHash();
+        }
+        else {
+            throw new Error("unsupported");
+        }
+        return new Promise(function (resolve, reject) {
+            try {
+                return fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+                    }
+                    else {
+                        resolve(new BillingAddress().fromArray(jsonresponse));
+                    }
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
+        });
     }
     getPunishments(network, page) {
         var id = this.id;

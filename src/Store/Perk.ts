@@ -1,3 +1,5 @@
+import { promises } from "dns";
+
 class Perk extends Core {
 
     core: Core;
@@ -7,8 +9,9 @@ class Perk extends Core {
     description: string;
     type: string;
     category: PerkCategory;
+    commands: Array<StoreCommand>;
 
-    constructor(core: Core, uuid?: string, network?: Network, name?: string, description?: string, type?: string, category?: PerkCategory) {
+    constructor(core: Core, uuid?: string, network?: Network, name?: string, description?: string, type?: string, category?: PerkCategory, commands?: Array<StoreCommand>) {
 
         super(core.getTool());
         this.core = core;
@@ -18,7 +21,7 @@ class Perk extends Core {
         this.description = description;
         this.type = type;
         this.category = category;
-
+        this.commands = commands;
     }
 
     fromArray(array): Perk {
@@ -28,6 +31,11 @@ class Perk extends Core {
         this.description = array.description;
         this.type = array.type;
         this.category = new PerkCategory(this.core).fromArray(array.category);
+
+        var commands = new Array<StoreCommand>();
+        
+
+
         return this;
     }
 }
