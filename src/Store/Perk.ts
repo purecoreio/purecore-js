@@ -1,5 +1,3 @@
-import { promises } from "dns";
-
 class Perk extends Core {
 
     core: Core;
