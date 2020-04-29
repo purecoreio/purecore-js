@@ -2755,6 +2755,10 @@ class Perk extends Core {
         this.type = array.type;
         this.category = new PerkCategory(this.core).fromArray(array.category);
         var commands = new Array();
+        array.commands.forEach(cmd => {
+            commands.push(new StoreCommand(this.core).fromArray(cmd));
+        });
+        this.commands = commands;
         return this;
     }
 }
@@ -2880,7 +2884,7 @@ class Store extends Network {
                         jsonresponse.forEach(element => {
                             perklist.push(new Perk(core).fromArray(element));
                         });
-                        return new StoreItem(core).fromArray(jsonresponse);
+                        return perklist;
                     }
                 });
             }
@@ -3082,10 +3086,10 @@ class StoreCommand extends Core {
     fromArray(array) {
         this.network = new Instance(this.core, array.network.uuid, array.network.name, "NTW").asNetwork();
         if (typeof array.cmd == "string") {
-            array.cmd = new Command(array.cmd, null, this.network);
+            this.cmd = new Command(array.cmd, null, this.network);
         }
         else {
-            array.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+            this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
         }
         this.needsOnline = array.needs_online;
         var instances = new Array();

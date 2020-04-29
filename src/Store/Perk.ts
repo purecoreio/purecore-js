@@ -31,8 +31,11 @@ class Perk extends Core {
         this.category = new PerkCategory(this.core).fromArray(array.category);
 
         var commands = new Array<StoreCommand>();
-        
+        array.commands.forEach(cmd => {
+            commands.push(new StoreCommand(this.core).fromArray(cmd))
+        });
 
+        this.commands = commands;
 
         return this;
     }

@@ -20,9 +20,9 @@ class StoreCommand extends Core {
     public fromArray(array): StoreCommand {
         this.network = new Instance(this.core, array.network.uuid, array.network.name, "NTW").asNetwork();
         if (typeof array.cmd == "string") {
-            array.cmd = new Command(array.cmd, null, this.network);
+            this.cmd = new Command(array.cmd, null, this.network);
         } else {
-            array.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+            this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
         }
         this.needsOnline = array.needs_online;
 

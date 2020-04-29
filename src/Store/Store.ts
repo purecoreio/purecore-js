@@ -92,7 +92,7 @@ class Store extends Network {
                     jsonresponse.forEach(element => {
                         perklist.push(new Perk(core).fromArray(element))
                     });
-                    return new StoreItem(core).fromArray(jsonresponse);
+                    return perklist;
                 }
             });
         } catch (e) {
