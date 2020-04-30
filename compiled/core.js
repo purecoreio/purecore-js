@@ -2893,6 +2893,38 @@ class Store extends Network {
             }
         });
     }
+    getPerkCategories() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/perk/categiry/list/?key=" + core.getKey();
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var perklist = new Array();
+                        jsonresponse.forEach(element => {
+                            perklist.push(new PerkCategory(core).fromArray(element));
+                        });
+                        return perklist;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
     getGateways() {
         let hash = this.network.core.getCoreSession().getHash();
         let ntwid = this.network.getId();
