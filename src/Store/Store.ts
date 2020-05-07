@@ -110,7 +110,7 @@ class Store extends Network {
         if (core.getTool() instanceof Session) {
             url = "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
         } else {
-            url = "https://api.purecore.io/rest/2/store/perk/categiry/list/?key=" + core.getKey();
+            url = "https://api.purecore.io/rest/2/store/perk/category/list/?key=" + core.getKey();
         }
 
         try {
@@ -300,6 +300,79 @@ class Store extends Network {
 
         });
     }
+
+    public async createPerkCategory(name) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/perk/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new PerkCategory(core).fromArray(jsonresponse);;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+        
+    }
+
+    public async createCategory(name, description) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new StoreCategory(core).fromArray(jsonresponse);;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+
+    }
+
+    public async getCategories() {
+        return new Promise(function (resolve, reject) {
+            try {
+                this.getPackages().then(function (nestedItems: Array<NestedItem>) {
+                    var categories = new Array<StoreCategory>();
+                    nestedItems.forEach(nestedItem => {
+                        categories.push(nestedItem.category);
+                    });
+                    resolve(categories);
+                })
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
 
     getPackages() {
 

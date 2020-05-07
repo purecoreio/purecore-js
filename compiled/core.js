@@ -2649,6 +2649,35 @@ class StoreCategory extends Core {
     getId() {
         return this.uuid;
     }
+    createItem(name, description, price) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/item/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/item/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new StoreItem(core).fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
 }
 class StoreItem extends Core {
     constructor(core, uuid, name, description, category, network, price, contextualizedPerks) {
@@ -2761,6 +2790,46 @@ class Perk extends Core {
         this.commands = commands;
         return this;
     }
+    addCmd(cmd, needsOnline, executeOn) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            var ids = [];
+            executeOn.forEach(instance => {
+                ids.push(instance.uuid);
+            });
+            var needsOnlineStr = "false";
+            if (needsOnline) {
+                needsOnlineStr = "true";
+            }
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/perk/cmd/add/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&perk=" + main.uuid + "&cmd=" + cmd + "&needsOnline=" + needsOnlineStr + "&instances=" + JSON.stringify(ids);
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/perk/cmd/add/?key=" + core.getKey() + "&network=" + main.uuid + "&perk=" + main.uuid + "&cmd=" + cmd + "&needsOnline=" + needsOnlineStr + "&instances=" + JSON.stringify(ids);
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var commands = new Array();
+                        jsonresponse.forEach(cmd => {
+                            commands.push(new StoreCommand(core).fromArray(cmd));
+                        });
+                        return commands;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
 }
 class PerkCategory extends Core {
     constructor(core, uuid, name, network) {
@@ -2780,6 +2849,35 @@ class PerkCategory extends Core {
             this.network = null;
         }
         return this;
+    }
+    createPerk(name, description, type) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/perk/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/perk/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new Perk(core).fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
     }
 }
 class PerkContextualized extends Core {
@@ -2902,7 +3000,7 @@ class Store extends Network {
                 url = "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/perk/categiry/list/?key=" + core.getKey();
+                url = "https://api.purecore.io/rest/2/store/perk/category/list/?key=" + core.getKey();
             }
             try {
                 return yield fetch(url, { method: "GET" }).then(function (response) {
@@ -3065,6 +3163,82 @@ class Store extends Network {
             catch (e) {
                 reject(e);
             }
+        });
+    }
+    createPerkCategory(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/perk/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new PerkCategory(core).fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    createCategory(name, description) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/store/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new StoreCategory(core).fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    getCategories() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(function (resolve, reject) {
+                try {
+                    this.getPackages().then(function (nestedItems) {
+                        var categories = new Array();
+                        nestedItems.forEach(nestedItem => {
+                            categories.push(nestedItem.category);
+                        });
+                        resolve(categories);
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
         });
     }
     getPackages() {
