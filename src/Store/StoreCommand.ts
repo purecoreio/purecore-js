@@ -25,6 +25,8 @@ class StoreCommand extends Core {
             this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
         }
         this.needsOnline = array.needs_online;
+        
+        this.listId = array.listid;
 
         var instances = new Array<Instance>();
 
@@ -38,7 +40,6 @@ class StoreCommand extends Core {
 
         });
         this.executeOn = instances;
-        this.listId = array.lisdid;
         return this;
     }
 

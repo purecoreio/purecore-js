@@ -1,8 +1,9 @@
 {
   "name": "purecore",
-  "version": "1.12.0",
+  "version": "1.12.9",
   "description": "purecore js client",
   "main": "./compiled/core.js",
+  "publishConfig": { "registry": "https://npm.pkg.github.com/" },
   "directories": {
     "test": "tests"
   },
@@ -16,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://bitbucket.org/purevanilla/javascript.git"
+    "url": "git+https://github.com/purecoreio/purecore-js.git"
   },
   "keywords": [
     "purecore",
@@ -25,5 +26,5 @@
   ],
   "author": "quiquelhappy",
   "license": "ISC",
-  "homepage": "https://bitbucket.org/purevanilla/javascript#readme"
+  "homepage": "https://github.com/purecoreio/purecore-js/blob/master/README.md"
 }

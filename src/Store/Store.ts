@@ -301,6 +301,34 @@ class Store extends Network {
         });
     }
 
+    public async unlinkGateway(gatewayName) {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/gateway/unlink/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&gateway=" + gatewayName;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/gateway/unlink/?key=" + core.getKey() + "&network=" + main.uuid + "&gateway=" + gatewayName;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return jsonresponse.success;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+
+    }
+
     public async createPerkCategory(name) {
 
         var core = this.core;
@@ -326,7 +354,7 @@ class Store extends Network {
         } catch (e) {
             throw new Error(e.message)
         }
-        
+
     }
 
     public async createCategory(name, description) {

@@ -37,9 +37,9 @@ class StoreCategory extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/item/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
+            url = "https://api.purecore.io/rest/2/store/item/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
         } else {
-            url = "https://api.purecore.io/rest/2/store/item/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
+            url = "https://api.purecore.io/rest/2/store/item/create/?key=" + core.getKey() + "&network=" + main.network.uuid + "&name=" + name + "&description=" + description + "&category=" + main.uuid + "&price=" + price;
         }
 
         try {

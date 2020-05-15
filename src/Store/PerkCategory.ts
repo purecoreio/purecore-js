@@ -37,9 +37,9 @@ class PerkCategory extends Core {
         var url;
 
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/perk/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
+            url = "https://api.purecore.io/rest/2/store/perk/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
         } else {
-            url = "https://api.purecore.io/rest/2/store/perk/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
+            url = "https://api.purecore.io/rest/2/store/perk/create/?key=" + core.getKey() + "&network=" + main.network.uuid + "&name=" + name + "&description=" + description + "&type=" + type.toUpperCase() + "&category=" + main.uuid;
         }
 
         try {

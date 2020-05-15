@@ -21,6 +21,41 @@ class StoreItem extends Core {
         this.perks = new Array<PerkContextualized>();
     }
 
+    public async addPerk(perk, quantity = 'undefined') {
+
+        var core = this.core;
+        let main = this;
+        var url;
+
+        var perkId = null;
+        if (typeof perk == "string") {
+            perkId = perk;
+        } else {
+            perkId = perk.uuid;
+        }
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/store/item/add/perk/?hash=" + core.getCoreSession().getHash() + "&network=" + main.network.uuid + "&item=" + main.uuid + "&perk=" + perkId + "&quantity=" + quantity;
+        } else {
+            url = "https://api.purecore.io/rest/2/store/item/add/perk/?key=" + core.getKey() + "&network=" + main.network.uuid + "&item=" + main.uuid + "&perk=" + perkId + "&quantity=" + quantity;
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new PerkContextualized(core).fromArray(jsonresponse);;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+
+    }
+
     getId() {
         return this.uuid;
     }
@@ -33,9 +68,13 @@ class StoreItem extends Core {
         this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
         this.price = array.price;
 
-        array.perks.forEach(perkJson => {
-            this.perks.push(new PerkContextualized(this.core).fromArray(perkJson));
-        });
+        if (array.perks != null) {
+            array.perks.forEach(perkJson => {
+                this.perks.push(new PerkContextualized(this.core).fromArray(perkJson));
+            });
+        } else {
+            this.perks = new Array<PerkContextualized>()
+        }
 
         return this;
     }
