@@ -460,6 +460,18 @@ class Workbench {
         return finalSeries;
     }
 }
+class PayPalSubscription {
+    constructor(url, id) {
+        this.url = url;
+        this.id = id;
+    }
+    getURL() {
+        return this.url;
+    }
+    getID() {
+        return this.id;
+    }
+}
 class Plan {
     constructor(uuid, name, price, features) {
         this.uuid = uuid;
@@ -507,6 +519,14 @@ class PlanSection {
             this.features.push(planFeature);
         });
         return this;
+    }
+}
+class StripeSubscription {
+    constructor(id) {
+        this.id = id;
+    }
+    getID() {
+        return this.id;
     }
 }
 class Command {
@@ -3579,18 +3599,107 @@ class Owner extends Core {
     getSession() {
         return this.core.getTool();
     }
+    stripeSubscribe(plan, billingAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // purecore, purecore_plus (auto-trial), purecore_plus_v
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            return new StripeSubscription(jsonresponse.id);
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
+    paypalSubscribe(plan, billingAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // purecore, purecore_plus (auto-trial), purecore_plus_v
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/subscribe/paypal/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            return new PayPalSubscription(jsonresponse.url, jsonresponse.id);
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
+    getBillingAddress() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/billing/get/?hash=" + core.getCoreSession().getHash();
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            return new BillingAddress().fromArray(jsonresponse);
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
     addPaymentMethod(pm) {
         return __awaiter(this, void 0, void 0, function* () {
-            var core = this;
+            var core = this.core;
             var url;
             var pmid = null;
             if (typeof pm == "string") {
                 pmid = pm;
             }
             else {
-                pmid = pm.id;
+                pmid = pm.paymentMethod.id;
             }
-            if (this.core.getTool() instanceof Session) {
+            if (core.getTool() instanceof Session) {
                 if (this.getTool() instanceof Session) {
                     url = "https://api.purecore.io/rest/2/account/card/add/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
                 }
@@ -3618,16 +3727,16 @@ class Owner extends Core {
     }
     removePaymentMethod(pm) {
         return __awaiter(this, void 0, void 0, function* () {
-            var core = this;
+            var core = this.core;
             var url;
             var pmid = null;
             if (typeof pm == "string") {
                 pmid = pm;
             }
             else {
-                pmid = pm.id;
+                pmid = pm.paymentMethod.id;
             }
-            if (this.core.getTool() instanceof Session) {
+            if (core.getTool() instanceof Session) {
                 if (this.getTool() instanceof Session) {
                     url = "https://api.purecore.io/rest/2/account/card/remove/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
                 }
@@ -3655,9 +3764,9 @@ class Owner extends Core {
     }
     getPaymentMethods() {
         return __awaiter(this, void 0, void 0, function* () {
-            var core = this;
+            var core = this.core;
             var url;
-            if (this.core.getTool() instanceof Session) {
+            if (core.getTool() instanceof Session) {
                 if (this.getTool() instanceof Session) {
                     url = "https://api.purecore.io/rest/2/account/card/list/?hash=" + core.getCoreSession().getHash();
                 }
