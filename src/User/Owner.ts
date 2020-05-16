@@ -19,11 +19,11 @@ class Owner extends Core {
         return this.name;
     }
 
-    getSurname(){
+    getSurname() {
         return this.surname;
     }
 
-    getEmail(){
+    getEmail() {
         return this.email;
     }
 
@@ -33,6 +33,116 @@ class Owner extends Core {
 
     getSession() {
         return this.core.getTool()
+    }
+
+    public async addPaymentMethod(pm) {
+
+        var core = this;
+        var url;
+
+        var pmid = null;
+        if (typeof pm == "string") {
+            pmid = pm;
+        } else {
+            pmid = pm.id;
+        }
+
+        if (this.core.getTool() instanceof Session) {
+
+            if (this.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/account/card/add/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
+            }
+
+            try {
+                return await fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        // single obj https://stripe.com/docs/api/payment_methods/object
+                        return jsonresponse;
+                    }
+                });
+            } catch (e) {
+                throw new Error(e.message)
+            }
+
+        } else {
+            throw new Error("invalid account");
+        }
+
+    }
+
+    public async removePaymentMethod(pm) {
+
+        var core = this;
+        var url;
+
+        var pmid = null;
+        if (typeof pm == "string") {
+            pmid = pm;
+        } else {
+            pmid = pm.id;
+        }
+
+        if (this.core.getTool() instanceof Session) {
+
+            if (this.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/account/card/remove/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
+            }
+
+            try {
+                return await fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        // bool
+                        return jsonresponse.success;
+                    }
+                });
+            } catch (e) {
+                throw new Error(e.message)
+            }
+
+        } else {
+            throw new Error("invalid account");
+        }
+
+    }
+
+    public async getPaymentMethods() {
+
+        var core = this;
+        var url;
+
+        if (this.core.getTool() instanceof Session) {
+
+            if (this.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/account/card/list/?hash=" + core.getCoreSession().getHash();
+            }
+
+            try {
+                return await fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                    } else {
+                        // array of https://stripe.com/docs/api/payment_methods/object
+                        return jsonresponse;
+                    }
+                });
+            } catch (e) {
+                throw new Error(e.message)
+            }
+
+        } else {
+            throw new Error("invalid account");
+        }
+
     }
 
     createNetwork(name: string, game: string, cname: string, ip?: string, port?) {
@@ -50,7 +160,7 @@ class Owner extends Core {
                     url = "https://api.purecore.io/rest/2/instance/network/create/?hash=" + core.getCoreSession().getHash() + "&name=" + name + "&game=" + game + "&cname=" + cname + "&ip=" + ip + "&port=" + port;
                 }
             }
-            
+
             return new Promise(function (resolve, reject) {
 
                 try {
@@ -73,7 +183,7 @@ class Owner extends Core {
             });
 
         } else {
-            throw new Error("Invalid tool type, got: "+core.getTool())
+            throw new Error("Invalid tool type, got: " + core.getTool())
         }
     }
 

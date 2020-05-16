@@ -3579,6 +3579,110 @@ class Owner extends Core {
     getSession() {
         return this.core.getTool();
     }
+    addPaymentMethod(pm) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this;
+            var url;
+            var pmid = null;
+            if (typeof pm == "string") {
+                pmid = pm;
+            }
+            else {
+                pmid = pm.id;
+            }
+            if (this.core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/card/add/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            // single obj https://stripe.com/docs/api/payment_methods/object
+                            return jsonresponse;
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
+    removePaymentMethod(pm) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this;
+            var url;
+            var pmid = null;
+            if (typeof pm == "string") {
+                pmid = pm;
+            }
+            else {
+                pmid = pm.id;
+            }
+            if (this.core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/card/remove/?hash=" + core.getCoreSession().getHash() + "&pm=" + pmid;
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            // bool
+                            return jsonresponse.success;
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
+    getPaymentMethods() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this;
+            var url;
+            if (this.core.getTool() instanceof Session) {
+                if (this.getTool() instanceof Session) {
+                    url = "https://api.purecore.io/rest/2/account/card/list/?hash=" + core.getCoreSession().getHash();
+                }
+                try {
+                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                        return response.json();
+                    }).then(function (jsonresponse) {
+                        if ("error" in jsonresponse) {
+                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                        }
+                        else {
+                            // array of https://stripe.com/docs/api/payment_methods/object
+                            return jsonresponse;
+                        }
+                    });
+                }
+                catch (e) {
+                    throw new Error(e.message);
+                }
+            }
+            else {
+                throw new Error("invalid account");
+            }
+        });
+    }
     createNetwork(name, game, cname, ip, port) {
         if (this.core.getTool() instanceof Session) {
             var core = this.core;

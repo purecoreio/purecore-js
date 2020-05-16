@@ -1,9 +1,8 @@
 {
   "name": "purecore",
-  "version": "1.12.9",
+  "version": "1.12.10",
   "description": "purecore js client",
   "main": "./compiled/core.js",
-  "publishConfig": { "registry": "https://npm.pkg.github.com/" },
   "directories": {
     "test": "tests"
   },
