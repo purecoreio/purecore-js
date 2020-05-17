@@ -35,7 +35,7 @@ class Owner extends Core {
         return this.core.getTool()
     }
 
-    public async stripeSubscribe(plan: string, billingAddress: BillingAddress) {
+    public async stripeSubscribe(plan: string, billingAddress: BillingAddress, pm?) {
         // purecore, purecore_plus (auto-trial), purecore_plus_v
 
         var core = this.core;
@@ -44,7 +44,17 @@ class Owner extends Core {
         if (core.getTool() instanceof Session) {
 
             if (this.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                if (pm == null) {
+                    url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                } else {
+                    var pmid = null;
+                    if (typeof pm == "string") {
+                        pmid = pm;
+                    } else {
+                        pmid = pm.paymentMethod.id;
+                    }
+                    url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress) + "&pm=" + pmid;
+                }
             }
 
             try {
