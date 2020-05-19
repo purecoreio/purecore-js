@@ -23,6 +23,32 @@ class Network extends Core {
         return this.uuid;
     }
 
+    public async getDevKey() {
+        var core = this.core;
+        let main = this;
+        var url;
+
+        if (core.getTool() instanceof Session) {
+            url = "https://api.purecore.io/rest/2/key/get/dev/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+        } else {
+            url = "https://api.purecore.io/rest/2/key/get/dev/?key=" + core.getKey();
+        }
+
+        try {
+            return await fetch(url, { method: "GET" }).then(function (response) {
+                return response.json();
+            }).then(function (jsonresponse) {
+                if ("error" in jsonresponse) {
+                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
+                } else {
+                    return new Key(core).fromArray(jsonresponse);;
+                }
+            });
+        } catch (e) {
+            throw new Error(e.message)
+        }
+    }
+
     public async getKeyFromId(keyid: string) {
         var core = this.core;
         let main = this;
