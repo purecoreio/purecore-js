@@ -1991,6 +1991,33 @@ class Network extends Core {
         });
     }
 }
+class GeoRestriction {
+    constructor(index, country, state, city) {
+        this.index = index;
+        this.country = country;
+        this.state = state;
+        this.city = city;
+    }
+    fromArray(array) {
+        this.index = array.index;
+        this.country = array.country;
+        this.state = array.state;
+        this.city = array.city;
+        return this;
+    }
+    getIndex() {
+        return this.index;
+    }
+    getCountry() {
+        return this.country;
+    }
+    getState() {
+        return this.state;
+    }
+    getCity() {
+        return this.city;
+    }
+}
 class Key extends Core {
     constructor(core, type, uuid, hash, instance) {
         super(core.getTool());
@@ -2005,7 +2032,193 @@ class Key extends Core {
         this.uuid = array.uuid;
         this.hash = array.hash;
         this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
+        this.restrict = array.restrict;
+        this.allowedReferrers = new Array();
+        array.allowedReferrers.forEach(referrerJSON => {
+            this.allowedReferrers.push(new RefererRestriction().fromArray(referrerJSON));
+        });
+        this.allowedRegions = new Array();
+        array.allowedRegions.forEach(regionJSON => {
+            this.allowedRegions.push(new GeoRestriction().fromArray(regionJSON));
+        });
         return this;
+    }
+    setRestrict(restrict) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            var enableStr = "false";
+            if (restrict) {
+                enableStr = "true";
+            }
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/key/restriction/enable/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&enable=" + enableStr;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/key/restriction/enable/?key=" + core.getKey() + "&keyid=" + main.uuid + "&enable=" + enableStr;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new Key(core).fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    addReferer(ipOrHostname) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/key/restriction/host/add/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&host=" + ipOrHostname;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/key/restriction/host/add/?key=" + core.getKey() + "&keyid=" + main.uuid + "&host=" + ipOrHostname;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new RefererRestriction().fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    removeReferer(index) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/key/restriction/host/remove/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&index=" + index;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/key/restriction/host/remove/?key=" + core.getKey() + "&keyid=" + main.uuid + "&index=" + index;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new RefererRestriction().fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    addGeo(country, state, city) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/key/restriction/geo/add/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&country=" + country;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/key/restriction/geo/add/?key=" + core.getKey() + "&keyid=" + main.uuid + "&country=" + country;
+            }
+            if (state != null) {
+                url += "&state=" + state;
+            }
+            if (city != null) {
+                url += "&city=" + city;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new GeoRestriction().fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    removeGeo(index) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url = "https://api.purecore.io/rest/2/key/restriction/geo/remove/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&index=" + index;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/key/restriction/geo/remove/?key=" + core.getKey() + "&keyid=" + main.uuid + "&index=" + index;
+            }
+            try {
+                return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return response.json();
+                }).then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new GeoRestriction().fromArray(jsonresponse);
+                        ;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+}
+class RefererRestriction {
+    constructor(index, domain, ip) {
+        this.index = index;
+        this.domain = domain;
+        this.ip = ip;
+    }
+    fromArray(array) {
+        this.index = array.index;
+        this.domain = array.domain;
+        this.ip = array.ip;
+        return this;
+    }
+    getIndex() {
+        return this.index;
+    }
+    getDomain() {
+        return this.domain;
+    }
+    getIP() {
+        return this.ip;
     }
 }
 class BIOS {
@@ -3599,14 +3812,26 @@ class Owner extends Core {
     getSession() {
         return this.core.getTool();
     }
-    stripeSubscribe(plan, billingAddress) {
+    stripeSubscribe(plan, billingAddress, pm) {
         return __awaiter(this, void 0, void 0, function* () {
             // purecore, purecore_plus (auto-trial), purecore_plus_v
             var core = this.core;
             var url;
             if (core.getTool() instanceof Session) {
                 if (this.getTool() instanceof Session) {
-                    url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                    if (pm == null) {
+                        url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress);
+                    }
+                    else {
+                        var pmid = null;
+                        if (typeof pm == "string") {
+                            pmid = pm;
+                        }
+                        else {
+                            pmid = pm.paymentMethod.id;
+                        }
+                        url = "https://api.purecore.io/rest/2/account/subscribe/stripe/?hash=" + core.getCoreSession().getHash() + "&plan=" + plan + "&billing=" + JSON.stringify(billingAddress) + "&pm=" + pmid;
+                    }
                 }
                 try {
                     return yield fetch(url, { method: "GET" }).then(function (response) {
