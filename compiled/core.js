@@ -27,21 +27,26 @@ class Core {
     getPlans() {
         return new Promise(function (resolve, reject) {
             try {
-                return fetch("https://api.purecore.io/rest/2/plan/list/", { method: "GET" }).then(function (response) {
+                return fetch("https://api.purecore.io/rest/2/plan/list/", {
+                    method: "GET",
+                })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error);
                     }
                     else {
                         var response = new Array();
-                        jsonresponse.forEach(planData => {
+                        jsonresponse.forEach((planData) => {
                             var plan = new Plan().fromArray(planData);
                             response.push(plan);
                         });
                         resolve(response);
                     }
-                }).catch(function (error) {
+                })
+                    .catch(function (error) {
                     reject(error);
                 });
             }
@@ -53,21 +58,26 @@ class Core {
     requestGlobalHash() {
         return new Promise(function (resolve, reject) {
             try {
-                return fetch("https://api.purecore.io/rest/2/session/hash/list/", { method: "GET" }).then(function (response) {
+                return fetch("https://api.purecore.io/rest/2/session/hash/list/", {
+                    method: "GET",
+                })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error);
                     }
                     else {
                         var response = new Array();
-                        jsonresponse.forEach(hashData => {
+                        jsonresponse.forEach((hashData) => {
                             var hash = new ConnectionHashGlobal(new Core());
                             response.push(hash.fromArray(hashData));
                         });
                         resolve(response);
                     }
-                }).catch(function (error) {
+                })
+                    .catch(function (error) {
                     reject(error);
                 });
             }
@@ -78,7 +88,7 @@ class Core {
     }
     getPlayersFromIds(ids) {
         var playerList = new Array();
-        ids.forEach(id => {
+        ids.forEach((id) => {
             playerList.push(new Player(this, id));
         });
         return playerList;
@@ -86,9 +96,13 @@ class Core {
     getMachine(hash) {
         return new Promise(function (resolve, reject) {
             try {
-                return fetch("https://api.purecore.io/rest/2/machine/?hash=" + hash, { method: "GET" }).then(function (response) {
+                return fetch("https://api.purecore.io/rest/2/machine/?hash=" + hash, {
+                    method: "GET",
+                })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
@@ -106,9 +120,12 @@ class Core {
         var obj = this;
         return new Promise(function (resolve, reject) {
             try {
-                return fetch("https://api.purecore.io/rest/2/session/from/google/?token=" + GoogleToken, { method: "GET" }).then(function (response) {
+                return fetch("https://api.purecore.io/rest/2/session/from/google/?token=" +
+                    GoogleToken, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (response) {
+                })
+                    .then(function (response) {
                     if ("error" in response) {
                         throw new Error(response.error + ". " + response.msg);
                     }
@@ -117,7 +134,8 @@ class Core {
                         obj.session = session;
                         resolve(obj);
                     }
-                }).catch(function (error) {
+                })
+                    .catch(function (error) {
                     throw error;
                 });
             }
@@ -138,12 +156,18 @@ class Core {
             var url;
             if (core.getCoreSession() != null) {
                 if (this.getTool() instanceof Session) {
-                    url = "https://api.purecore.io/rest/2/account/push/fcm/?hash=" + core.getCoreSession().getHash() + "&token=" + token;
+                    url =
+                        "https://api.purecore.io/rest/2/account/push/fcm/?hash=" +
+                            core.getCoreSession().getHash() +
+                            "&token=" +
+                            token;
                 }
                 try {
-                    return yield fetch(url, { method: "GET" }).then(function (response) {
+                    return yield fetch(url, { method: "GET" })
+                        .then(function (response) {
                         return response.json();
-                    }).then(function (jsonresponse) {
+                    })
+                        .then(function (jsonresponse) {
                         if ("error" in jsonresponse) {
                             throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                         }
@@ -172,6 +196,9 @@ class Core {
     getCoreSession() {
         return this.session;
     }
+    getLegacyKey() {
+        return new Key(this, "UNK", "", this.key, null);
+    }
     getKey() {
         if (this.key == undefined) {
             return null;
@@ -193,14 +220,17 @@ class Core {
                 try {
                     var params = "";
                     if (devkey == true) {
-                        params = "?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
+                        params =
+                            "?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
                     }
                     else {
                         params = "?guildid=" + guildId + "&token=" + botToken;
                     }
-                    return fetch("https://api.purecore.io/rest/2/key/from/discord/?token=" + params, { method: "GET" }).then(function (response) {
+                    return fetch("https://api.purecore.io/rest/2/key/from/discord/?token=" + params, { method: "GET" })
+                        .then(function (response) {
                         return response.json();
-                    }).then(function (response) {
+                    })
+                        .then(function (response) {
                         if ("error" in response) {
                             throw new Error(response.error + ". " + response.msg);
                         }
@@ -208,7 +238,8 @@ class Core {
                             obj.key = response.hash;
                             resolve(obj);
                         }
-                    }).catch(function (error) {
+                    })
+                        .catch(function (error) {
                         throw error;
                     });
                 }
@@ -2092,14 +2123,50 @@ class Key extends Core {
         this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
         this.restrict = array.restrict;
         this.allowedReferrers = new Array();
-        array.allowedReferrers.forEach(referrerJSON => {
+        array.allowedReferrers.forEach((referrerJSON) => {
             this.allowedReferrers.push(new RefererRestriction().fromArray(referrerJSON));
         });
         this.allowedRegions = new Array();
-        array.allowedRegions.forEach(regionJSON => {
+        array.allowedRegions.forEach((regionJSON) => {
             this.allowedRegions.push(new GeoRestriction().fromArray(regionJSON));
         });
         return this;
+    }
+    update() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url =
+                    "https://api.purecore.io/rest/2/key/from/id/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid;
+            }
+            else {
+                url =
+                    "https://api.purecore.io/rest/2/key/from/hash/?hash=" +
+                        core.getCoreSession().getHash();
+            }
+            try {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new Key(core).fromArray(jsonresponse);
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
     }
     setRestrict(restrict) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2111,21 +2178,34 @@ class Key extends Core {
                 enableStr = "true";
             }
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/key/restriction/enable/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&enable=" + enableStr;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/enable/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&enable=" +
+                        enableStr;
             }
             else {
-                url = "https://api.purecore.io/rest/2/key/restriction/enable/?key=" + core.getKey() + "&keyid=" + main.uuid + "&enable=" + enableStr;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/enable/?key=" +
+                        core.getKey() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&enable=" +
+                        enableStr;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new Key(core).fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -2140,21 +2220,34 @@ class Key extends Core {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/key/restriction/host/add/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&host=" + ipOrHostname;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/host/add/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&host=" +
+                        ipOrHostname;
             }
             else {
-                url = "https://api.purecore.io/rest/2/key/restriction/host/add/?key=" + core.getKey() + "&keyid=" + main.uuid + "&host=" + ipOrHostname;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/host/add/?key=" +
+                        core.getKey() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&host=" +
+                        ipOrHostname;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new RefererRestriction().fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -2169,21 +2262,34 @@ class Key extends Core {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/key/restriction/host/remove/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&index=" + index;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/host/remove/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&index=" +
+                        index;
             }
             else {
-                url = "https://api.purecore.io/rest/2/key/restriction/host/remove/?key=" + core.getKey() + "&keyid=" + main.uuid + "&index=" + index;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/host/remove/?key=" +
+                        core.getKey() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&index=" +
+                        index;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new RefererRestriction().fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -2198,10 +2304,22 @@ class Key extends Core {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/key/restriction/geo/add/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&country=" + country;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/geo/add/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&country=" +
+                        country;
             }
             else {
-                url = "https://api.purecore.io/rest/2/key/restriction/geo/add/?key=" + core.getKey() + "&keyid=" + main.uuid + "&country=" + country;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/geo/add/?key=" +
+                        core.getKey() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&country=" +
+                        country;
             }
             if (state != null) {
                 url += "&state=" + state;
@@ -2210,15 +2328,16 @@ class Key extends Core {
                 url += "&city=" + city;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new GeoRestriction().fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -2233,21 +2352,34 @@ class Key extends Core {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/key/restriction/geo/remove/?hash=" + core.getCoreSession().getHash() + "&keyid=" + main.uuid + "&index=" + index;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/geo/remove/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&index=" +
+                        index;
             }
             else {
-                url = "https://api.purecore.io/rest/2/key/restriction/geo/remove/?key=" + core.getKey() + "&keyid=" + main.uuid + "&index=" + index;
+                url =
+                    "https://api.purecore.io/rest/2/key/restriction/geo/remove/?key=" +
+                        core.getKey() +
+                        "&keyid=" +
+                        main.uuid +
+                        "&index=" +
+                        index;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new GeoRestriction().fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
