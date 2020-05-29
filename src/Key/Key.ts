@@ -65,8 +65,7 @@ class Key extends Core {
         main.uuid;
     } else {
       url =
-        "https://api.purecore.io/rest/2/key/from/hash/?hash=" +
-        core.getCoreSession().getHash();
+        "https://api.purecore.io/rest/2/key/from/hash/?key=" + core.getKey();
     }
 
     try {

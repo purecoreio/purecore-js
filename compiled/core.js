@@ -197,7 +197,7 @@ class Core {
         return this.session;
     }
     getLegacyKey() {
-        return new Key(this, "UNK", "", this.key, null);
+        return new Key(this, "UNK", null, this.key, null);
     }
     getKey() {
         if (this.key == undefined) {
@@ -2146,8 +2146,7 @@ class Key extends Core {
             }
             else {
                 url =
-                    "https://api.purecore.io/rest/2/key/from/hash/?hash=" +
-                        core.getCoreSession().getHash();
+                    "https://api.purecore.io/rest/2/key/from/hash/?key=" + core.getKey();
             }
             try {
                 return yield fetch(url, { method: "GET" })

@@ -197,7 +197,7 @@ class Core {
   }
 
   public getLegacyKey(): Key {
-    return new Key(this, "UNK", "", this.key, null);
+    return new Key(this, "UNK", null, this.key, null);
   }
 
   public getKey() {
