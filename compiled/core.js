@@ -560,6 +560,194 @@ class StripeSubscription {
         return this.id;
     }
 }
+class CacheCollection {
+    constructor(instanceCaches, uuidAssociation, socketAssociation) {
+        if (instanceCaches != null) {
+            this.instanceCaches = instanceCaches;
+        }
+        else {
+            this.instanceCaches = new Array();
+        }
+        if (uuidAssociation != null) {
+            this.uuidAssociation = uuidAssociation;
+        }
+        else {
+            this.uuidAssociation = {};
+        }
+        if (socketAssociation != null) {
+            this.socketAssociation = socketAssociation;
+        }
+        else {
+            this.socketAssociation = {};
+        }
+    }
+    // CONNECTION AND DISCONNECT
+    disconnect(socketId) {
+        this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
+    }
+    connect(socketId, keyStr) {
+        let main = this;
+        var credentials = new Core(keyStr);
+        credentials
+            .getLegacyKey()
+            .update()
+            .then(function (keyData) {
+            var cache = new InstanceCache(credentials, keyData.instance);
+            main.socketAssociation[socketId] = cache.createdOn.getTime();
+            if (!(cache.instance.uuid in main.uuidAssociation)) {
+                main.uuidAssociation[cache.instance.uuid] = [];
+            }
+            main.uuidAssociation[cache.instance.uuid].push(cache.createdOn.getTime());
+            main.instanceCaches.push(cache);
+        });
+    }
+    // DATA REMOVAL
+    removeCache(epoch) {
+        var cache = this.getCacheByEpoch(epoch);
+        cache.flush();
+        // remove assoc (sockets)
+        var socketIdsToRemove = [];
+        for (const key in this.socketAssociation) {
+            if (this.socketAssociation.hasOwnProperty(key)) {
+                const element = this.socketAssociation[key];
+                if (element.createdOn == epoch) {
+                    socketIdsToRemove.push(key);
+                }
+            }
+        }
+        socketIdsToRemove.forEach((socketId) => {
+            delete this.socketAssociation[socketId];
+        });
+        // remove assoc (instance ids)
+        var newAssoc = this.uuidAssociation[cache.instance.uuid].filter(function (item) {
+            return item !== epoch;
+        });
+        if (newAssoc.length == 0) {
+            delete this.uuidAssociation[cache.instance.uuid];
+        }
+        else {
+            this.uuidAssociation[cache.instance.uuid] = newAssoc;
+        }
+    }
+    // DATA QUERY
+    getCacheByEpoch(epoch) {
+        var value = null;
+        this.instanceCaches.forEach((instanceCache) => {
+            if (instanceCache.createdOn.getTime() == epoch) {
+                value = instanceCache;
+            }
+        });
+        return value;
+    }
+    getCacheBySocket(socketId) {
+        return this.getCacheByEpoch(this.socketAssociation[socketId]);
+    }
+    getCachesByInstance(instance) {
+        var cacheList = new Array();
+        this.uuidAssociation[instance.uuid].forEach((epoch) => {
+            var cache = this.getCacheByEpoch(epoch);
+            if (cache != null) {
+                cacheList.push(cache);
+            }
+        });
+        return cacheList;
+    }
+}
+class InstanceCache extends Core {
+    constructor(credentials, instance, skipFill = false, consoleLines, instanceVitals, createdOn) {
+        super(credentials.getTool());
+        // ensure valid credentials on the instance object
+        var securedInstance = instance;
+        securedInstance.core = credentials;
+        this.instance = securedInstance;
+        // check optional values
+        if (consoleLines != null) {
+            this.consoleLines = consoleLines;
+        }
+        else {
+            this.consoleLines = new Array();
+        }
+        if (instanceVitals != null) {
+            this.instanceVitals = instanceVitals;
+        }
+        else {
+            this.instanceVitals = new Array();
+        }
+        if (createdOn != null) {
+            this.createdOn = createdOn;
+        }
+        else {
+            this.createdOn = new Date();
+        }
+        if (!skipFill) {
+            this.update();
+        }
+    }
+    createLine(string) {
+        new ConsoleLine(new Date(), LineType.INFO, string);
+    }
+    connectPlayer(ip, uuid, username) {
+        let main = this;
+        var player = new Player(this.instance.core, null, username, uuid);
+        player
+            .openConnection(ip, this.instance)
+            .then(function (connection) {
+            main.pushConnection(connection);
+        })
+            .catch(function () {
+            // ignore
+        });
+    }
+    disconnectPlayer(uuid, username) {
+        let main = this;
+        var player = new Player(this.instance.core, null, username, uuid, false);
+        player.closeConnections(this.instance).then(function (closedConnections) {
+            var newConnections = new Array();
+            main.connections.forEach((connection) => {
+                var match = false;
+                closedConnections.forEach((closedConnection) => {
+                    if (connection.uuid == closedConnection.uuid) {
+                        match = true;
+                    }
+                });
+                if (!match) {
+                    newConnections.push(connection);
+                }
+            });
+            main.connections = newConnections;
+        });
+    }
+    pushConnection(connection) {
+        this.connections.push(connection);
+    }
+    pushLine(consoleLine) {
+        this.consoleLines.push(consoleLine);
+    }
+    pushVital(instanceVital) {
+        this.instanceVitals.push(instanceVital);
+    }
+    update() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // updates data from the instance if it hasn't been pushed before
+            let main = this;
+            return yield this.instance
+                .getOpenConnections()
+                .then(function (connections) {
+                main.connections = connections;
+            });
+        });
+    }
+    flush() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return yield this.instance.closeOpenConnections().then(function () {
+                main.connections = new Array();
+                main.consoleLines = new Array();
+                main.instanceVitals = new Array();
+            });
+        });
+    }
+}
 class Command {
     constructor(uuid, cmd, network) {
         this.uuid = uuid;
@@ -1333,27 +1521,121 @@ class Instance extends Core {
         this.name = name;
         this.type = type;
     }
+    closeOpenConnections() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url =
+                    "https://api.purecore.io/rest/2/instance/connections/close/all/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&instance=" +
+                        main.uuid;
+            }
+            else {
+                url =
+                    "https://api.purecore.io/rest/2/instance/connections/open/all/?key=" +
+                        core.getKey();
+            }
+            try {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var connectionList = new Array();
+                        jsonresponse.forEach((connectionJson) => {
+                            var connection = new Connection(core).fromArray(connectionJson);
+                            connectionList.push(connection);
+                        });
+                        return connectionList;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    getOpenConnections() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url =
+                    "https://api.purecore.io/rest/2/instance/connections/open/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&instance=" +
+                        main.uuid;
+            }
+            else {
+                url =
+                    "https://api.purecore.io/rest/2/instance/connections/open/list/?key=" +
+                        core.getKey();
+            }
+            try {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var connectionList = new Array();
+                        jsonresponse.forEach((connectionJson) => {
+                            var connection = new Connection(core).fromArray(connectionJson);
+                            connectionList.push(connection);
+                        });
+                        return connectionList;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
     getGrowthAnalytics(span = 3600 * 24) {
         return __awaiter(this, void 0, void 0, function* () {
             var core = this.core;
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/instance/growth/analytics/?hash=" + core.getCoreSession().getHash() + "&instance=" + main.uuid + "&span=" + span;
+                url =
+                    "https://api.purecore.io/rest/2/instance/growth/analytics/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&instance=" +
+                        main.uuid +
+                        "&span=" +
+                        span;
             }
             else {
-                url = "https://api.purecore.io/rest/2/instance/growth/analytics/?key=" + core.getKey() + "&span=" + span;
+                url =
+                    "https://api.purecore.io/rest/2/instance/growth/analytics/?key=" +
+                        core.getKey() +
+                        "&span=" +
+                        span;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         var growthAnalytics = new Array();
-                        jsonresponse.forEach(growthAnalyticJSON => {
+                        jsonresponse.forEach((growthAnalyticJSON) => {
                             var growthAnalytic = new GrowthAnalytic().fromArray(growthAnalyticJSON);
                             growthAnalytics.push(growthAnalytic);
                         });
@@ -1371,16 +1653,26 @@ class Instance extends Core {
         var instance = this;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/delete/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/delete/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&instance=" +
+                    instance.getId();
         }
         else {
-            url = "https://api.purecore.io/rest/2/instance/delete/?key=" + core.getKey() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/delete/?key=" +
+                    core.getKey() +
+                    "&instance=" +
+                    instance.getId();
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error));
                     }
@@ -1399,22 +1691,32 @@ class Instance extends Core {
         var instance = this;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/key/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/key/list/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&instance=" +
+                    instance.getId();
         }
         else {
-            url = "https://api.purecore.io/rest/2/instance/key/list/?key=" + core.getKey() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/key/list/?key=" +
+                    core.getKey() +
+                    "&instance=" +
+                    instance.getId();
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error));
                     }
                     else {
                         var keyList = new Array();
-                        jsonresponse.forEach(jsonKey => {
+                        jsonresponse.forEach((jsonKey) => {
                             keyList.push(new Key(core).fromArray(jsonKey));
                         });
                         resolve(keyList);
@@ -1440,16 +1742,26 @@ class Instance extends Core {
         var instance = this;
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/info/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/info/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&instance=" +
+                    instance.getId();
         }
         else {
-            url = "https://api.purecore.io/rest/2/instance/info/?key=" + core.getKey() + "&instance=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/instance/info/?key=" +
+                    core.getKey() +
+                    "&instance=" +
+                    instance.getId();
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
@@ -3367,21 +3679,33 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/income/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
+                url =
+                    "https://api.purecore.io/rest/2/store/income/analytics/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid +
+                        "&span=" +
+                        span;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/income/analytics/?key=" + core.getKey() + "&span=" + span;
+                url =
+                    "https://api.purecore.io/rest/2/store/income/analytics/?key=" +
+                        core.getKey() +
+                        "&span=" +
+                        span;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         var IncomeAnalytics = new Array();
-                        jsonresponse.forEach(IncomeAnalyticJSON => {
+                        jsonresponse.forEach((IncomeAnalyticJSON) => {
                             var IncomeAnalyticD = new IncomeAnalytic().fromArray(IncomeAnalyticJSON);
                             IncomeAnalytics.push(IncomeAnalyticD);
                         });
@@ -3400,15 +3724,27 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/item/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&item=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/store/item/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid +
+                        "&item=" +
+                        id;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/item/?key=" + core.getKey() + "&item=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/store/item/?key=" +
+                        core.getKey() +
+                        "&item=" +
+                        id;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
@@ -3428,21 +3764,28 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/perk/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         var perklist = new Array();
-                        jsonresponse.forEach(element => {
+                        jsonresponse.forEach((element) => {
                             perklist.push(new Perk(core).fromArray(element));
                         });
                         return perklist;
@@ -3460,21 +3803,29 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/perk/category/list/?key=" + core.getKey();
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/category/list/?key=" +
+                        core.getKey();
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         var perklist = new Array();
-                        jsonresponse.forEach(element => {
+                        jsonresponse.forEach((element) => {
                             perklist.push(new PerkCategory(core).fromArray(element));
                         });
                         return perklist;
@@ -3492,21 +3843,23 @@ class Store extends Network {
         return new Promise(function (resolve, reject) {
             try {
                 return fetch("https://api.purecore.io/rest/2/store/gateway/list/", {
-                    method: 'POST',
+                    method: "POST",
                     headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        Accept: "application/json",
+                        "Content-Type": "application/x-www-form-urlencoded",
                     },
-                    body: "hash=" + hash + "&network=" + ntwid
-                }).then(function (response) {
+                    body: "hash=" + hash + "&network=" + ntwid,
+                })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error));
                     }
                     else {
                         var methods = [];
-                        jsonresponse.forEach(gtw => {
+                        jsonresponse.forEach((gtw) => {
                             var gtf = new Gateway(gtw.name, null, null, null);
                             methods.push(gtf);
                         });
@@ -3521,14 +3874,14 @@ class Store extends Network {
     }
     itemIdList(list) {
         var finalList = new Array();
-        list.forEach(item => {
+        list.forEach((item) => {
             finalList.push(new StoreItem(new Core(), item.uuid));
         });
         return finalList;
     }
     itemIdListFromJSON(json) {
         var finalList = new Array();
-        json.forEach(item => {
+        json.forEach((item) => {
             finalList.push(new StoreItem(new Core(), item.uuid));
         });
         return finalList;
@@ -3536,12 +3889,18 @@ class Store extends Network {
     getStripeWalletLink() {
         var hash = this.network.core.getCoreSession().getHash();
         var ntwid = this.network.getId();
-        return "https://api.purecore.io/link/stripe/wallet/?hash=" + hash + "&network=" + ntwid;
+        return ("https://api.purecore.io/link/stripe/wallet/?hash=" +
+            hash +
+            "&network=" +
+            ntwid);
     }
     getPayPalWalletLink() {
         var hash = this.network.core.getCoreSession().getHash();
         var ntwid = this.network.getId();
-        return "https://api.purecore.io/link/paypal/wallet/?hash=" + hash + "&network=" + ntwid;
+        return ("https://api.purecore.io/link/paypal/wallet/?hash=" +
+            hash +
+            "&network=" +
+            ntwid);
     }
     requestPayment(itemList, username, billingAddress) {
         if (billingAddress == null) {
@@ -3550,31 +3909,59 @@ class Store extends Network {
         var core = this.network.core;
         var instance = this.network.asInstance();
         var idList = [];
-        itemList.forEach(item => {
+        itemList.forEach((item) => {
             idList.push(item.uuid);
         });
         var body = "";
         if (core.getTool() instanceof Session) {
-            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
+            body =
+                "hash=" +
+                    core.getCoreSession().getHash() +
+                    "&network=" +
+                    instance.getId() +
+                    "&products=" +
+                    escape(JSON.stringify(idList)) +
+                    "&username=" +
+                    username +
+                    "&billing=" +
+                    JSON.stringify(billingAddress);
         }
         else if (core.getKey() != null) {
-            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
+            body =
+                "key=" +
+                    core.getKey() +
+                    "&products=" +
+                    escape(JSON.stringify(idList)) +
+                    "&username=" +
+                    username +
+                    "&billing=" +
+                    JSON.stringify(billingAddress);
         }
         else {
-            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
+            body =
+                "network=" +
+                    instance.getId() +
+                    "&products=" +
+                    escape(JSON.stringify(idList)) +
+                    "&username=" +
+                    username +
+                    "&billing=" +
+                    JSON.stringify(billingAddress);
         }
         return new Promise(function (resolve, reject) {
             try {
                 return fetch("https://api.purecore.io/rest/2/payment/request/", {
-                    method: 'POST',
+                    method: "POST",
                     headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        Accept: "application/json",
+                        "Content-Type": "application/x-www-form-urlencoded",
                     },
-                    body: body
-                }).then(function (response) {
+                    body: body,
+                })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error));
                     }
@@ -3601,22 +3988,36 @@ class Store extends Network {
         }
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + page;
+            url =
+                "https://api.purecore.io/rest/2/payment/list/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&network=" +
+                    instance.getId() +
+                    "&page=" +
+                    page;
         }
         else {
-            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + "&network=" + instance.getId() + "&page=" + page;
+            url =
+                "https://api.purecore.io/rest/2/payment/list/?key=" +
+                    core.getKey() +
+                    "&network=" +
+                    instance.getId() +
+                    "&page=" +
+                    page;
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var payments = new Array();
-                        jsonresponse.forEach(paymentJson => {
+                        jsonresponse.forEach((paymentJson) => {
                             payments.push(new Payment(core).fromArray(paymentJson));
                         });
                         resolve(payments);
@@ -3634,15 +4035,29 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/gateway/unlink/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&gateway=" + gatewayName;
+                url =
+                    "https://api.purecore.io/rest/2/store/gateway/unlink/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid +
+                        "&gateway=" +
+                        gatewayName;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/gateway/unlink/?key=" + core.getKey() + "&network=" + main.uuid + "&gateway=" + gatewayName;
+                url =
+                    "https://api.purecore.io/rest/2/store/gateway/unlink/?key=" +
+                        core.getKey() +
+                        "&network=" +
+                        main.uuid +
+                        "&gateway=" +
+                        gatewayName;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
@@ -3662,21 +4077,34 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name;
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid +
+                        "&name=" +
+                        name;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/perk/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name;
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/category/create/?key=" +
+                        core.getKey() +
+                        "&network=" +
+                        main.uuid +
+                        "&name=" +
+                        name;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new PerkCategory(core).fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -3691,21 +4119,38 @@ class Store extends Network {
             let main = this;
             var url;
             if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/store/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+                url =
+                    "https://api.purecore.io/rest/2/store/category/create/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid +
+                        "&name=" +
+                        name +
+                        "&description=" +
+                        description;
             }
             else {
-                url = "https://api.purecore.io/rest/2/store/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
+                url =
+                    "https://api.purecore.io/rest/2/store/category/create/?key=" +
+                        core.getKey() +
+                        "&network=" +
+                        main.uuid +
+                        "&name=" +
+                        name +
+                        "&description=" +
+                        description;
             }
             try {
-                return yield fetch(url, { method: "GET" }).then(function (response) {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
                     }
                     else {
                         return new StoreCategory(core).fromArray(jsonresponse);
-                        ;
                     }
                 });
             }
@@ -3720,7 +4165,7 @@ class Store extends Network {
                 try {
                     this.getPackages().then(function (nestedItems) {
                         var categories = new Array();
-                        nestedItems.forEach(nestedItem => {
+                        nestedItems.forEach((nestedItem) => {
                             categories.push(nestedItem.category);
                         });
                         resolve(categories);
@@ -3737,30 +4182,43 @@ class Store extends Network {
         var instance = this.network.asInstance();
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/store/item/list/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&network=" +
+                    instance.getId();
         }
         else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/store/item/list/?key=" + core.getKey() + "&network=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/store/item/list/?key=" +
+                    core.getKey() +
+                    "&network=" +
+                    instance.getId();
         }
         else {
-            url = "https://api.purecore.io/rest/2/store/item/list/?network=" + instance.getId();
+            url =
+                "https://api.purecore.io/rest/2/store/item/list/?network=" +
+                    instance.getId();
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         throw new Error(jsonresponse.error);
                     }
                     else {
                         var response = new Array();
-                        jsonresponse.forEach(nestedData => {
+                        jsonresponse.forEach((nestedData) => {
                             response.push(new NestedItem(core).fromArray(nestedData));
                         });
                         resolve(response);
                     }
-                }).catch(function (err) {
+                })
+                    .catch(function (err) {
                     reject(err);
                 });
             }
@@ -4254,20 +4712,98 @@ class Player extends Core {
         this.uuid = uuid;
         this.verified = verified;
     }
+    closeConnections(instance) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                throw new Error("Unsupported");
+            }
+            else {
+                url =
+                    "https://api.purecore.io/rest/2/connection/close/all/?key=" +
+                        core.getKey() +
+                        "&uuid=" +
+                        this.uuid;
+            }
+            try {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        var connectionsClosed = new Array();
+                        jsonresponse.forEach((connectionJson) => {
+                            connectionsClosed.push(new Connection(core).fromArray(connectionJson));
+                        });
+                        return connectionsClosed;
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
+    openConnection(ip, instance) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var url;
+            if (core.getTool() instanceof Session) {
+                throw new Error("Unsupported");
+            }
+            else {
+                url =
+                    "https://api.purecore.io/rest/2/connection/new/?key=" +
+                        core.getKey() +
+                        "&ip=" +
+                        ip +
+                        "&username=" +
+                        this.username +
+                        "&uuid=" +
+                        this.uuid;
+            }
+            try {
+                return yield fetch(url, { method: "GET" })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (jsonresponse) {
+                    if ("error" in jsonresponse) {
+                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+                    }
+                    else {
+                        return new Connection(core).fromArray(jsonresponse);
+                    }
+                });
+            }
+            catch (e) {
+                throw new Error(e.message);
+            }
+        });
+    }
     getBillingAddress() {
         var core = this.core;
         var url = "";
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/billing/get/?hash=" + core.getCoreSession().getHash();
+            url =
+                "https://api.purecore.io/rest/2/player/billing/get/?hash=" +
+                    core.getCoreSession().getHash();
         }
         else {
             throw new Error("unsupported");
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
@@ -4291,33 +4827,61 @@ class Player extends Core {
         var url;
         if (core.getTool() instanceof Session) {
             if (network == null || network == undefined) {
-                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/player/punishment/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
             else {
-                url = "https://api.purecore.io/rest/2/player/punishment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/player/punishment/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        network.getId() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
         }
         else {
             if (network == null || network == undefined) {
-                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;
-                ;
+                url =
+                    "https://api.purecore.io/rest/2/player/punishment/list/?key=" +
+                        core.getKey() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
             else {
-                url = "https://api.purecore.io/rest/2/player/punishment/list/?key=" + core.getKey() + "&network=" + network.getId() + "&page=" + queryPage + "&player=" + id;
-                ;
+                url =
+                    "https://api.purecore.io/rest/2/player/punishment/list/?key=" +
+                        core.getKey() +
+                        "&network=" +
+                        network.getId() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var punishments = new Array();
-                        jsonresponse.forEach(punishmentJson => {
+                        jsonresponse.forEach((punishmentJson) => {
                             punishments.push(new Punishment(core).fromArray(punishmentJson));
                         });
                         resolve(punishments);
@@ -4338,23 +4902,40 @@ class Player extends Core {
         }
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;
+            url =
+                "https://api.purecore.io/rest/2/player/payment/list/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&network=" +
+                    store.getNetwork().getId() +
+                    "&page=" +
+                    queryPage +
+                    "&player=" +
+                    id;
         }
         else {
-            url = "https://api.purecore.io/rest/2/player/payment/list/?key=" + core.getKey() + "&network=" + store.getNetwork().getId() + "&page=" + queryPage + "&player=" + id;
-            ;
+            url =
+                "https://api.purecore.io/rest/2/player/payment/list/?key=" +
+                    core.getKey() +
+                    "&network=" +
+                    store.getNetwork().getId() +
+                    "&page=" +
+                    queryPage +
+                    "&player=" +
+                    id;
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var payments = new Array();
-                        jsonresponse.forEach(paymentJson => {
+                        jsonresponse.forEach((paymentJson) => {
                             payments.push(new Payment(core).fromArray(paymentJson));
                         });
                         resolve(payments);
@@ -4369,16 +4950,20 @@ class Player extends Core {
     getDiscordId() {
         var url = "";
         if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/get/discord/id/?hash=" + this.core.getCoreSession().getHash();
+            url =
+                "https://api.purecore.io/rest/2/player/get/discord/id/?hash=" +
+                    this.core.getCoreSession().getHash();
         }
         else {
             throw new Error("only sessions are supported in this call");
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
@@ -4402,33 +4987,61 @@ class Player extends Core {
         var url;
         if (core.getTool() instanceof Session) {
             if (instance == null) {
-                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&page=" + queryPage + "&player=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/player/connection/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
             else {
-                url = "https://api.purecore.io/rest/2/player/connection/list/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
+                url =
+                    "https://api.purecore.io/rest/2/player/connection/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&instance=" +
+                        instance.getId() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
         }
         else {
             if (instance == null) {
-                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&page=" + queryPage + "&player=" + id;
-                ;
+                url =
+                    "https://api.purecore.io/rest/2/player/connection/list/?key=" +
+                        core.getKey() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
             else {
-                url = "https://api.purecore.io/rest/2/player/connection/list/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id;
-                ;
+                url =
+                    "https://api.purecore.io/rest/2/player/connection/list/?key=" +
+                        core.getKey() +
+                        "&instance=" +
+                        instance.getId() +
+                        "&page=" +
+                        queryPage +
+                        "&player=" +
+                        id;
             }
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var connections = new Array();
-                        jsonresponse.forEach(connectionJson => {
+                        jsonresponse.forEach((connectionJson) => {
                             connections.push(new Connection(core).fromArray(connectionJson));
                         });
                         resolve(connections);
@@ -4445,7 +5058,7 @@ class Player extends Core {
         var core = this.core;
         var queryPage = 0;
         var playerListIds = [];
-        playerList.forEach(player => {
+        playerList.forEach((player) => {
             playerListIds.push(player.getId());
         });
         if (page != undefined || page != null) {
@@ -4453,24 +5066,46 @@ class Player extends Core {
         }
         var url;
         if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?hash=" + core.getCoreSession().getHash() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+            url =
+                "https://api.purecore.io/rest/2/player/connection/list/match/players/?hash=" +
+                    core.getCoreSession().getHash() +
+                    "&instance=" +
+                    instance.getId() +
+                    "&page=" +
+                    queryPage +
+                    "&player=" +
+                    id +
+                    "&players=" +
+                    JSON.stringify(playerListIds);
         }
         else {
-            url = "https://api.purecore.io/rest/2/player/connection/list/match/players/?key=" + core.getKey() + "&instance=" + instance.getId() + "&page=" + queryPage + "&player=" + id + "&players=" + JSON.stringify(playerListIds);
+            url =
+                "https://api.purecore.io/rest/2/player/connection/list/match/players/?key=" +
+                    core.getKey() +
+                    "&instance=" +
+                    instance.getId() +
+                    "&page=" +
+                    queryPage +
+                    "&player=" +
+                    id +
+                    "&players=" +
+                    JSON.stringify(playerListIds);
         }
         return new Promise(function (resolve, reject) {
             try {
-                return fetch(url, { method: "GET" }).then(function (response) {
+                return fetch(url, { method: "GET" })
+                    .then(function (response) {
                     return response.json();
-                }).then(function (jsonresponse) {
+                })
+                    .then(function (jsonresponse) {
                     if ("error" in jsonresponse) {
                         reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
                     }
                     else {
                         var activityMatch = new Array();
-                        jsonresponse.forEach(activity => {
+                        jsonresponse.forEach((activity) => {
                             var matchingRanges = new Array();
-                            activity.matchList.forEach(matchingRangeJson => {
+                            activity.matchList.forEach((matchingRangeJson) => {
                                 var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn * 1000), new Date(matchingRangeJson.finishedOn * 1000), matchingRangeJson.matchWith);
                                 matchingRanges.push(matchingRange);
                             });

@@ -1,451 +1,570 @@
 class Store extends Network {
+  network: Network;
 
-    network: Network;
+  constructor(network: Network) {
+    super(network.core, network.asInstance());
+    this.network = network;
+  }
 
-    constructor(network: Network) {
+  async getIncomeAnalytics(span = 3600 * 24) {
+    var core = this.core;
+    let main = this;
+    var url;
 
-        super(network.core, network.asInstance());
-        this.network = network;
-
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/income/analytics/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid +
+        "&span=" +
+        span;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/income/analytics/?key=" +
+        core.getKey() +
+        "&span=" +
+        span;
     }
 
-    async getIncomeAnalytics(span = 3600 * 24) {
-
-        var core = this.core;
-        let main = this;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/income/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/income/analytics/?key=" + core.getKey() + "&span=" + span;
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    var IncomeAnalytics = new Array<IncomeAnalytic>();
-                    jsonresponse.forEach(IncomeAnalyticJSON => {
-                        var IncomeAnalyticD = new IncomeAnalytic().fromArray(IncomeAnalyticJSON);
-                        IncomeAnalytics.push(IncomeAnalyticD);
-                    });
-                    return IncomeAnalytics;
-                }
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            var IncomeAnalytics = new Array<IncomeAnalytic>();
+            jsonresponse.forEach((IncomeAnalyticJSON) => {
+              var IncomeAnalyticD = new IncomeAnalytic().fromArray(
+                IncomeAnalyticJSON
+              );
+              IncomeAnalytics.push(IncomeAnalyticD);
             });
-        } catch (e) {
-            throw new Error(e.message)
-        }
+            return IncomeAnalytics;
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
+
+  public async getItem(id: string) {
+    var core = this.core;
+    let main = this;
+    var url;
+
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/item/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid +
+        "&item=" +
+        id;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/item/?key=" +
+        core.getKey() +
+        "&item=" +
+        id;
     }
 
-    public async getItem(id: string) {
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            return new StoreItem(core).fromArray(jsonresponse);
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
 
-        var core = this.core;
-        let main = this;
-        var url;
+  public async getPerks() {
+    var core = this.core;
+    let main = this;
+    var url;
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/item/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&item=" + id;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/item/?key=" + core.getKey() + "&item=" + id;
-        }
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/list/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
+    }
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new StoreItem(core).fromArray(jsonresponse);
-                }
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            var perklist = new Array<Perk>();
+            jsonresponse.forEach((element) => {
+              perklist.push(new Perk(core).fromArray(element));
             });
-        } catch (e) {
-            throw new Error(e.message)
-        }
+            return perklist;
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
 
+  public async getPerkCategories() {
+    var core = this.core;
+    let main = this;
+    var url;
+
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/category/list/?key=" +
+        core.getKey();
     }
 
-    public async getPerks() {
-
-        var core = this.core;
-        let main = this;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/perk/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/perk/list/?key=" + core.getKey();
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    var perklist = new Array<Perk>();
-                    jsonresponse.forEach(element => {
-                        perklist.push(new Perk(core).fromArray(element))
-                    });
-                    return perklist;
-                }
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            var perklist = new Array<PerkCategory>();
+            jsonresponse.forEach((element) => {
+              perklist.push(new PerkCategory(core).fromArray(element));
             });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
+            return perklist;
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
     }
+  }
 
-    public async getPerkCategories() {
+  public getGateways() {
+    let hash = this.network.core.getCoreSession().getHash();
+    let ntwid = this.network.getId();
 
-        var core = this.core;
-        let main = this;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/perk/category/list/?key=" + core.getKey();
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    var perklist = new Array<PerkCategory>();
-                    jsonresponse.forEach(element => {
-                        perklist.push(new PerkCategory(core).fromArray(element))
-                    });
-                    return perklist;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
-    }
-
-    public getGateways() {
-
-        let hash = this.network.core.getCoreSession().getHash();
-        let ntwid = this.network.getId();
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch("https://api.purecore.io/rest/2/store/gateway/list/", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: "hash=" + hash + "&network=" + ntwid
-                }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-
-                        var methods = []
-                        jsonresponse.forEach(gtw => {
-                            var gtf = new Gateway(gtw.name, null, null, null)
-                            methods.push(gtf);
-                        });
-                        resolve(methods);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
+    return new Promise(function (resolve, reject) {
+      try {
+        return fetch("https://api.purecore.io/rest/2/store/gateway/list/", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "hash=" + hash + "&network=" + ntwid,
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (jsonresponse) {
+            if ("error" in jsonresponse) {
+              reject(new Error(jsonresponse.error));
+            } else {
+              var methods = [];
+              jsonresponse.forEach((gtw) => {
+                var gtf = new Gateway(gtw.name, null, null, null);
+                methods.push(gtf);
+              });
+              resolve(methods);
             }
+          });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
-        });
+  public itemIdList(list: Array<StoreItem>): Array<StoreItem> {
+    var finalList = new Array<StoreItem>();
+    list.forEach((item) => {
+      finalList.push(new StoreItem(new Core(), item.uuid));
+    });
+    return finalList;
+  }
+
+  public itemIdListFromJSON(json): Array<StoreItem> {
+    var finalList = new Array<StoreItem>();
+    json.forEach((item) => {
+      finalList.push(new StoreItem(new Core(), item.uuid));
+    });
+    return finalList;
+  }
+
+  getStripeWalletLink() {
+    var hash = this.network.core.getCoreSession().getHash();
+    var ntwid = this.network.getId();
+    return (
+      "https://api.purecore.io/link/stripe/wallet/?hash=" +
+      hash +
+      "&network=" +
+      ntwid
+    );
+  }
+
+  getPayPalWalletLink() {
+    var hash = this.network.core.getCoreSession().getHash();
+    var ntwid = this.network.getId();
+    return (
+      "https://api.purecore.io/link/paypal/wallet/?hash=" +
+      hash +
+      "&network=" +
+      ntwid
+    );
+  }
+
+  requestPayment(
+    itemList: Array<StoreItem>,
+    username: string,
+    billingAddress?
+  ) {
+    if (billingAddress == null) {
+      billingAddress = new BillingAddress();
     }
 
-    public itemIdList(list: Array<StoreItem>): Array<StoreItem> {
-        var finalList = new Array<StoreItem>();
-        list.forEach(item => {
-            finalList.push(new StoreItem(new Core(), item.uuid));
-        });
-        return finalList;
+    var core = this.network.core;
+    var instance = this.network.asInstance();
+    var idList = [];
+
+    itemList.forEach((item) => {
+      idList.push(item.uuid);
+    });
+
+    var body = "";
+    if (core.getTool() instanceof Session) {
+      body =
+        "hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        instance.getId() +
+        "&products=" +
+        escape(JSON.stringify(idList)) +
+        "&username=" +
+        username +
+        "&billing=" +
+        JSON.stringify(billingAddress);
+    } else if (core.getKey() != null) {
+      body =
+        "key=" +
+        core.getKey() +
+        "&products=" +
+        escape(JSON.stringify(idList)) +
+        "&username=" +
+        username +
+        "&billing=" +
+        JSON.stringify(billingAddress);
+    } else {
+      body =
+        "network=" +
+        instance.getId() +
+        "&products=" +
+        escape(JSON.stringify(idList)) +
+        "&username=" +
+        username +
+        "&billing=" +
+        JSON.stringify(billingAddress);
     }
-
-    public itemIdListFromJSON(json): Array<StoreItem> {
-        var finalList = new Array<StoreItem>();
-        json.forEach(item => {
-            finalList.push(new StoreItem(new Core(), item.uuid));
-        });
-        return finalList;
-    }
-
-    getStripeWalletLink() {
-        var hash = this.network.core.getCoreSession().getHash();
-        var ntwid = this.network.getId();
-        return "https://api.purecore.io/link/stripe/wallet/?hash=" + hash + "&network=" + ntwid
-    }
-
-    getPayPalWalletLink() {
-        var hash = this.network.core.getCoreSession().getHash();
-        var ntwid = this.network.getId();
-        return "https://api.purecore.io/link/paypal/wallet/?hash=" + hash + "&network=" + ntwid
-    }
-
-    requestPayment(itemList: Array<StoreItem>, username: string, billingAddress?) {
-
-        if (billingAddress == null) {
-            billingAddress = new BillingAddress();
-        }
-
-        var core = this.network.core;
-        var instance = this.network.asInstance();
-        var idList = [];
-
-        itemList.forEach(item => {
-            idList.push(item.uuid);
-        });
-
-        var body = "";
-        if (core.getTool() instanceof Session) {
-            body = "hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
-        } else if (core.getKey() != null) {
-            body = "key=" + core.getKey() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
-        } else {
-            body = "network=" + instance.getId() + "&products=" + escape(JSON.stringify(idList)) + "&username=" + username + "&billing=" + JSON.stringify(billingAddress);
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch("https://api.purecore.io/rest/2/payment/request/", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: body
-                }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-                        var paymentRequest = new CorePaymentRequest(core).fromArray(jsonresponse);
-                        resolve(paymentRequest);
-                    }
-                });
-            } catch (e) {
-                reject(e);
+    return new Promise(function (resolve, reject) {
+      try {
+        return fetch("https://api.purecore.io/rest/2/payment/request/", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: body,
+        })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (jsonresponse) {
+            if ("error" in jsonresponse) {
+              reject(new Error(jsonresponse.error));
+            } else {
+              var paymentRequest = new CorePaymentRequest(core).fromArray(
+                jsonresponse
+              );
+              resolve(paymentRequest);
             }
+          });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
-        });
+  getNetwork(): Network {
+    return this.network;
+  }
+
+  getPayments(page?) {
+    var core = this.network.core;
+    var instance = this.network.asInstance();
+
+    var queryPage = 0;
+
+    if (page != undefined || page != null) {
+      queryPage = page;
     }
 
-    getNetwork(): Network {
-        return this.network;
+    var url;
+
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/payment/list/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        instance.getId() +
+        "&page=" +
+        page;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/payment/list/?key=" +
+        core.getKey() +
+        "&network=" +
+        instance.getId() +
+        "&page=" +
+        page;
     }
 
-    getPayments(page?) {
+    return new Promise(function (resolve, reject) {
+      try {
+        return fetch(url, { method: "GET" })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (jsonresponse) {
+            if ("error" in jsonresponse) {
+              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
+            } else {
+              var payments = new Array<Payment>();
 
-        var core = this.network.core;
-        var instance = this.network.asInstance();
+              jsonresponse.forEach((paymentJson) => {
+                payments.push(new Payment(core).fromArray(paymentJson));
+              });
 
-        var queryPage = 0;
-
-        if (page != undefined || page != null) {
-            queryPage = page;
-        }
-
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/payment/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + page;
-        } else {
-            url = "https://api.purecore.io/rest/2/payment/list/?key=" + core.getKey() + "&network=" + instance.getId() + "&page=" + page;
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                    } else {
-
-                        var payments = new Array<Payment>();
-
-                        jsonresponse.forEach(paymentJson => {
-
-                            payments.push(new Payment(core).fromArray(paymentJson));
-
-                        });
-
-                        resolve(payments);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
+              resolve(payments);
             }
+          });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
+  public async unlinkGateway(gatewayName) {
+    var core = this.core;
+    let main = this;
+    var url;
+
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/gateway/unlink/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid +
+        "&gateway=" +
+        gatewayName;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/gateway/unlink/?key=" +
+        core.getKey() +
+        "&network=" +
+        main.uuid +
+        "&gateway=" +
+        gatewayName;
+    }
+
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            return jsonresponse.success;
+          }
         });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
+
+  public async createPerkCategory(name) {
+    var core = this.core;
+    let main = this;
+    var url;
+
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid +
+        "&name=" +
+        name;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/perk/category/create/?key=" +
+        core.getKey() +
+        "&network=" +
+        main.uuid +
+        "&name=" +
+        name;
     }
 
-    public async unlinkGateway(gatewayName) {
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            return new PerkCategory(core).fromArray(jsonresponse);
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
 
-        var core = this.core;
-        let main = this;
-        var url;
+  public async createCategory(name, description) {
+    var core = this.core;
+    let main = this;
+    var url;
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/gateway/unlink/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&gateway=" + gatewayName;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/gateway/unlink/?key=" + core.getKey() + "&network=" + main.uuid + "&gateway=" + gatewayName;
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return jsonresponse.success;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/category/create/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        main.uuid +
+        "&name=" +
+        name +
+        "&description=" +
+        description;
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/category/create/?key=" +
+        core.getKey() +
+        "&network=" +
+        main.uuid +
+        "&name=" +
+        name +
+        "&description=" +
+        description;
     }
 
-    public async createPerkCategory(name) {
+    try {
+      return await fetch(url, { method: "GET" })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (jsonresponse) {
+          if ("error" in jsonresponse) {
+            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
+          } else {
+            return new StoreCategory(core).fromArray(jsonresponse);
+          }
+        });
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
 
-        var core = this.core;
-        let main = this;
-        var url;
+  public async getCategories() {
+    return new Promise(function (resolve, reject) {
+      try {
+        this.getPackages().then(function (nestedItems: Array<NestedItem>) {
+          var categories = new Array<StoreCategory>();
+          nestedItems.forEach((nestedItem) => {
+            categories.push(nestedItem.category);
+          });
+          resolve(categories);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/perk/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/perk/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name;
-        }
+  getPackages() {
+    var core = this.network.core;
+    var instance = this.network.asInstance();
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new PerkCategory(core).fromArray(jsonresponse);;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
+    var url;
 
+    if (core.getTool() instanceof Session) {
+      url =
+        "https://api.purecore.io/rest/2/store/item/list/?hash=" +
+        core.getCoreSession().getHash() +
+        "&network=" +
+        instance.getId();
+    } else if (core.getKey() != null) {
+      url =
+        "https://api.purecore.io/rest/2/store/item/list/?key=" +
+        core.getKey() +
+        "&network=" +
+        instance.getId();
+    } else {
+      url =
+        "https://api.purecore.io/rest/2/store/item/list/?network=" +
+        instance.getId();
     }
 
-    public async createCategory(name, description) {
+    return new Promise(function (resolve, reject) {
+      try {
+        return fetch(url, { method: "GET" })
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (jsonresponse) {
+            if ("error" in jsonresponse) {
+              throw new Error(jsonresponse.error);
+            } else {
+              var response = new Array<NestedItem>();
 
-        var core = this.core;
-        let main = this;
-        var url;
+              jsonresponse.forEach((nestedData) => {
+                response.push(new NestedItem(core).fromArray(nestedData));
+              });
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/category/create/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
-        } else {
-            url = "https://api.purecore.io/rest/2/store/category/create/?key=" + core.getKey() + "&network=" + main.uuid + "&name=" + name + "&description=" + description;
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new StoreCategory(core).fromArray(jsonresponse);;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
-    }
-
-    public async getCategories() {
-        return new Promise(function (resolve, reject) {
-            try {
-                this.getPackages().then(function (nestedItems: Array<NestedItem>) {
-                    var categories = new Array<StoreCategory>();
-                    nestedItems.forEach(nestedItem => {
-                        categories.push(nestedItem.category);
-                    });
-                    resolve(categories);
-                })
-            } catch (e) {
-                reject(e);
+              resolve(response);
             }
-        });
-    }
-
-
-    getPackages() {
-
-        var core = this.network.core;
-        var instance = this.network.asInstance();
-
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/store/item/list/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId();
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/store/item/list/?key=" + core.getKey() + "&network=" + instance.getId();
-        } else {
-            url = "https://api.purecore.io/rest/2/store/item/list/?network=" + instance.getId();
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error)
-                    } else {
-
-                        var response = new Array<NestedItem>();
-
-                        jsonresponse.forEach(nestedData => {
-
-                            response.push(new NestedItem(core).fromArray(nestedData));
-
-                        });
-
-                        resolve(response);
-
-                    }
-                }).catch(function (err) {
-                    reject(err);
-                });
-            } catch (e) {
-                reject(e);
-            }
-
-        });
-    }
-
+          })
+          .catch(function (err) {
+            reject(err);
+          });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 }
