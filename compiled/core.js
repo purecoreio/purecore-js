@@ -589,19 +589,22 @@ class CacheCollection {
         this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
     }
     connect(socketId, keyStr) {
-        let main = this;
-        var credentials = new Core(keyStr);
-        credentials
-            .getLegacyKey()
-            .update()
-            .then(function (keyData) {
-            var cache = new InstanceCache(credentials, keyData.instance);
-            main.socketAssociation[socketId] = cache.createdOn.getTime();
-            if (!(cache.instance.uuid in main.uuidAssociation)) {
-                main.uuidAssociation[cache.instance.uuid] = [];
-            }
-            main.uuidAssociation[cache.instance.uuid].push(cache.createdOn.getTime());
-            main.instanceCaches.push(cache);
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var credentials = new Core(keyStr);
+            return yield credentials
+                .getLegacyKey()
+                .update()
+                .then(function (keyData) {
+                var cache = new InstanceCache(credentials, keyData.instance);
+                main.socketAssociation[socketId] = cache.createdOn.getTime();
+                if (!(cache.instance.uuid in main.uuidAssociation)) {
+                    main.uuidAssociation[cache.instance.uuid] = [];
+                }
+                main.uuidAssociation[cache.instance.uuid].push(cache.createdOn.getTime());
+                main.instanceCaches.push(cache);
+                return true;
+            });
         });
     }
     // DATA REMOVAL
@@ -657,7 +660,7 @@ class CacheCollection {
     }
 }
 class InstanceCache extends Core {
-    constructor(credentials, instance, skipFill = false, consoleLines, instanceVitals, createdOn) {
+    constructor(credentials, instance, skipFill = false, consoleLines, instanceVitals, instanceConnections, createdOn) {
         super(credentials.getTool());
         // ensure valid credentials on the instance object
         var securedInstance = instance;
@@ -676,6 +679,12 @@ class InstanceCache extends Core {
         else {
             this.instanceVitals = new Array();
         }
+        if (instanceConnections != null) {
+            this.connections = instanceConnections;
+        }
+        else {
+            this.connections = new Array();
+        }
         if (createdOn != null) {
             this.createdOn = createdOn;
         }
@@ -690,34 +699,39 @@ class InstanceCache extends Core {
         new ConsoleLine(new Date(), LineType.INFO, string);
     }
     connectPlayer(ip, uuid, username) {
-        let main = this;
-        var player = new Player(this.instance.core, null, username, uuid);
-        player
-            .openConnection(ip, this.instance)
-            .then(function (connection) {
-            main.pushConnection(connection);
-        })
-            .catch(function () {
-            // ignore
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var player = new Player(this.instance.core, null, username, uuid);
+            return yield player
+                .openConnection(ip, this.instance)
+                .then(function (connection) {
+                main.pushConnection(connection);
+                return connection;
+            });
         });
     }
     disconnectPlayer(uuid, username) {
-        let main = this;
-        var player = new Player(this.instance.core, null, username, uuid, false);
-        player.closeConnections(this.instance).then(function (closedConnections) {
-            var newConnections = new Array();
-            main.connections.forEach((connection) => {
-                var match = false;
-                closedConnections.forEach((closedConnection) => {
-                    if (connection.uuid == closedConnection.uuid) {
-                        match = true;
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var player = new Player(this.instance.core, null, username, uuid, false);
+            return yield player
+                .closeConnections(this.instance)
+                .then(function (closedConnections) {
+                var newConnections = new Array();
+                main.connections.forEach((connection) => {
+                    var match = false;
+                    closedConnections.forEach((closedConnection) => {
+                        if (connection.uuid == closedConnection.uuid) {
+                            match = true;
+                        }
+                    });
+                    if (!match) {
+                        newConnections.push(connection);
                     }
                 });
-                if (!match) {
-                    newConnections.push(connection);
-                }
+                main.connections = newConnections;
+                return closedConnections;
             });
-            main.connections = newConnections;
         });
     }
     pushConnection(connection) {
@@ -733,11 +747,11 @@ class InstanceCache extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             // updates data from the instance if it hasn't been pushed before
             let main = this;
-            return yield this.instance
-                .getOpenConnections()
-                .then(function (connections) {
+            /*return await this.instance
+              .getOpenConnections()
+              .then(function (connections) {
                 main.connections = connections;
-            });
+              });*/
         });
     }
     flush() {

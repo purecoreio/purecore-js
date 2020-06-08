@@ -34,10 +34,10 @@ class CacheCollection {
     this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
   }
 
-  public connect(socketId, keyStr) {
+  public async connect(socketId, keyStr) {
     let main = this;
     var credentials = new Core(keyStr);
-    credentials
+    return await credentials
       .getLegacyKey()
       .update()
       .then(function (keyData) {
@@ -50,6 +50,7 @@ class CacheCollection {
           cache.createdOn.getTime()
         );
         main.instanceCaches.push(cache);
+        return true;
       });
   }
 

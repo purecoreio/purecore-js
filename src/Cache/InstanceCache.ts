@@ -12,6 +12,7 @@ class InstanceCache extends Core {
     skipFill: boolean = false,
     consoleLines?: Array<ConsoleLine>,
     instanceVitals?: Array<InstanceVital>,
+    instanceConnections?: Array<Connection>,
     createdOn?: Date
   ) {
     super(credentials.getTool());
@@ -35,6 +36,12 @@ class InstanceCache extends Core {
       this.instanceVitals = new Array<InstanceVital>();
     }
 
+    if (instanceConnections != null) {
+      this.connections = instanceConnections;
+    } else {
+      this.connections = new Array<Connection>();
+    }
+
     if (createdOn != null) {
       this.createdOn = createdOn;
     } else {
@@ -50,37 +57,38 @@ class InstanceCache extends Core {
     new ConsoleLine(new Date(), LineType.INFO, string);
   }
 
-  public connectPlayer(ip, uuid, username): void {
+  public async connectPlayer(ip, uuid, username) {
     let main = this;
     var player = new Player(this.instance.core, null, username, uuid);
-    player
+    return await player
       .openConnection(ip, this.instance)
       .then(function (connection) {
         main.pushConnection(connection);
+        return connection;
       })
-      .catch(function () {
-        // ignore
-      });
   }
 
-  public disconnectPlayer(uuid, username?) {
+  public async disconnectPlayer(uuid, username?) {
     let main = this;
     var player = new Player(this.instance.core, null, username, uuid, false);
-    player.closeConnections(this.instance).then(function (closedConnections) {
-      var newConnections = new Array<Connection>();
-      main.connections.forEach((connection) => {
-        var match = false;
-        closedConnections.forEach((closedConnection) => {
-          if (connection.uuid == closedConnection.uuid) {
-            match = true;
+    return await player
+      .closeConnections(this.instance)
+      .then(function (closedConnections) {
+        var newConnections = new Array<Connection>();
+        main.connections.forEach((connection) => {
+          var match = false;
+          closedConnections.forEach((closedConnection) => {
+            if (connection.uuid == closedConnection.uuid) {
+              match = true;
+            }
+          });
+          if (!match) {
+            newConnections.push(connection);
           }
         });
-        if (!match) {
-          newConnections.push(connection);
-        }
+        main.connections = newConnections;
+        return closedConnections;
       });
-      main.connections = newConnections;
-    });
   }
 
   public pushConnection(connection: Connection): void {
@@ -98,11 +106,11 @@ class InstanceCache extends Core {
   async update() {
     // updates data from the instance if it hasn't been pushed before
     let main = this;
-    return await this.instance
+    /*return await this.instance
       .getOpenConnections()
       .then(function (connections) {
         main.connections = connections;
-      });
+      });*/
   }
 
   async flush() {
