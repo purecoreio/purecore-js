@@ -18,6 +18,10 @@ class Core {
     // if not start with fromdiscord or fromtoken
   }
 
+  public getCacheCollection(): CacheCollection {
+    return new CacheCollection();
+  }
+
   public getPlans() {
     return new Promise(function (resolve, reject) {
       try {
