@@ -1,8 +1,7 @@
 class InstanceVital {
-
-    date: Date;
-    RAMUsage: RAMUsage;
-    CPUUsage: CPUUsage;
-    driveUsage: DriveUsage;1
-
+  date: Date;
+  RAMUsage: RAMUsage;
+  CPUUsage: CPUUsage;
+  driveUsage: DriveUsage;
+  1;
 }

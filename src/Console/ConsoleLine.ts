@@ -1,13 +1,11 @@
 class ConsoleLine {
+  date: Date;
+  type: LineType;
+  message: string;
 
-    date: Date;
-    type: LineType;
-    message: string;
-
-    public constructor(date: Date, type: LineType, message: string) {
-        this.date = date;
-        this.type = type;
-        this.message = message;
-    }
-
+  public constructor(date: Date, type: LineType, message: string) {
+    this.date = date;
+    this.type = type;
+    this.message = message;
+  }
 }

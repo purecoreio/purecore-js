@@ -1,8 +1,14 @@
 class Core {
   key: string;
   session: Session;
+  dev: boolean;
 
-  constructor(tool?: any) {
+  constructor(tool?: any, dev?) {
+    if (dev == null) {
+      this.dev = false;
+    } else {
+      this.dev = dev;
+    }
     if (tool != undefined) {
       if (typeof tool == "string") {
         this.key = tool;
@@ -10,7 +16,9 @@ class Core {
         if (tool instanceof Session) {
           this.session = tool;
         } else {
-          this.session = new Session(new Core(this.session)).fromArray(tool);
+          this.session = new Session(
+            new Core(this.session, this.dev)
+          ).fromArray(tool);
         }
       }
     }
@@ -218,6 +226,10 @@ class Core {
 
   public getInstance(instanceId, name?, type?): Instance {
     return new Instance(this, instanceId, name, type);
+  }
+
+  public getCore(): Core {
+    return this;
   }
 
   public async fromDiscord(guildId: string, botToken: string, devkey: boolean) {

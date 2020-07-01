@@ -12,7 +12,7 @@ class Player extends Core {
     uuid?: string,
     verified?
   ) {
-    super(core.getKey());
+    super(core.getKey(), core.dev);
     this.core = core;
     this.id = id;
     this.username = username;
@@ -20,110 +20,93 @@ class Player extends Core {
     this.verified = verified;
   }
 
-  async closeConnections(instance: Instance) {
+  public async closeConnections(
+    instance: Instance
+  ): Promise<Array<Connection>> {
     var core = this.core;
-    var url;
 
-    if (core.getTool() instanceof Session) {
-      throw new Error("Unsupported");
-    } else {
-      url =
-        "https://api.purecore.io/rest/2/connection/close/all/?key=" +
-        core.getKey() +
-        "&uuid=" +
-        this.uuid;
-    }
-
-    try {
-      return await fetch(url, { method: "GET" })
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function (jsonresponse) {
-          if ("error" in jsonresponse) {
-            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
-          } else {
-            var connectionsClosed = new Array<Connection>();
-            jsonresponse.forEach((connectionJson) => {
-              connectionsClosed.push(
-                new Connection(core).fromArray(connectionJson)
-              );
-            });
-            return connectionsClosed;
-          }
+    return await new Call(core)
+      .commit({ instance: instance.getId() }, "connection/close/all/")
+      .then(function (jsonresponse) {
+        var connectionsClosed = new Array<Connection>();
+        jsonresponse.forEach((connectionJson) => {
+          connectionsClosed.push(
+            new Connection(core).fromArray(connectionJson)
+          );
         });
-    } catch (e) {
-      throw new Error(e.message);
-    }
+        return connectionsClosed;
+      });
   }
 
-  async openConnection(ip: string, instance: Instance) {
+  public async openConnection(
+    ip: string,
+    instance: Instance
+  ): Promise<Connection> {
     var core = this.core;
-    var url;
 
-    if (core.getTool() instanceof Session) {
-      throw new Error("Unsupported");
-    } else {
-      url =
-        "https://api.purecore.io/rest/2/connection/new/?key=" +
-        core.getKey() +
-        "&ip=" +
-        ip +
-        "&username=" +
-        this.username +
-        "&uuid=" +
-        this.uuid;
+    return await new Call(core)
+      .commit(
+        {
+          instance: instance.getId(),
+          ip: ip,
+          username: this.username,
+          uuid: this.uuid,
+        },
+        "connection/new/"
+      )
+      .then(function (jsonresponse) {
+        return new Connection(core).fromArray(jsonresponse);
+      });
+  }
+
+  public async getBillingAddress(): Promise<BillingAddress> {
+    var core = this.core;
+
+    return await new Call(core)
+      .commit({}, "player/billing/get/")
+      .then(function (jsonresponse) {
+        return new BillingAddress().fromArray(jsonresponse);
+      });
+  }
+
+  public async getPunishments(
+    network?: Network,
+    page?
+  ): Promise<Array<Punishment>> {
+    var id = this.id;
+    var core = this.core;
+    var queryPage = 0;
+
+    if (page != undefined || page != null) {
+      queryPage = page;
     }
 
-    try {
-      return await fetch(url, { method: "GET" })
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function (jsonresponse) {
-          if ("error" in jsonresponse) {
-            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
-          } else {
-            return new Connection(core).fromArray(jsonresponse);
-          }
+    var args = {};
+    if (network != null) {
+      args = {
+        page: page,
+        player: id,
+        network: network.getId(),
+      };
+    } else {
+      args = {
+        player: id,
+        page: page,
+      };
+    }
+
+    return await new Call(core)
+      .commit(args, "player/punishment/list/")
+      .then(function (jsonresponse) {
+        var punishments = new Array<Punishment>();
+        jsonresponse.forEach((punishmentJson) => {
+          punishments.push(new Punishment(core).fromArray(punishmentJson));
         });
-    } catch (e) {
-      throw new Error(e.message);
-    }
+        return punishments;
+      });
   }
 
-  getBillingAddress() {
-    var core = this.core;
-    var url = "";
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/player/billing/get/?hash=" +
-        core.getCoreSession().getHash();
-    } else {
-      throw new Error("unsupported");
-    }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              resolve(new BillingAddress().fromArray(jsonresponse));
-            }
-          });
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  getPunishments(network?: Network, page?) {
+  public async getPayments(store: Store, page?): Promise<Array<Payment>> {
     var id = this.id;
     var core = this.core;
     var queryPage = 0;
@@ -132,78 +115,36 @@ class Player extends Core {
       queryPage = page;
     }
 
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      if (network == null || network == undefined) {
-        url =
-          "https://api.purecore.io/rest/2/player/punishment/list/?hash=" +
-          core.getCoreSession().getHash() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      } else {
-        url =
-          "https://api.purecore.io/rest/2/player/punishment/list/?hash=" +
-          core.getCoreSession().getHash() +
-          "&network=" +
-          network.getId() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      }
-    } else {
-      if (network == null || network == undefined) {
-        url =
-          "https://api.purecore.io/rest/2/player/punishment/list/?key=" +
-          core.getKey() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      } else {
-        url =
-          "https://api.purecore.io/rest/2/player/punishment/list/?key=" +
-          core.getKey() +
-          "&network=" +
-          network.getId() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      }
-    }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              var punishments = new Array<Punishment>();
-
-              jsonresponse.forEach((punishmentJson) => {
-                punishments.push(
-                  new Punishment(core).fromArray(punishmentJson)
-                );
-              });
-
-              resolve(punishments);
-            }
-          });
-      } catch (e) {
-        reject(e);
-      }
-    });
+    return await new Call(core)
+      .commit(
+        {
+          network: store.getNetwork().getId(),
+          page: queryPage,
+          player: id,
+        },
+        "player/payment/list/"
+      )
+      .then(function (jsonresponse) {
+        var payments = new Array<Payment>();
+        jsonresponse.forEach((paymentJson) => {
+          payments.push(new Payment(core).fromArray(paymentJson));
+        });
+        return payments;
+      });
   }
 
-  getPayments(store: Store, page?) {
+  public async getDiscordId(): Promise<String> {
+    return await new Call(this.core)
+      .commit({}, "player/payment/list/")
+      .then(function (jsonresponse) {
+        return String(jsonresponse.id);
+      });
+  }
+
+  public async getConnections(
+    instance: Instance,
+    page?
+  ): Promise<Array<Connection>> {
     var id = this.id;
     var core = this.core;
     var queryPage = 0;
@@ -212,171 +153,30 @@ class Player extends Core {
       queryPage = page;
     }
 
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/player/payment/list/?hash=" +
-        core.getCoreSession().getHash() +
-        "&network=" +
-        store.getNetwork().getId() +
-        "&page=" +
-        queryPage +
-        "&player=" +
-        id;
+    var args = {};
+    if (instance != null) {
+      args = { page: queryPage, player: id, instance: instance.getId() };
     } else {
-      url =
-        "https://api.purecore.io/rest/2/player/payment/list/?key=" +
-        core.getKey() +
-        "&network=" +
-        store.getNetwork().getId() +
-        "&page=" +
-        queryPage +
-        "&player=" +
-        id;
+      args = { page: queryPage, player: id };
     }
 
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              var payments = new Array<Payment>();
-
-              jsonresponse.forEach((paymentJson) => {
-                payments.push(new Payment(core).fromArray(paymentJson));
-              });
-
-              resolve(payments);
-            }
-          });
-      } catch (e) {
-        reject(e);
-      }
-    });
+    return await new Call(this.core)
+      .commit({}, "player/connection/list/")
+      .then(function (jsonresponse) {
+        var connections = new Array<Connection>();
+        jsonresponse.forEach((connectionJson) => {
+          connections.push(new Connection(core).fromArray(connectionJson));
+        });
+        return connections;
+      });
   }
 
-  getDiscordId() {
-    var url = "";
-    if (this.core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/player/get/discord/id/?hash=" +
-        this.core.getCoreSession().getHash();
-    } else {
-      throw new Error("only sessions are supported in this call");
-    }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              resolve(jsonresponse.id);
-            }
-          });
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  getConnections(instance: Instance, page?) {
-    var id = this.id;
-    var core = this.core;
-    var queryPage = 0;
-
-    if (page != undefined || page != null) {
-      queryPage = page;
-    }
-
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      if (instance == null) {
-        url =
-          "https://api.purecore.io/rest/2/player/connection/list/?hash=" +
-          core.getCoreSession().getHash() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      } else {
-        url =
-          "https://api.purecore.io/rest/2/player/connection/list/?hash=" +
-          core.getCoreSession().getHash() +
-          "&instance=" +
-          instance.getId() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      }
-    } else {
-      if (instance == null) {
-        url =
-          "https://api.purecore.io/rest/2/player/connection/list/?key=" +
-          core.getKey() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      } else {
-        url =
-          "https://api.purecore.io/rest/2/player/connection/list/?key=" +
-          core.getKey() +
-          "&instance=" +
-          instance.getId() +
-          "&page=" +
-          queryPage +
-          "&player=" +
-          id;
-      }
-    }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              var connections = new Array<Connection>();
-
-              jsonresponse.forEach((connectionJson) => {
-                connections.push(
-                  new Connection(core).fromArray(connectionJson)
-                );
-              });
-
-              resolve(connections);
-            }
-          });
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  getMatchingConnections(
+  public async getMatchingConnections(
     instance: Instance,
     page?,
     playerList?: Array<Player>
-  ) {
+  ): Promise<Array<ActivityMatch>> {
     var id = this.id;
-    var core = this.core;
     var queryPage = 0;
     var playerListIds = [];
     playerList.forEach((player) => {
@@ -387,74 +187,42 @@ class Player extends Core {
       queryPage = page;
     }
 
-    var url;
+    return await new Call(this.core)
+      .commit(
+        {
+          instance: instance.getId(),
+          page: queryPage,
+          players: JSON.stringify(playerListIds),
+          player: id,
+        },
+        "connection/list/match/players/"
+      )
+      .then(function (jsonresponse) {
+        var activityMatch = new Array<ActivityMatch>();
 
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/player/connection/list/match/players/?hash=" +
-        core.getCoreSession().getHash() +
-        "&instance=" +
-        instance.getId() +
-        "&page=" +
-        queryPage +
-        "&player=" +
-        id +
-        "&players=" +
-        JSON.stringify(playerListIds);
-    } else {
-      url =
-        "https://api.purecore.io/rest/2/player/connection/list/match/players/?key=" +
-        core.getKey() +
-        "&instance=" +
-        instance.getId() +
-        "&page=" +
-        queryPage +
-        "&player=" +
-        id +
-        "&players=" +
-        JSON.stringify(playerListIds);
-    }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        return fetch(url, { method: "GET" })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (jsonresponse) {
-            if ("error" in jsonresponse) {
-              reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-            } else {
-              var activityMatch = new Array<ActivityMatch>();
-
-              jsonresponse.forEach((activity) => {
-                var matchingRanges = new Array<MatchingRange>();
-                activity.matchList.forEach((matchingRangeJson) => {
-                  var matchingRange = new MatchingRange(
-                    new Date(matchingRangeJson.startedOn * 1000),
-                    new Date(matchingRangeJson.finishedOn * 1000),
-                    matchingRangeJson.matchWith
-                  );
-                  matchingRanges.push(matchingRange);
-                });
-
-                activityMatch.push(
-                  new ActivityMatch(
-                    new Date(activity.startedOn * 1000),
-                    new Date(activity.finishedOn * 1000),
-                    activity.activity,
-                    matchingRanges
-                  )
-                );
-              });
-
-              resolve(activityMatch);
-            }
+        jsonresponse.forEach((activity) => {
+          var matchingRanges = new Array<MatchingRange>();
+          activity.matchList.forEach((matchingRangeJson) => {
+            var matchingRange = new MatchingRange(
+              new Date(matchingRangeJson.startedOn * 1000),
+              new Date(matchingRangeJson.finishedOn * 1000),
+              matchingRangeJson.matchWith
+            );
+            matchingRanges.push(matchingRange);
           });
-      } catch (e) {
-        reject(e);
-      }
-    });
+
+          activityMatch.push(
+            new ActivityMatch(
+              new Date(activity.startedOn * 1000),
+              new Date(activity.finishedOn * 1000),
+              activity.activity,
+              matchingRanges
+            )
+          );
+        });
+
+        return activityMatch;
+      });
   }
 
   getId() {

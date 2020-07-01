@@ -1,5 +1,3 @@
 class InstanceConsole {
-
-    messages: Array<ConsoleLine>;
-
+  messages: Array<ConsoleLine>;
 }

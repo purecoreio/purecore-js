@@ -1,637 +1,408 @@
 class Network extends Core {
+  core: Core;
+  uuid: string;
+  name: string;
 
-    core: Core;
-    uuid: string;
-    name: string;
+  constructor(core: Core, instance: Instance) {
+    super(core.getTool());
+    this.core = core;
+    this.uuid = instance.getId();
+    this.name = instance.getName();
+  }
 
-    constructor(core: Core, instance: Instance) {
-        super(core.getTool());
-        this.core = core;
-        this.uuid = instance.getId();
-        this.name = instance.getName();
-    }
+  getStore(): Store {
+    return new Store(this);
+  }
 
-    getStore(): Store {
-        return new Store(this);
-    }
+  getForum(): Forum {
+    return new Forum(this);
+  }
 
-    getForum(): Forum {
-        return new Forum(this);
-    }
+  getId() {
+    return this.uuid;
+  }
 
-    getId() {
-        return this.uuid;
-    }
+  public async getDevKey(): Promise<Key> {
+    let main = this;
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "key/get/dev/"
+      )
+      .then((jsonresponse) => {
+        return new Key(main.core).fromArray(jsonresponse);
+      });
+  }
 
-    public async getDevKey() {
-        var core = this.core;
-        let main = this;
-        var url;
+  public async getKeyFromId(keyid: string): Promise<Key> {
+    let main = this;
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/key/get/dev/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-        } else {
-            url = "https://api.purecore.io/rest/2/key/get/dev/?key=" + core.getKey();
-        }
+    return new Call(this.core)
+      .commit(
+        {
+          keyid: keyid,
+        },
+        "key/from/id/"
+      )
+      .then((jsonresponse) => {
+        return new Key(main.core).fromArray(jsonresponse);
+      });
+  }
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new Key(core).fromArray(jsonresponse);;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
+  public async createServer(name: string): Promise<Instance> {
+    let main = this;
 
-    public async getKeyFromId(keyid: string) {
-        var core = this.core;
-        let main = this;
-        var url;
+    return new Call(this.core)
+      .commit(
+        {
+          name: name,
+        },
+        "instance/server/create/"
+      )
+      .then((jsonresponse) => {
+        return new Instance(
+          main.core,
+          jsonresponse.uuid,
+          jsonresponse.name,
+          "SVR"
+        );
+      });
+  }
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/key/from/id/?hash=" + core.getCoreSession().getHash() + "&keyid=" + keyid;
-        } else {
-            url = "https://api.purecore.io/rest/2/key/from/id/?key=" + core.getKey() + "&keyid=" + keyid;
-        }
+  public async getServers(): Promise<Array<Instance>> {
+    let main = this;
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new Key(core).fromArray(jsonresponse);;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
-
-    async createServer(name: string) {
-
-        var core = this.core;
-        var network = this;
-        var url;
-
-        if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/server/create/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&name=" + name;
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/server/create/?key=" + core.getKey() + "&name=" + name;
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-
-                        resolve(new Instance(core, jsonresponse.uuid, jsonresponse.name, "SVR"));
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/server/list/"
+      )
+      .then((jsonresponse) => {
+        var servers = new Array<Instance>();
+        jsonresponse.forEach((serverInstance) => {
+          servers.push(
+            new Instance(
+              main.core,
+              serverInstance.uuid,
+              serverInstance.name,
+              "SVR"
+            )
+          );
         });
+        return servers;
+      });
+  }
 
-    }
+  public asInstance(): Instance {
+    return new Instance(this.core, this.uuid, this.name, "NTW");
+  }
 
-    async getServers() {
-
-        var core = this.core;
-        var network = this;
-        var url;
-
-        if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/server/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/server/list/?key=" + core.getKey() + "&network=" + network.getId();
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                    } else {
-
-                        var servers = [];
-
-                        jsonresponse.forEach(serverInstance => {
-                            servers.push(new Instance(core, serverInstance.uuid, serverInstance.name, "SVR"));
-                        });
-
-                        resolve(servers);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
+  public async getVotingAnalytics(
+    span = 3600 * 24
+  ): Promise<Array<VoteAnalytic>> {
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+          span: span,
+        },
+        "instance/network/voting/analytics/"
+      )
+      .then((jsonresponse) => {
+        var votingAnalytics = new Array<VoteAnalytic>();
+        jsonresponse.forEach((votingAnalyticJSON) => {
+          var votingAnalytic = new VoteAnalytic().fromArray(votingAnalyticJSON);
+          votingAnalytics.push(votingAnalytic);
         });
+        return votingAnalytics;
+      });
+  }
 
+  async getVotingSites(): Promise<Array<VotingSite>> {
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/network/voting/site/list/"
+      )
+      .then((jsonresponse) => {
+        var siteArray = new Array<VotingSite>();
+        jsonresponse.forEach((votingSite) => {
+          var site = new VotingSite(main.core).fromArray(votingSite);
+          siteArray.push(site);
+        });
+        return siteArray;
+      });
+  }
+
+  public async getSetupVotingSites(
+    displaySetup: boolean = true
+  ): Promise<Array<VotingSite | VotingSiteConfig>> {
+    let main = this;
+    var url;
+
+    if (displaySetup) {
+      url = "instance/network/voting/site/list/setup/config/";
+    } else {
+      url = "instance/network/voting/site/list/setup/";
     }
 
-    asInstance() {
-        return new Instance(this.core, this.uuid, this.name, "NTW");
-    }
-
-    async getVotingAnalytics(span = 3600 * 24) {
-
-        var core = this.core;
-        let main = this;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid + "&span=" + span;
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/analytics/?key=" + core.getKey() + "&span=" + span;
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    var votingAnalytics = new Array<VoteAnalytic>();
-                    jsonresponse.forEach(votingAnalyticJSON => {
-                        var votingAnalytic = new VoteAnalytic().fromArray(votingAnalyticJSON);
-                        votingAnalytics.push(votingAnalytic);
-                    });
-                    return votingAnalytics;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
-
-    async getVotingSites() {
-
-        var core = this.core;
-        let main = this;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/?key=" + core.getKey();
-        }
-
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    var siteArray = new Array<VotingSite>();
-                    jsonresponse.forEach(votingSite => {
-                        var site = new VotingSite(core).fromArray(votingSite);
-                        siteArray.push(site);
-                    });
-                    return siteArray;
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
-
-    async getSetupVotingSites(displaySetup: boolean = true) {
-
-        var core = this.core;
-        let main = this;
-        var url;
-
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        url
+      )
+      .then((jsonresponse) => {
         if (displaySetup) {
-            if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-            } else if (core.getKey() != null) {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?key=" + core.getKey();
-            } else {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/config/?network=" + main.getId();
-            }
+          var configArray = new Array<VotingSiteConfig>();
+          jsonresponse.forEach((votingSite) => {
+            var siteConfig = new VotingSiteConfig(main.core).fromArray(
+              votingSite
+            );
+            configArray.push(siteConfig);
+          });
+          return configArray;
         } else {
-            if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-            } else if (core.getKey() != null) {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?key=" + core.getKey();
-            } else {
-                url = "https://api.purecore.io/rest/2/instance/network/voting/site/list/setup/?network=" + main.getId();
-            }
+          var siteArray = new Array<VotingSite>();
+          jsonresponse.forEach((votingSite) => {
+            var site = new VotingSite(main.core).fromArray(votingSite);
+            siteArray.push(site);
+          });
+          return siteArray;
         }
+      });
+  }
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    if (displaySetup) {
-                        var configArray = new Array<VotingSiteConfig>();
-                        jsonresponse.forEach(votingSite => {
-                            var siteConfig = new VotingSiteConfig(core).fromArray(votingSite);
-                            configArray.push(siteConfig);
-                        });
-                        return configArray;
-                    } else {
-                        var siteArray = new Array<VotingSite>();
-                        jsonresponse.forEach(votingSite => {
-                            var site = new VotingSite(core).fromArray(votingSite);
-                            siteArray.push(site);
-                        });
-                        return siteArray;
-                    }
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
+  public async getGuild(): Promise<DiscordGuild> {
+    let main = this;
 
-    async getGuild() {
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/network/discord/get/guild/"
+      )
+      .then((jsonresponse) => {
+        return new DiscordGuild(main).fromArray(jsonresponse);
+      });
+  }
 
-        var core = this.core;
-        let main = this;
-        var url;
+  public async setGuild(discordGuildId: string): Promise<boolean> {
+    return new Call(this.core)
+      .commit(
+        {
+          guildid: discordGuildId,
+        },
+        "/instance/network/discord/setguild/"
+      )
+      .then(() => {
+        return true;
+      });
+  }
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?hash=" + core.getCoreSession().getHash() + "&network=" + main.uuid;
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/network/discord/get/guild/?key=" + core.getKey();
-        }
+  public async setSessionChannel(channelId: string): Promise<boolean> {
+    var key = this.core.getKey();
 
-        try {
-            return await fetch(url, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return new DiscordGuild(main).fromArray(jsonresponse);
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
+    return new Call(this.core)
+      .commit(
+        {
+          channelid: channelId,
+        },
+        "instance/network/discord/setchannel/session/"
+      )
+      .then(() => {
+        return true;
+      });
+  }
 
-    async setGuild(discordGuildId: string) {
+  public async setDonationChannel(channelId: string): Promise<boolean> {
+    return new Call(this.core)
+      .commit(
+        {
+          channelid: channelId,
+        },
+        "instance/network/discord/setchannel/donation/"
+      )
+      .then(() => {
+        return true;
+      });
+  }
 
-        var key = this.core.getKey();
-
-        try {
-            return await fetch("https://api.purecore.io/rest/2/instance/network/discord/setguild/?key=" + key + "&guildid=" + discordGuildId, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return true
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-    }
-
-    async setSessionChannel(channelId: string) {
-
-        var key = this.core.getKey();
-
-        try {
-            return await fetch("https://api.purecore.io/rest/2/instance/network/discord/setchannel/session/?key=" + key + "&channelid=" + channelId, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return true
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
-    }
-
-    async setDonationChannel(channelId: string) {
-
-        var key = this.core.getKey();
-
-        try {
-            return await fetch("https://api.purecore.io/rest/2/instance/network/discord/setchannel/donation/?key=" + key + "&channelid=" + channelId, { method: "GET" }).then(function (response) {
-                return response.json();
-            }).then(function (jsonresponse) {
-                if ("error" in jsonresponse) {
-                    throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                } else {
-                    return true
-                }
-            });
-        } catch (e) {
-            throw new Error(e.message)
-        }
-
-    }
-
-    async getHashes() {
-
-        var key = this.core.getKey();
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch("https://api.purecore.io/rest/2/session/hash/list/?key=" + key, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                    } else {
-                        var response = new Array();
-                        jsonresponse.forEach(hashData => {
-                            var hash = new ConnectionHash(new Core(key));
-                            response.push(hash.fromArray(hashData))
-                        });
-                        resolve(response)
-                    }
-                }).catch(function (error) {
-                    reject(error);
-                })
-            } catch (e) {
-                reject(e);
-            }
+  public async getHashes(): Promise<Array<ConnectionHash>> {
+    let main = this;
+    return new Call(this.core)
+      .commit({}, "session/hash/list/")
+      .then((jsonresponse) => {
+        var response = new Array<ConnectionHash>();
+        jsonresponse.forEach((hashData) => {
+          var hash = new ConnectionHash(main.core);
+          response.push(hash.fromArray(hashData));
         });
-    }
+        return response;
+      });
+  }
 
-    async getOffences() {
+  public async getOffences(): Promise<Array<Offence>> {
+    let main = this;
 
-        var url;
-        var core = this.core;
-
-        if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/punishment/offence/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
-        } else if (this.core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/punishment/offence/list/?key=" + this.core.getKey();
-        } else {
-            url = "https://api.purecore.io/rest/2/punishment/offence/list/?network=" + this.getId();
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-
-                    return response.json();
-
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                    } else {
-                        var response = new Array();
-                        jsonresponse.forEach(offenceData => {
-
-                            var offence = new Offence(core);
-                            response.push(offence.fromArray(offenceData))
-                        });
-                        resolve(response)
-                    }
-                }).catch(function (error) {
-                    reject(error);
-                })
-            } catch (e) {
-                reject(e);
-            }
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "punishment/offence/list/"
+      )
+      .then((jsonresponse) => {
+        var response = new Array<Offence>();
+        jsonresponse.forEach((offenceData) => {
+          var offence = new Offence(main.core);
+          response.push(offence.fromArray(offenceData));
         });
-    }
+        return response;
+      });
+  }
 
-    async getOffenceActions() {
+  public async getOffenceActions(): Promise<Array<OffenceAction>> {
+    let main = this;
 
-        var url;
-        var core = this.core;
-
-        if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/punishment/action/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId();
-        } else {
-            url = "https://api.purecore.io/rest/2/punishment/action/list/key=" + this.core.getKey() + "&network=" + this.getId();
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-
-                    return response.json();
-
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        throw new Error(jsonresponse.error + ". " + jsonresponse.msg)
-                    } else {
-                        var response = new Array();
-                        jsonresponse.forEach(actionData => {
-
-                            var offence = new OffenceAction(core);
-                            response.push(offence.fromArray(actionData))
-                        });
-                        resolve(response)
-                    }
-                }).catch(function (error) {
-                    reject(error);
-                })
-            } catch (e) {
-                reject(e);
-            }
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "punishment/action/list"
+      )
+      .then((jsonresponse) => {
+        var response = new Array<OffenceAction>();
+        jsonresponse.forEach((actionData) => {
+          var offence = new OffenceAction(main.core);
+          response.push(offence.fromArray(actionData));
         });
+        return response;
+      });
+  }
+
+  public async searchPlayers(
+    username?: string,
+    uuid?: string,
+    coreid?: string
+  ): Promise<Array<Player>> {
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+          username: username,
+        },
+        "player/from/minecraft/username/search/"
+      )
+      .then((jsonresponse) => {
+        var finalPlayerList = new Array<Player>();
+        jsonresponse.forEach((playerData) => {
+          var player = new Player(
+            main.core,
+            playerData.coreid,
+            playerData.username,
+            playerData.uuid,
+            playerData.verified
+          );
+          finalPlayerList.push(player);
+        });
+        return finalPlayerList;
+      });
+  }
+
+  public async getPlayer(coreid: string): Promise<Player> {
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          player: coreid,
+        },
+        "player/from/core/id/"
+      )
+      .then((jsonresponse) => {
+        var player = new Player(
+          main.core,
+          jsonresponse.coreid,
+          jsonresponse.username,
+          jsonresponse.uuid,
+          jsonresponse.verified
+        );
+        return player;
+      });
+  }
+
+  public async getPlayers(page?): Promise<Array<Player>> {
+    let main = this;
+
+    var queryPage = 0;
+    if (page != undefined && page != null) {
+      queryPage = page;
     }
 
-    searchPlayers(username?: string, uuid?: string, coreid?: string) {
-        if (username != null) {
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+          page: queryPage,
+        },
+        "instance/network/list/players/"
+      )
+      .then((jsonresponse) => {
+        var players = new Array<Player>();
 
-            var networkid = this.uuid;
-            var core = this.core;
-            var url;
-
-            if (core.getTool() instanceof Session) {
-                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?hash=" + core.getCoreSession().getHash() + "&network=" + networkid + "&username=" + username;
-            } else {
-                url = "https://api.purecore.io/rest/2/player/from/minecraft/username/search/?key=" + core.getKey() + "&username=" + username;
-            }
-
-            return new Promise(function (resolve, reject) {
-
-                try {
-                    return fetch(url, { method: "GET" }).then(function (response) {
-                        return response.json();
-                    }).then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                        } else {
-
-                            var finalPlayerList = new Array<Player>();
-                            jsonresponse.forEach(playerData => {
-                                var player = new Player(core, playerData.coreid, playerData.username, playerData.uuid, playerData.verified);
-                                finalPlayerList.push(player);
-                            });
-                            resolve(finalPlayerList);
-
-                        }
-                    });
-                } catch (e) {
-                    reject(e);
-                }
-
-            });
-
-        } else {
-            return new Array<Player>();
-        }
-    }
-
-    getPlayer(coreid: string) {
-
-
-        var core = this.core;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/player/from/core/id/?hash=" + core.getCoreSession().getHash() + "&player=" + coreid;
-        } else {
-            if (core.getKey() != null) {
-                url = "https://api.purecore.io/rest/2/player/from/core/id/?key=" + core.getKey() + "&player=" + coreid;
-            } else {
-                url = "https://api.purecore.io/rest/2/player/from/core/id/?player=" + coreid;
-            }
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                    } else {
-
-                        var player = new Player(core, jsonresponse.coreid, jsonresponse.username, jsonresponse.uuid, jsonresponse.verified);
-                        resolve(player);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
+        jsonresponse.forEach((playerJson) => {
+          var player = new Player(
+            main.core,
+            playerJson.coreid,
+            playerJson.username,
+            playerJson.uuid,
+            playerJson.verified
+          );
+          players.push(player);
         });
 
+        return players;
+      });
+  }
+
+  public async getPunishments(page = 0): Promise<Array<Punishment>> {
+    let main = this;
+
+    var queryPage = 0;
+    if (page != undefined && page != null) {
+      queryPage = page;
     }
 
-    getPlayers(page?) {
-
-        var core = this.core;
-        var instance = this.asInstance();
-
-        var queryPage = 0;
-        if (page != undefined && page != null) {
-            queryPage = page;
-        }
-
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/instance/network/list/players/?hash=" + core.getCoreSession().getHash() + "&network=" + instance.getId() + "&page=" + queryPage;
-        } else {
-            url = "https://api.purecore.io/rest/2/instance/network/list/players/?key=" + core.getKey() + "&page=" + queryPage;
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                    } else {
-
-                        var players = new Array<Player>();
-
-                        jsonresponse.forEach(playerJson => {
-
-                            var player = new Player(core, playerJson.coreid, playerJson.username, playerJson.uuid, playerJson.verified);
-                            players.push(player);
-
-                        });
-
-                        resolve(players);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+          page: queryPage,
+        },
+        "punishment/list/"
+      )
+      .then((jsonresponse) => {
+        var response = new Array<Punishment>();
+        jsonresponse.forEach((punishmentData) => {
+          var punishment = new Punishment(main.core);
+          response.push(punishment.fromArray(punishmentData));
         });
-    }
 
-    async getPunishments(page = 0) {
-
-        var url;
-        var core = this.core;
-
-        if (this.core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/punishment/list/?hash=" + this.core.getCoreSession().getHash() + "&network=" + this.getId() + "&page=" + page.toString();
-        } else {
-            url = "https://api.purecore.io/rest/2/punishment/list/key=" + this.core.getKey() + "&network=" + this.getId() + "&page=" + page.toString();
-        }
-
-        var key = this.core.getKey();
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-
-                    return response.json();
-
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error + ". " + jsonresponse.msg))
-                    } else {
-                        var response = new Array<Punishment>();
-                        jsonresponse.forEach(punishmentData => {
-
-                            var punishment = new Punishment(core);
-                            response.push(punishment.fromArray(punishmentData))
-
-                        });
-                        resolve(response)
-                    }
-                }).catch(function (error) {
-                    reject(error);
-                })
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
+        return response;
+      });
+  }
 }

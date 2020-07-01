@@ -1,11 +1,9 @@
 class RAMUsage {
+  max;
+  used;
 
-    max;
-    used;
-
-    public constructor(max, used) {
-        this.max = max;
-        this.used = used;
-    }
-
+  public constructor(max, used) {
+    this.max = max;
+    this.used = used;
+  }
 }

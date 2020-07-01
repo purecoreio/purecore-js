@@ -1,21 +1,19 @@
 class NetworkAdapter {
+  public speed;
+  public name;
 
-    public speed;
-    public name;
+  public constructor(speed?: string, name?: string) {
+    this.speed = speed;
+    this.name = name;
+  }
 
-    public constructor(speed?: string, name?: string) {
-        this.speed = speed;
-        this.name = name;
-    }
+  public fromArray(array): NetworkAdapter {
+    this.speed = array.speed;
+    this.name = array.name;
+    return this;
+  }
 
-    public fromArray(array): NetworkAdapter {
-        this.speed = array.speed;
-        this.name = array.name;
-        return this;
-    }
-
-    public asArray() {
-        return { "speed": this.speed, "name": this.name }
-    }
-
+  public asArray() {
+    return { speed: this.speed, name: this.name };
+  }
 }

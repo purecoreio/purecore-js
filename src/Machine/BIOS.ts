@@ -1,21 +1,19 @@
 class BIOS {
+  public vendor: string;
+  public version: string;
 
-    public vendor: string;
-    public version: string;
+  constructor(vendor?: string, version?: string) {
+    this.vendor = vendor;
+    this.version = version;
+  }
 
-    constructor(vendor?: string, version?: string) {
-        this.vendor = vendor;
-        this.version = version;
-    }
+  fromArray(array): BIOS {
+    this.vendor = array.vendor;
+    this.version = array.version;
+    return this;
+  }
 
-    fromArray(array): BIOS {
-        this.vendor = array.vendor;
-        this.version = array.version;
-        return this;
-    }
-
-    asArray() {
-        return { "vendor": this.vendor, "version": this.version }
-    }
-
+  asArray() {
+    return { vendor: this.vendor, version: this.version };
+  }
 }

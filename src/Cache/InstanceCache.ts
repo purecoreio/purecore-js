@@ -65,7 +65,7 @@ class InstanceCache extends Core {
       .then(function (connection) {
         main.pushConnection(connection);
         return connection;
-      })
+      });
   }
 
   public async disconnectPlayer(uuid, username?) {

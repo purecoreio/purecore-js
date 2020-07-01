@@ -1,153 +1,75 @@
 class Forum {
+  public network: Network;
 
-    public network: Network;
+  public constructor(network: Network) {
+    this.network = network;
+  }
 
-    public constructor(network: Network) {
-        this.network = network;
-    }
+  public async getSections(): Promise<Array<ForumSection>> {
+    let main = this;
 
-    public getSections() {
-
-        var core = this.network.core;
-        var network = this.network;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId();
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?key=" + core.getKey();
-        } else {
-            url = "https://api.purecore.io/rest/2/forum/get/section/list/?network=" + network.getId();
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-
-                        var finalResponse = new Array<ForumSection>();
-                        jsonresponse.forEach(sectionJSON => {
-                            finalResponse.push(new ForumSection(core).fromArray(sectionJSON));
-                        });
-
-                        resolve(finalResponse);
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
+    return new Call(this.network.core)
+      .commit(
+        {
+          network: this.network.uuid,
+        },
+        "forum/get/section/list/"
+      )
+      .then((jsonresponse) => {
+        var finalResponse = new Array<ForumSection>();
+        jsonresponse.forEach((sectionJSON) => {
+          finalResponse.push(
+            new ForumSection(main.network.core).fromArray(sectionJSON)
+          );
         });
+        return finalResponse;
+      });
+  }
 
-    }
+  public async getCategory(catid: string): Promise<ForumCategory> {
+    let main = this;
 
-    public getCategory(catid) {
+    return new Call(this.network.core)
+      .commit(
+        {
+          category: catid,
+        },
+        "forum/get/category/"
+      )
+      .then((jsonresponse) => {
+        return new ForumCategory(main.network.core).fromArray(jsonresponse);
+      });
+  }
 
-        var core = this.network.core;
-        var url;
+  public async getPost(postid): Promise<ForumPost> {
+    let main = this;
 
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/get/category/?hash=" + core.getCoreSession().getHash() + "&category=" + catid;
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/get/category/?key=" + core.getKey() + "&category=" + catid;
-        } else {
-            url = "https://api.purecore.io/rest/2/forum/get/category/?category=" + catid;
-        }
+    return new Call(this.network.core)
+      .commit(
+        {
+          post: postid,
+        },
+        "forum/get/post/"
+      )
+      .then((jsonresponse) => {
+        return new ForumPost(main.network.core).fromArray(jsonresponse);
+      });
+  }
 
-        return new Promise(function (resolve, reject) {
+  public async createSection(name, description): Promise<ForumSection> {
+    let main = this;
 
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-                        resolve(new ForumCategory(core).fromArray(jsonresponse));
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
-        });
-
-    }
-
-    public getPost(postid) {
-
-        var core = this.network.core;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/get/post/?hash=" + core.getCoreSession().getHash() + "&post=" + postid;
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/get/post/?key=" + core.getKey() + "&post=" + postid;
-        } else {
-            url = "https://api.purecore.io/rest/2/forum/get/post/?post=" + postid;
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-                        resolve(new ForumPost(core).fromArray(jsonresponse));
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
-        });
-
-    }
-
-    public createSection(name, description) {
-
-        var core = this.network.core;
-        var network = this.network;
-        var url;
-
-        if (core.getTool() instanceof Session) {
-            url = "https://api.purecore.io/rest/2/forum/create/section/?hash=" + core.getCoreSession().getHash() + "&network=" + network.getId() + "&name=" + name + "&description=" + description;
-        } else if (core.getKey() != null) {
-            url = "https://api.purecore.io/rest/2/forum/create/section/?key=" + core.getKey() + "&name=" + name + "&description=" + description;;
-        } else {
-            url = "https://api.purecore.io/rest/2/forum/create/section/?network=" + network.getId() + "&name=" + name + "&description=" + description;;
-        }
-
-        return new Promise(function (resolve, reject) {
-
-            try {
-                return fetch(url, { method: "GET" }).then(function (response) {
-                    return response.json();
-                }).then(function (jsonresponse) {
-                    if ("error" in jsonresponse) {
-                        reject(new Error(jsonresponse.error));
-                    } else {
-
-                        resolve(new ForumSection(core).fromArray(jsonresponse));
-
-                    }
-                });
-            } catch (e) {
-                reject(e);
-            }
-
-        });
-    }
-
+    return new Call(this.network.core)
+      .commit(
+        {
+          network: this.network.uuid,
+          name: name,
+          description: description,
+        },
+        "forum/create/section/"
+      )
+      .then((jsonresponse) => {
+        return new ForumSection(main.network.core).fromArray(jsonresponse);
+      });
+  }
 }
