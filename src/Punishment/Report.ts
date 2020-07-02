@@ -1,3 +1,4 @@
 class Report {
-  constructor(parameters) {}
+    constructor(parameters) {
+    }
 }

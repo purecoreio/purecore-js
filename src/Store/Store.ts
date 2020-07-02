@@ -1,309 +1,172 @@
 class Store extends Network {
-  network: Network;
+    public readonly network: Network;
 
-  constructor(network: Network) {
-    super(network.core, network.asInstance());
-    this.network = network;
-  }
-
-  public async getIncomeAnalytics(
-    span = 3600 * 24
-  ): Promise<Array<IncomeAnalytic>> {
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          span: span,
-        },
-        "store/income/analytics/"
-      )
-      .then((jsonresponse) => {
-        var IncomeAnalytics = new Array<IncomeAnalytic>();
-        jsonresponse.forEach((IncomeAnalyticJSON) => {
-          var IncomeAnalyticD = new IncomeAnalytic().fromArray(
-            IncomeAnalyticJSON
-          );
-          IncomeAnalytics.push(IncomeAnalyticD);
-        });
-        return IncomeAnalytics;
-      });
-  }
-
-  public async getItem(id: string): Promise<StoreItem> {
-    let core = this.core;
-
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          item: id,
-        },
-        "store/item/"
-      )
-      .then((jsonresponse) => {
-        return new StoreItem(core).fromArray(jsonresponse);
-      });
-  }
-
-  public async getPerks(): Promise<Array<Perk>> {
-    var core = this.core;
-    let main = this;
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/store/perk/list/?hash=" +
-        core.getCoreSession().getHash() +
-        "&network=" +
-        main.uuid;
-    } else {
-      url = "https://api.purecore.io/rest/2/store/?key=" + core.getKey();
+    public constructor(network: Network) {
+        super(network.core, network.asInstance());
+        this.network = network;
     }
 
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-        },
-        "perk/list/"
-      )
-      .then((jsonresponse) => {
-        var perklist = new Array<Perk>();
-        jsonresponse.forEach((element) => {
-          perklist.push(new Perk(core).fromArray(element));
-        });
-        return perklist;
-      });
-  }
-
-  public async getPerkCategories(): Promise<Array<PerkCategory>> {
-    var core = this.core;
-    let main = this;
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" +
-        core.getCoreSession().getHash() +
-        "&network=" +
-        main.uuid;
-    } else {
-      url = "https://api.purecore.io/rest/2/?key=" + core.getKey();
+    public async getIncomeAnalytics(span = 3600 * 24): Promise<Array<IncomeAnalytic>> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    span: span,
+                },
+                "store/income/analytics/"
+            )
+            .then(json => json.map(new IncomeAnalytic().fromArray));
     }
 
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-        },
-        "store/perk/category/list/"
-      )
-      .then((jsonresponse) => {
-        var perklist = new Array<PerkCategory>();
-        jsonresponse.forEach((element) => {
-          perklist.push(new PerkCategory(core).fromArray(element));
-        });
-        return perklist;
-      });
-  }
-
-  public async getGateways(): Promise<Array<Gateway>> {
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-        },
-        "store/gateway/list/"
-      )
-      .then((jsonresponse) => {
-        var methods = new Array<Gateway>();
-        jsonresponse.forEach((gtw) => {
-          var gtf = new Gateway(gtw.name, null, null, null);
-          methods.push(gtf);
-        });
-        return methods;
-      });
-  }
-
-  public itemIdList(list: Array<StoreItem>): Array<StoreItem> {
-    var finalList = new Array<StoreItem>();
-    list.forEach((item) => {
-      finalList.push(new StoreItem(new Core(), item.uuid));
-    });
-    return finalList;
-  }
-
-  public itemIdListFromJSON(json): Array<StoreItem> {
-    var finalList = new Array<StoreItem>();
-    json.forEach((item) => {
-      finalList.push(new StoreItem(new Core(), item.uuid));
-    });
-    return finalList;
-  }
-
-  getStripeWalletLink() {
-    var hash = this.network.core.getCoreSession().getHash();
-    var ntwid = this.network.getId();
-    return (
-      "https://api.purecore.io/link/stripe/wallet/?hash=" +
-      hash +
-      "&network=" +
-      ntwid
-    );
-  }
-
-  getPayPalWalletLink() {
-    var hash = this.network.core.getCoreSession().getHash();
-    var ntwid = this.network.getId();
-    return (
-      "https://api.purecore.io/link/paypal/wallet/?hash=" +
-      hash +
-      "&network=" +
-      ntwid
-    );
-  }
-
-  public async requestPayment(
-    itemList: Array<StoreItem>,
-    username: string,
-    billingAddress?
-  ) {
-    if (billingAddress == null) {
-      billingAddress = new BillingAddress();
+    public async getItem(id: string): Promise<StoreItem> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    item: id,
+                },
+                "store/item/"
+            )
+            .then(item => StoreItem.fromJSON(this.core, item));
     }
 
-    let core = this.network.core;
-    var idList = [];
+    public async getPerks(): Promise<Array<Perk>> {
+        let args: any = {
+            network: this.uuid
+        };
 
-    itemList.forEach((item) => {
-      idList.push(item.uuid);
-    });
+        if (this.core.getTool() instanceof Session) {
+            args.hash = this.core.getCoreSession().getHash();
+        }
 
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          username: username,
-          products: escape(JSON.stringify(idList)),
-          billing: JSON.stringify(billingAddress),
-        },
-        "payment/request/"
-      )
-      .then((jsonresponse) => {
-        return new CorePaymentRequest(core).fromArray(jsonresponse);
-      });
-  }
-
-  getNetwork(): Network {
-    return this.network;
-  }
-
-  public async getPayments(page?): Promise<Array<Payment>> {
-    var core = this.network.core;
-    var queryPage = 0;
-
-    if (page != undefined || page != null) {
-      queryPage = page;
+        return new Call(this.core)
+            .commit(args, "perk/list/")
+            .then(json => json.map(perk => Perk.fromJSON(this.core, perk)));
     }
 
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          page: page,
-        },
-        "/payment/list/"
-      )
-      .then((jsonresponse) => {
-        var payments = new Array<Payment>();
+    public async getPerkCategories(): Promise<Array<PerkCategory>> {
+        let args: any = {
+            network: this.uuid
+        };
 
-        jsonresponse.forEach((paymentJson) => {
-          payments.push(new Payment(core).fromArray(paymentJson));
+        if (this.core.getTool() instanceof Session) {
+            args.hash = this.core.getCoreSession().getHash();
+        }
+
+        return new Call(this.core)
+            .commit(args, "store/perk/category/list/")
+            .then(json => json.map(perk => PerkCategory.fromJSON(this.core, perk)));
+    }
+
+    public async getGateways(): Promise<Array<Gateway>> {
+        return new Call(this.core)
+            .commit({network: this.uuid}, "store/gateway/list/")
+            .then(json => json.map(gateway => new Gateway(gateway.name, null, null, null)));
+    }
+
+    public itemIdList(array: Array<StoreItem>): Array<StoreItem> {
+        return array.map(item => new StoreItem(new Core(), item.getId()));
+    }
+
+    public itemIdListFromJSON(json: any): Array<StoreItem> {
+        return json.map(item => new StoreItem(new Core(), item.uuid));
+    }
+
+    public getStripeWalletLink(): string {
+        return `https://api.purecore.io/link/stripe/wallet/?hash=
+        ${this.network.core.getCoreSession().getHash()}&network=${this.network.getId()}`
+    }
+
+    public getPayPalWalletLink(): string {
+        return `https://api.purecore.io/link/paypal/wallet/?hash=
+        ${this.network.core.getCoreSession().getHash()}&network=${this.network.getId()}`
+    }
+
+    public async requestPayment(itemList: Array<StoreItem>, username: string, billingAddress: BillingAddress) {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    username: username,
+                    products: escape(JSON.stringify(itemList.map(item => item.getId()))),
+                    billing: JSON.stringify(billingAddress),
+                },
+                "payment/request/"
+            )
+            .then(json => CorePaymentRequest.fromJSON(this.core, json));
+    }
+
+    public getNetwork(): Network {
+        return this.network;
+    }
+
+    public async getPayments(page?: number): Promise<Array<Payment>> {
+        if (page == undefined) page = 0;
+
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    page: page,
+                },
+                "/payment/list/"
+            )
+            .then(json => json.map(payment => Payment.fromJSON(this.core, payment)));
+    }
+
+    public async unlinkGateway(gatewayName): Promise<boolean> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    gateway: gatewayName,
+                },
+                "store/gateway/unlink/"
+            )
+            .then(json => json.success);
+    }
+
+    public async createPerkCategory(name: string): Promise<PerkCategory> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    name: name,
+                },
+                "store/perk/category/create/"
+            )
+            .then(json => PerkCategory.fromJSON(this.core, json));
+    }
+
+    public async createCategory(name, description): Promise<StoreCategory> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    name: name,
+                    description: description,
+                },
+                "store/category/create/"
+            )
+            .then(json => StoreCategory.fromJSON(this.core, json));
+    }
+
+    //TODO: return type
+    public async getCategories() {
+        return new Promise((resolve, reject) => {
+            this.getPackages()
+                .then((nestedItems: Array<NestedItem>) => resolve(nestedItems.map(item => item.getCategory())))
+                .catch(reject);
         });
+    }
 
-        return payments;
-      });
-  }
+    public async getPackages(): Promise<Array<NestedItem>> {
+        return new Call(this.core)
+            .commit({network: this.uuid}, "store/item/list/")
+            .then(json => json.map(item => NestedItem.fromJSON(this.core, item)));
+    }
 
-  public async unlinkGateway(gatewayName): Promise<boolean> {
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          gateway: gatewayName,
-        },
-        "store/gateway/unlink/"
-      )
-      .then((jsonresponse) => {
-        return jsonresponse.success;
-      });
-  }
-
-  public async createPerkCategory(name): Promise<PerkCategory> {
-    let core = this.core;
-
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          name: name,
-        },
-        "store/perk/category/create/"
-      )
-      .then((jsonresponse) => {
-        return new PerkCategory(core).fromArray(jsonresponse);
-      });
-  }
-
-  public async createCategory(name, description): Promise<StoreCategory> {
-    var core = this.core;
-
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          name: name,
-          description: description,
-        },
-        "store/category/create/"
-      )
-      .then((jsonresponse) => {
-        return new StoreCategory(core).fromArray(jsonresponse);
-      });
-  }
-
-  public async getCategories() {
-    return new Promise(function (resolve, reject) {
-      try {
-        this.getPackages().then(function (nestedItems: Array<NestedItem>) {
-          var categories = new Array<StoreCategory>();
-          nestedItems.forEach((nestedItem) => {
-            categories.push(nestedItem.category);
-          });
-          resolve(categories);
-        });
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  public async getPackages(): Promise<Array<NestedItem>> {
-    let core = this.network.core;
-
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-        },
-        "store/item/list/"
-      )
-      .then((jsonresponse) => {
-        var response = new Array<NestedItem>();
-        jsonresponse.forEach((nestedData) => {
-          response.push(new NestedItem(core).fromArray(nestedData));
-        });
-        return response;
-      });
-  }
+    public static fromJSON(core: Core, json: any): Store {
+        return new Store(Network.fromJSON(core, json.network));
+    }
 }

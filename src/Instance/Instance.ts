@@ -1,147 +1,92 @@
 class Instance extends Core {
-  core: Core;
-  uuid: string;
-  name: string;
-  type: string;
+    public core: Core;
+    public uuid: string;
+    public name: string;
+    public type: CoreInstanceType;
 
-  constructor(core: Core, uuid: string, name: string, type: string) {
-    super(core.getTool());
-    this.core = core;
-    this.uuid = uuid;
-    this.name = name;
-    this.type = type;
-  }
+    public constructor(core: Core, uuid: string, name: string, type: CoreInstanceType) {
+        super(core.getTool());
+        this.core = core;
+        this.uuid = uuid;
+        this.name = name;
+        this.type = type;
+    }
 
-  public async closeOpenConnections(): Promise<Array<Connection>> {
-    let main = this;
+    public async closeOpenConnections(): Promise<Array<Connection>> {
+        return new Call(this.core)
+            .commit({instance: this.uuid}, "instance/connections/close/all/")
+            .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-        },
-        "instance/connections/close/all/"
-      )
-      .then((jsonresponse) => {
-        var connectionList = new Array<Connection>();
-        jsonresponse.forEach((connectionJson) => {
-          var connection = new Connection(main.core).fromArray(connectionJson);
-          connectionList.push(connection);
-        });
-        return connectionList;
-      });
-  }
+    public async getOpenConnections(): Promise<Array<Connection>> {
+        return new Call(this.core)
+            .commit({instance: this.uuid}, "instance/connections/open/list/")
+            .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+    }
 
-  public async getOpenConnections(): Promise<Array<Connection>> {
-    let main = this;
+    public async getGrowthAnalytics(span = 3600 * 24): Promise<Array<GrowthAnalytic>> {
+        return new Call(this.core)
+            .commit(
+                {
+                    instance: this.uuid,
+                    span: span,
+                },
+                "instance/growth/analytics/"
+            )
+            .then(json => json.map(growthAnalytic => new GrowthAnalytic().fromArray(growthAnalytic)));
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-        },
-        "instance/connections/open/list/"
-      )
-      .then((jsonresponse) => {
-        var connectionList = new Array<Connection>();
-        jsonresponse.forEach((connectionJson) => {
-          var connection = new Connection(main.core).fromArray(connectionJson);
-          connectionList.push(connection);
-        });
-        return connectionList;
-      });
-  }
+    public async delete(): Promise<boolean> {
+        return new Call(this.core)
+            .commit({instance: this.uuid}, "instance/delete/")
+            .then(() => true); //TODO: process return
+    }
 
-  public async getGrowthAnalytics(
-    span = 3600 * 24
-  ): Promise<Array<GrowthAnalytic>> {
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-          span: span,
-        },
-        "instance/growth/analytics/"
-      )
-      .then((jsonresponse) => {
-        var growthAnalytics = new Array<GrowthAnalytic>();
-        jsonresponse.forEach((growthAnalyticJSON) => {
-          var growthAnalytic = new GrowthAnalytic().fromArray(
-            growthAnalyticJSON
-          );
-          growthAnalytics.push(growthAnalytic);
-        });
-        return growthAnalytics;
-      });
-  }
+    public async getKeys(): Promise<Array<Key>> {
+        return new Call(this.core)
+            .commit({instance: this.uuid}, "instance/key/list/")
+            .then(json => json.map(key => Key.fromJSON(this.core, key)));
+    }
 
-  public async delete(): Promise<boolean> {
-    let main = this;
+    public getName(): string {
+        return this.name;
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-        },
-        "instance/delete/"
-      )
-      .then(() => {
-        return true;
-      });
-  }
+    public getId(): string {
+        return this.uuid;
+    }
 
-  public async getKeys(): Promise<Array<Key>> {
-    let main = this;
+    public getType(): CoreInstanceType {
+        return this.type;
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-        },
-        "instance/key/list/"
-      )
-      .then((jsonresponse) => {
-        var keyList = new Array<Key>();
-        jsonresponse.forEach((jsonKey) => {
-          keyList.push(new Key(main.core).fromArray(jsonKey));
-        });
-        return keyList;
-      });
-  }
+    public asNetwork(): Network {
+        return new Network(this.core, this);
+    }
 
-  public getName() {
-    return this.name;
-  }
+    public async update(): Promise<Instance> {
+        return new Call(this.core)
+            .commit({instance: this.uuid}, "instance/info/")
+            .then(json => {
+                if (json.server == null) {
+                    this.type = "NTW";
+                    this.uuid = json.network.uuid;
+                    this.name = json.network.name;
+                } else {
+                    this.type = "SVR";
+                    this.uuid = json.server.uuid;
+                    this.name = json.server.name;
+                }
+                return this;
+            });
+    }
 
-  public getId() {
-    return this.uuid;
-  }
-
-  public asNetwork(): Network {
-    return new Network(this.core, this);
-  }
-
-  public async update(): Promise<Instance> {
-    let main = this;
-
-    return new Call(this.core)
-      .commit(
-        {
-          instance: this.uuid,
-        },
-        "instance/info/"
-      )
-      .then((jsonresponse) => {
-        if (jsonresponse.server == null) {
-          main.type = "NTW";
-          main.uuid = jsonresponse.network.uuid;
-          main.name = jsonresponse.network.name;
-        } else {
-          main.type = "SVR";
-          main.uuid = jsonresponse.server.uuid;
-          main.name = jsonresponse.server.name;
-        }
-        return main;
-      });
-  }
+    public static fromJSON(core: Core, json: any, type?: CoreInstanceType): Instance {
+        return new Instance(
+            core,
+            json.uuid,
+            json.name,
+            type == undefined ? "UNK" : type //TODO: check api calls for json.type
+        );
+    }
 }

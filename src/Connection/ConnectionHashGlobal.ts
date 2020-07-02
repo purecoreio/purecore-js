@@ -1,84 +1,49 @@
 class ConnectionHashGlobal extends Core {
-  core: Core;
-  hash: string;
-  player: Player;
+    public core: Core;
+    public hash: string;
+    public player: Player;
 
-  constructor(core: Core, hash?: string, player?: Player) {
-    super(core.getKey());
-    this.core = core;
-    this.hash = hash;
-    this.player = player;
-  }
+    public constructor(core: Core, hash?: string, player?: Player) {
+        super(core.getKey());
+        this.core = core;
+        this.hash = hash;
+        this.player = player;
+    }
 
-  fromArray(array) {
-    this.hash = array.hash;
-    this.player = new Player(
-      this.core,
-      array.player.coreid,
-      array.player.username,
-      array.player.uuid,
-      array.player.verified
-    );
-    return this;
-  }
+    public getPlayer(): Player {
+        return this.player;
+    }
 
-  getPlayer() {
-    return this.player;
-  }
+    public getHash(): string {
+        return this.hash;
+    }
 
-  getHash() {
-    return this.hash;
-  }
+    public async requestSession(): Promise<SessionRequest> {
+        return new Call(this.core)
+            .commit({hash: this.hash}, "session/hash/token/")
+            .then(json => {
+                if (this.core.getTool() != null) {
+                    return SessionRequest.fromJSON(this.core, json);
+                } else {
+                    return new SessionRequest(
+                        this.core,
+                        json.uuid,
+                        json.token,
+                        json.validated,
+                        Player.fromJSON(this.core, json.player),
+                        null,
+                        "masterplayer"
+                    );
+                }
+            });
+    }
 
-  public async requestSession(): Promise<SessionRequest> {
-    let main = this;
-    return new Call(this.core)
-      .commit(
-        {
-          hash: this.hash,
-        },
-        "session/hash/token/"
-      )
-      .then((jsonresponse) => {
-        var player = new Player(
-          main.core,
-          jsonresponse.player.coreid,
-          jsonresponse.player.username,
-          jsonresponse.player.uuid,
-          jsonresponse.player.verified
-        );
-        if (main.core.getTool() != null) {
-          var instance = new Network(
-            main.core,
-            new Instance(
-              main.core,
-              jsonresponse.network.uuid,
-              jsonresponse.network.name,
-              "NTW"
-            )
-          );
-          var sessionRequest = new SessionRequest(
-            main.core,
-            jsonresponse.uuid,
-            jsonresponse.token,
-            jsonresponse.validated,
-            player,
-            instance,
-            "player"
-          );
-          return sessionRequest;
-        } else {
-          var sessionRequest = new SessionRequest(
-            main.core,
-            jsonresponse.uuid,
-            jsonresponse.token,
-            jsonresponse.validated,
-            player,
-            null,
-            "masterplayer"
-          );
-          return sessionRequest;
-        }
-      });
-  }
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array) {
+        this.hash = array.hash;
+        this.player = Player.fromJSON(this.core, array.player);
+        return this;
+    }
 }

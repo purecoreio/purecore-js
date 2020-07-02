@@ -1,91 +1,103 @@
 class ForumPost extends Core {
-  public core: Core;
-  public uuid;
-  public title;
-  public content;
-  public player: Player;
-  public open: boolean;
-  public network: Network;
-  public category: ForumCategory;
+    public core: Core;
+    public uuid: string;
+    public title: string;
+    public content: string;
+    public player: Player;
+    public open: boolean;
+    public network: Network;
+    public category: ForumCategory;
 
-  public constructor(
-    core: Core,
-    uuid?: string,
-    title?: string,
-    content?: string,
-    player?: Player,
-    open?: boolean,
-    network?: Network,
-    category?: ForumCategory
-  ) {
-    super(core.getTool());
-    this.core = core;
-    this.uuid = uuid;
-    this.title = title;
-    this.content = content;
-    this.player = player;
-    this.open = open;
-    this.network = network;
-    this.category = category;
-  }
-
-  public fromArray(array): ForumPost {
-    this.uuid = array.uuid;
-    this.title = array.title;
-    this.content = array.content;
-    this.player = new Player(
-      this.core,
-      array.player.coreid,
-      array.player.username,
-      array.player.uuid,
-      array.player.verified
-    );
-    this.open = array.open;
-    this.network = new Network(
-      this.core,
-      new Instance(this.core, array.network.uuid, array.network.name, "NTW")
-    );
-    this.category = new ForumCategory(this.core).fromArray(array.category);
-    return this;
-  }
-
-  public async createReply(content): Promise<ForumReply> {
-    let main = this;
-
-    return new Call(this.core)
-      .commit(
-        {
-          object: this.uuid,
-          content: escape(content),
-        },
-        "forum/create/reply/"
-      )
-      .then((jsonresponse) => {
-        return new ForumReply(main.core).fromArray(jsonresponse);
-      });
-  }
-
-  public async getReplies(page = 0): Promise<Array<ForumReply>> {
-    if (page == null || page == undefined) {
-      page = 0;
+    public constructor(core: Core, uuid?: string, title?: string, content?: string, player?: Player, open?: boolean, network?: Network, category?: ForumCategory) {
+        super(core.getTool());
+        this.core = core;
+        this.uuid = uuid;
+        this.title = title;
+        this.content = content;
+        this.player = player;
+        this.open = open;
+        this.network = network;
+        this.category = category;
     }
 
-    let main = this;
+    public async createReply(content): Promise<ForumReply> {
+        return new Call(this.core)
+            .commit(
+                {
+                    object: this.uuid,
+                    content: escape(content),
+                },
+                "forum/create/reply/"
+            )
+            .then(json => ForumReply.fromJSON(this.core, json));
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          object: this.uuid,
-          page: page.toString(),
-        },
-        "forum/get/reply/list/"
-      )
-      .then((jsonresponse) => {
-        var replies = new Array<ForumReply>();
-        jsonresponse.forEach((response) => {
-          replies.push(new ForumReply(main.core).fromArray(response));
-        });
-        return replies;
-      });
-  }
+    public async getReplies(page = 0): Promise<Array<ForumReply>> {
+        if (page == undefined) page = 0;
+
+        return new Call(this.core)
+            .commit(
+                {
+                    object: this.uuid,
+                    page: page.toString(),
+                },
+                "forum/get/reply/list/"
+            )
+            .then(json => json.map(reply => ForumReply.fromJSON(this.core, reply)));
+    }
+
+    public getId(): string {
+        return this.uuid;
+    }
+
+    public getTitle(): string {
+        return this.title;
+    }
+
+    public getContent(): string {
+        return this.content;
+    }
+
+    public getPlayer(): Player {
+        return this.player;
+    }
+
+    public isOpen(): boolean {
+        return this.open;
+    }
+
+    public getNetwork(): Network {
+        return this.network;
+    }
+
+    public getCategory(): ForumCategory {
+        return this.category;
+    }
+
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array): ForumPost {
+        this.uuid = array.uuid;
+        this.title = array.title;
+        this.content = array.content;
+        this.player = Player.fromJSON(this.core, array.player);
+        this.open = array.open;
+        this.network = Network.fromJSON(this.core, array.network);
+        this.category = ForumCategory.fromJSON(this.core, array.category);
+        return this;
+    }
+
+    public static fromJSON(core: Core, json: any) {
+        return new ForumPost(
+            core,
+            json.uuid,
+            json.title,
+            json.content,
+            Player.fromJSON(core, json.player),
+            json.open,
+            Network.fromJSON(core, json.network),
+            ForumCategory.fromJSON(core, json.category)
+        );
+    }
 }

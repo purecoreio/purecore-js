@@ -1,184 +1,105 @@
 class Session extends Core {
-  core: Core;
-  uuid: string;
-  hash: string;
-  device: SessionDevice;
-  location: SessionLocation;
-  usage: SessionUsage;
-  network: Network;
-  player: Player;
-  owner: Owner;
+    public core: Core;
+    public uuid: string;
+    public hash: string;
+    public device: SessionDevice;
+    public location: SessionLocation;
+    public usage: SessionUsage;
+    public network: Network;
+    public player: Player;
+    public owner: Owner;
+    public user: Player | Owner;
 
-  constructor(
-    core: Core,
-    uuid?: string,
-    hash?: string,
-    device?: SessionDevice,
-    location?: SessionLocation,
-    usage?: SessionUsage,
-    network?: Network,
-    user?
-  ) {
-    super(core.getTool(), core.dev);
-    this.core = core;
-    this.uuid = uuid;
-    this.hash = hash;
-    this.device = device;
-    this.location = location;
-    this.usage = usage;
-    this.network = network;
+    public constructor(core: Core, uuid?: string, hash?: string, device?: SessionDevice, location?: SessionLocation, usage?: SessionUsage, network?: Network, user?: Owner | Player) {
+        super(core.getTool(), core.dev);
 
-    if (user instanceof Player) {
-      this.player = user;
-    } else if (user instanceof Owner) {
-      this.owner = user;
-    }
-  }
+        this.core = core;
+        this.uuid = uuid;
+        this.hash = hash;
+        this.device = device;
+        this.location = location;
+        this.usage = usage;
+        this.network = network;
 
-  getUser() {
-    if (this.player == undefined && this.owner != undefined) {
-      return new Owner(
-        this.core,
-        this.owner.getId(),
-        this.owner.getName(),
-        this.owner.getSurname(),
-        this.owner.getEmail()
-      );
-    } else {
-      return new Player(
-        this.core,
-        this.player.getId(),
-        this.player.getUsername(),
-        this.player.getUuid(),
-        this.player.verified
-      );
-    }
-  }
+        if (user instanceof Player) {
+            this.player = user;
+        } else if (user instanceof Owner) {
+            this.owner = user;
+        }
 
-  fromArray(array) {
-    var core = this.core;
-    this.uuid = array.uuid;
-    this.hash = array.hash;
-    this.device = new SessionDevice(
-      array.device.brand,
-      array.device.device,
-      array.device.model,
-      array.device.os
-    );
-    this.location = new SessionLocation(
-      array.location.city,
-      array.location.state,
-      array.location.country_code
-    );
-    this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
-
-    if ("network" in array) {
-      this.network = new Network(
-        this.core,
-        new Instance(this.core, array.network.uuid, array.network.name, "NTW")
-      );
-      this.core = new Core(
-        new Session(
-          new Core(null, core.dev),
-          this.uuid,
-          this.hash,
-          this.device,
-          this.location,
-          this.usage,
-          this.network,
-          null
-        ),
-        core.dev
-      );
-    } else {
-      this.core = new Core(
-        new Session(
-          new Core(null, core.dev),
-          this.uuid,
-          this.hash,
-          this.device,
-          this.location,
-          this.usage,
-          null,
-          null
-        ),
-        core.dev
-      );
+        this.user = user;
     }
 
-    if ("player" in array) {
-      this.player = new Player(
-        this.core,
-        array.player.coreid,
-        array.player.username,
-        array.player.uuid,
-        array.player.verified
-      );
-    } else if ("owner" in array) {
-      this.owner = new Owner(
-        this.core,
-        array.owner.uuid,
-        array.owner.name,
-        array.owner.surname,
-        array.owner.email
-      );
+    public getUser(): Owner | Player {
+        return this.user;
     }
 
-    return this;
-  }
+    public async fromHash(sessionHash: string): Promise<Session> {
+        return await new Call(this.core)
+            .commit({hash: sessionHash}, "session/get/")
+            .then(json => new Session(this.core).fromArray(json));
+    }
 
-  public async fromHash(sessionHash): Promise<Session> {
-    var core = this.core;
-    var hash = sessionHash;
+    public getId(): string {
+        return this.uuid;
+    }
 
-    return await new Call(this.core)
-      .commit({ hash: hash }, "session/get/")
-      .then(function (jsonresponse) {
-        return new Session(core).fromArray(jsonresponse);
-      });
-  }
+    public getHash(): string {
+        return this.hash;
+    }
 
-  getId() {
-    return this.uuid;
-  }
+    public getPlayer(): Player {
+        return this.player;
+    }
 
-  getHash() {
-    return this.hash;
-  }
+    public async getMachines(): Promise<Array<Machine>> {
+        return await new Call(this.core)
+            .commit({hash: this.getHash()}, "machine/list/")
+            .then(json => json.map(machine => new Machine().fromArray(machine)));
+    }
 
-  getPlayer() {
-    return this.player;
-  }
+    public async getNetworks(): Promise<Array<Network>> {
+        return await new Call(this.core)
+            .commit({}, "instance/network/list/")
+            .then(json => json.map(network => Network.fromJSON(this.core, network)));
+    }
 
-  public async getMachines(): Promise<Array<Machine>> {
-    var hash = this.hash;
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array: any): Session {
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.device = SessionDevice.fromJSON(array.device);
+        this.location = SessionLocation.fromJSON(array.location);
+        this.usage = SessionUsage.fromJSON(array.usage);
 
-    return await new Call(this.core)
-      .commit({ hash: hash }, "machine/list/")
-      .then(function (jsonresponse) {
-        var machines = new Array<Machine>();
-        jsonresponse.forEach((machineJSON) => {
-          machines.push(new Machine().fromArray(machineJSON));
-        });
-        return machines;
-      });
-  }
+        if ("network" in array) {
+            this.network = Network.fromJSON(this.core, array.network);
+            this.core = new Core(this, this.core.dev);
+        } else {
+            this.core = new Core(this, this.core.dev);
+        }
 
-  public async getNetworks(): Promise<Array<Network>> {
-    var core = this.core;
-    return await new Call(this.core)
-      .commit({}, "instance/network/list/")
-      .then(function (jsonresponse) {
-        var networks = new Array<Network>();
-        jsonresponse.forEach((network) => {
-          networks.push(
-            new Network(
-              core,
-              new Instance(core, network.uuid, network.name, "NTW")
-            )
-          );
-        });
-        return networks;
-      });
-  }
+        if ("player" in array) {
+            this.player = Player.fromJSON(this.core, array.player);
+        } else if ("owner" in array) {
+            this.owner = Owner.fromJSON(this.core, array.owner);
+        }
+
+        return this;
+    }
+
+    public static fromJSON(core: Core, json: any): Session {
+        return new Session(
+            core,
+            json.uuid,
+            json.hash,
+            SessionDevice.fromJSON(json.device),
+            SessionLocation.fromJSON(json.location),
+            SessionUsage.fromJSON(json.usage),
+            "network" in json ? Network.fromJSON(core, json.network) : null,
+            "player" in json ? Player.fromJSON(core, json.network) : Owner.fromJSON(core, json.owner)
+        );
+    }
 }

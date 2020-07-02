@@ -1,116 +1,71 @@
 class CorePaymentRequest extends Core {
-  public core: Core;
-  public uuid: string;
-  public store: Store;
-  public products: Array<StoreItem>;
-  public username: string;
-  public player: Player;
-  public sessionList: Array<ConnectionHash>;
-  public warnings: Array<Warning>;
-  public discounts: Array<Discount>;
-  public gateways: Array<Gateway>;
-  public due;
-  public currency: string;
+    public readonly core: Core;
+    public uuid: string;
+    public store: Store;
+    public products: Array<StoreItem>;
+    public username: string;
+    public player: Player;
+    public sessionList: Array<ConnectionHash>;
+    public warnings: Array<Warning>;
+    public discounts: Array<Discount>;
+    public gateways: Array<Gateway>;
+    public due: number;
+    public currency: string;
 
-  constructor(core: Core) {
-    super(core.getTool());
-    this.core = new Core(core.getTool());
-    this.products = new Array<StoreItem>();
-    this.sessionList = new Array<ConnectionHash>();
-    this.warnings = new Array<Warning>();
-    this.discounts = new Array<Discount>();
-    this.gateways = new Array<Gateway>();
-  }
-
-  public async isPaid(): Promise<boolean> {
-    return new Call(this.core)
-      .commit(
-        {
-          request: this.uuid,
-        },
-        "payment/request/isPaid/"
-      )
-      .then((jsonresponse) => {
-        return jsonresponse.paid;
-      });
-  }
-
-  fromArray(array): CorePaymentRequest {
-    this.uuid = array.uuid;
-    this.store = new Store(
-      new Network(
-        this.core,
-        new Instance(
-          this.core,
-          array.store.network.uuid,
-          array.store.network.name,
-          "NTW"
-        )
-      )
-    );
-
-    array.products.forEach((product) => {
-      this.products.push(new StoreItem(this.core).fromArray(product));
-    });
-
-    this.username = array.username;
-
-    try {
-      this.player = new Player(
-        this.core,
-        array.player.coreid,
-        array.player.username,
-        array.player.uuid,
-        array.player.verified
-      );
-    } catch (error) {
-      this.player = null;
+    public constructor(core: Core, uuid?: string, store?: Store, products?: Array<StoreItem>, username?: string, player?: Player, sessionList?: Array<ConnectionHash>, warnings?: Array<Warning>, discounts?: Array<Discount>, gateways?: Array<Gateway>, due?: null, currency?: string) {
+        super(core.getTool());
+        this.core = new Core(core.getTool());
+        this.uuid = uuid;
+        this.store = store;
+        this.products = products == null ? new Array<StoreItem>() : products;
+        this.username = username;
+        this.sessionList = sessionList == null ? new Array<ConnectionHash>() : sessionList;
+        this.warnings = warnings == null ? new Array<Warning>() : warnings;
+        this.discounts = discounts == null ? new Array<Discount>() : discounts;
+        this.gateways = gateways == null ? new Array<Gateway>() : gateways;
+        this.due = due;
+        this.currency = currency;
     }
 
-    if (array.sessionList != null) {
-      array.sessionList.forEach((session) => {
-        // TODO
-      });
+    public async isPaid(): Promise<boolean> {
+        return new Call(this.core)
+            .commit({request: this.uuid}, "payment/request/isPaid/")
+            .then(json => json.paid);
     }
 
-    if (array.warnings != null) {
-      array.warnings.forEach((warning) => {
-        try {
-          this.warnings.push(new Warning(warning.cause, warning.text));
-        } catch (error) {
-          // ignore
-        }
-      });
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array): CorePaymentRequest {
+        this.uuid = array.uuid;
+        this.store = Store.fromJSON(this.core, array.store);
+        this.products = array.products.map(product => StoreItem.fromJSON(this.core, product));
+        this.username = array.username;
+        this.player = Player.fromJSON(this.core, array.player);
+        this.sessionList = array.sessionList.map(session => ConnectionHash.fromJSON(this.core, session)); //TODO: check implementation as it was a todo previously
+        this.warnings = array.warnings.map(Warning.fromJSON);
+        this.discounts = array.discounts.map(Discount.fromJSON)
+        this.gateways = array.gateways.map(Gateway.fromJSON)
+        this.due = array.due;
+        this.currency = array.currency;
+
+        return this;
     }
 
-    if (array.discounts != null) {
-      array.discounts.forEach((discount) => {
-        try {
-          this.discounts.push(
-            new Discount(
-              discount.type,
-              discount.id,
-              discount.description,
-              discount.amount
-            )
-          );
-        } catch (error) {
-          // ignore
-        }
-      });
-    }
-
-    if (array.gateways != null) {
-      array.gateways.forEach((gateway) => {
-        this.gateways.push(
-          new Gateway(gateway.name, gateway.url, gateway.color, gateway.logo)
+    public static fromJSON(core: Core, json: any): CorePaymentRequest {
+        return new CorePaymentRequest(
+            core,
+            json.uuid,
+            Store.fromJSON(core, json.store),
+            json.products.map(product => StoreItem.fromJSON(core, product)),
+            json.username,
+            Player.fromJSON(core, json.player),
+            json.sessionList.map(session => ConnectionHash.fromJSON(core, session)),
+            json.warnings.map(Warning.fromJSON),
+            json.discounts.map(Discount.fromJSON),
+            json.gateways.map(Gateway.fromJSON),
+            json.due,
+            json.currency
         );
-      });
     }
-
-    this.due = array.due;
-    this.currency = array.currency;
-
-    return this;
-  }
 }

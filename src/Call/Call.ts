@@ -1,69 +1,54 @@
 class Call extends Core {
-  public baseURL;
-  public core;
+    private readonly baseURL: string;
+    private readonly core: Core;
 
-  public constructor(core: Core) {
-    super(core.getTool(), core.dev);
-    this.core = core;
-    if (core.dev) {
-      this.baseURL = "http://localhost/rest/2/";
-    } else {
-      this.baseURL = "https://api.purecore.io/rest/2/";
-    }
-  }
-
-  public async commit(args = {}, endpoint: string): Promise<any> {
-    var key = this.core.getKey();
-    var session = this.core.getCoreSession();
-    var baseURL = this.baseURL;
-
-    var finalArgs = {};
-    if (args == null) {
-      finalArgs = {};
-    } else {
-      finalArgs = args;
+    public constructor(core: Core) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        if (core.dev) {
+            this.baseURL = "http://localhost/rest/2/";
+        } else {
+            this.baseURL = "https://api.purecore.io/rest/2/";
+        }
     }
 
-    if (session != null) {
-      finalArgs["hash"] = session.getHash();
-    } else if (key != null) {
-      finalArgs["key"] = key;
-    }
+    public async commit(args: any, endpoint: string): Promise<any> {
+        if (args == null) args = {};
 
-    var paramsEncoded = Object.keys(finalArgs)
-      .filter(function (key) {
-        return finalArgs[key] ? true : false;
-      })
-      .map(function (key) {
-        return (
-          encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key])
-        );
-      })
-      .join("&");
+        if (this.core.getCoreSession() !== null) {
+            args["hash"] = this.core.getCoreSession().getHash();
+        } else if (this.core.getKey() !== null) {
+            args["key"] = this.core.getKey();
+        }
 
-    var url = baseURL + endpoint + "?" + paramsEncoded;
+        const params: string = Object.keys(args)
+            .filter(key => args.hasOwnProperty(key))
+            .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
+            .join("&")
 
-    if (this.core.dev) {
-      console.log("Fetching: " + url);
-    }
+        const url = this.baseURL + Call.formatEndpoint(endpoint) + "?" + params;
 
-    return new Promise(function (resolve, reject) {
-      return fetch(url, {
-        method: "POST",
-      })
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function (response) {
-          if ("error" in response) {
-            throw new Error(response.error + ". " + response.msg);
-          } else {
-            resolve(response);
-          }
-        })
-        .catch(function (error) {
-          reject(error.message);
+        if (this.core.dev) {
+            console.log("Fetching: " + url);
+        }
+
+        return new Promise((resolve, reject) => {
+            return fetch(url, {
+                method: "POST",
+            })
+                .then((response: Response) => response.json())
+                .then((response: any) => {
+                    if ("error" in response) {
+                        throw new Error(response.error + ". " + response.msg);
+                    } else {
+                        resolve(response);
+                    }
+                })
+                .catch(error => reject(error.message));
         });
-    });
-  }
+    }
+
+    private static formatEndpoint(endpoint: string): string {
+        return (endpoint.startsWith('/') ? '' : '/') + endpoint + (endpoint.endsWith('/') ? '' : '/');
+    }
 }

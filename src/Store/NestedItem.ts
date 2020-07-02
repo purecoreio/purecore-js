@@ -1,31 +1,44 @@
 class NestedItem extends Core {
-  public core: Core;
-  public uuid: string;
-  public items: Array<StoreItem>;
-  public category: StoreCategory;
+    public core: Core;
+    public uuid: string;
+    public items: Array<StoreItem>;
+    public category: StoreCategory;
 
-  constructor(core: Core) {
-    super(core.getTool());
-    this.core = core;
-  }
+    public constructor(core: Core, uuid?: string, items?: Array<StoreItem>, category?: StoreCategory) {
+        super(core.getTool());
+        this.core = core;
+    }
 
-  fromArray(array): NestedItem {
-    this.category = new StoreCategory(this.core).fromArray(array.category);
-    this.uuid = this.category.getId();
+    public getId(): string {
+        return this.uuid;
+    }
 
-    this.items = new Array<StoreItem>();
-    array.products.forEach((product) => {
-      this.items.push(new StoreItem(this.core).fromArray(product));
-    });
+    public getCategory(): StoreCategory {
+        return this.category;
+    }
 
-    return this;
-  }
+    public getItems(): Array<StoreItem> {
+        return this.items;
+    }
 
-  getCategory(): StoreCategory {
-    return this.category;
-  }
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array: any): NestedItem {
+        this.category = StoreCategory.fromJSON(this.core, array.category);
+        this.uuid = this.category.getId();
+        this.items = array.products.map(product => StoreItem.fromJSON(this.core, product))
+        return this;
+    }
 
-  getItems(): Array<StoreItem> {
-    return this.items;
-  }
+    public static fromJSON(core: Core, json: any): NestedItem {
+        const category: StoreCategory = StoreCategory.fromJSON(core, json.category);
+
+        return new NestedItem(
+            core,
+            category.getId(),
+            json.products.map(product => StoreItem.fromJSON(core, product)),
+            category,
+        );
+    }
 }
