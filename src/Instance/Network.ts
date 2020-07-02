@@ -280,7 +280,7 @@ class Network extends Core {
         {
           network: this.uuid,
         },
-        "punishment/action/list"
+        "punishment/action/list/"
       )
       .then((jsonresponse) => {
         var response = new Array<OffenceAction>();

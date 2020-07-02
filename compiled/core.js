@@ -1464,23 +1464,25 @@ class Instance extends Core {
         return new Network(this.core, this);
     }
     update() {
-        let main = this;
-        return new Call(this.core)
-            .commit({
-            instance: this.uuid,
-        }, "instance/key/list/")
-            .then((jsonresponse) => {
-            if (jsonresponse.server == null) {
-                main.type = "NTW";
-                main.uuid = jsonresponse.network.uuid;
-                main.name = jsonresponse.network.name;
-            }
-            else {
-                main.type = "SVR";
-                main.uuid = jsonresponse.server.uuid;
-                main.name = jsonresponse.server.name;
-            }
-            return main;
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                instance: this.uuid,
+            }, "instance/info/")
+                .then((jsonresponse) => {
+                if (jsonresponse.server == null) {
+                    main.type = "NTW";
+                    main.uuid = jsonresponse.network.uuid;
+                    main.name = jsonresponse.network.name;
+                }
+                else {
+                    main.type = "SVR";
+                    main.uuid = jsonresponse.server.uuid;
+                    main.name = jsonresponse.server.name;
+                }
+                return main;
+            });
         });
     }
 }
@@ -1709,7 +1711,7 @@ class Network extends Core {
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
-            }, "punishment/action/list")
+            }, "punishment/action/list/")
                 .then((jsonresponse) => {
                 var response = new Array();
                 jsonresponse.forEach((actionData) => {

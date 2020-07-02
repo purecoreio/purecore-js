@@ -121,7 +121,7 @@ class Instance extends Core {
     return new Network(this.core, this);
   }
 
-  public update(): Promise<Instance> {
+  public async update(): Promise<Instance> {
     let main = this;
 
     return new Call(this.core)
@@ -129,7 +129,7 @@ class Instance extends Core {
         {
           instance: this.uuid,
         },
-        "instance/key/list/"
+        "instance/info/"
       )
       .then((jsonresponse) => {
         if (jsonresponse.server == null) {

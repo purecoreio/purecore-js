@@ -84,14 +84,14 @@ class Player extends Core {
     var args = {};
     if (network != null) {
       args = {
-        page: page,
+        page: page.toString(),
         player: id,
         network: network.getId(),
       };
     } else {
       args = {
         player: id,
-        page: page,
+        page: page.toString(),
       };
     }
 
@@ -119,7 +119,7 @@ class Player extends Core {
       .commit(
         {
           network: store.getNetwork().getId(),
-          page: queryPage,
+          page: queryPage.toString(),
           player: id,
         },
         "player/payment/list/"
@@ -161,7 +161,7 @@ class Player extends Core {
     }
 
     return await new Call(this.core)
-      .commit({}, "player/connection/list/")
+      .commit(args, "player/connection/list/")
       .then(function (jsonresponse) {
         var connections = new Array<Connection>();
         jsonresponse.forEach((connectionJson) => {
