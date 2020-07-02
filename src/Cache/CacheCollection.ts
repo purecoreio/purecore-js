@@ -31,7 +31,9 @@ class CacheCollection {
   // CONNECTION AND DISCONNECT
 
   public disconnect(socketId) {
-    this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
+    if (this.getCacheBySocket(socketId) != null) {
+      this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
+    }
   }
 
   public async connect(socketId, keyStr) {
