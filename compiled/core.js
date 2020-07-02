@@ -787,48 +787,53 @@ class Call extends Core {
         }
     }
     commit(args = {}, endpoint) {
-        var key = this.core.getKey();
-        var session = this.core.getCoreSession();
-        var baseURL = this.baseURL;
-        var finalArgs = {};
-        if (args == null) {
-            finalArgs = {};
-        }
-        if (session != null) {
-            finalArgs["hash"] = session.getHash();
-        }
-        else if (key != null) {
-            finalArgs["key"] = key;
-        }
-        var paramsEncoded = Object.keys(finalArgs)
-            .filter(function (key) {
-            return finalArgs[key] ? true : false;
-        })
-            .map(function (key) {
-            return (encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key]));
-        })
-            .join("&");
-        var url = baseURL + endpoint + "?" + paramsEncoded;
-        if (this.core.dev) {
-            console.log("Fetching: " + url);
-        }
-        return new Promise(function (resolve, reject) {
-            return fetch(url, {
-                method: "POST",
+        return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
+            var session = this.core.getCoreSession();
+            var baseURL = this.baseURL;
+            var finalArgs = {};
+            if (args == null) {
+                finalArgs = {};
+            }
+            else {
+                finalArgs = args;
+            }
+            if (session != null) {
+                finalArgs["hash"] = session.getHash();
+            }
+            else if (key != null) {
+                finalArgs["key"] = key;
+            }
+            var paramsEncoded = Object.keys(finalArgs)
+                .filter(function (key) {
+                return finalArgs[key] ? true : false;
             })
-                .then(function (response) {
-                return response.json();
+                .map(function (key) {
+                return (encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key]));
             })
-                .then(function (response) {
-                if ("error" in response) {
-                    throw new Error(response.error + ". " + response.msg);
-                }
-                else {
-                    resolve(response);
-                }
-            })
-                .catch(function (error) {
-                reject(error.message);
+                .join("&");
+            var url = baseURL + endpoint + "?" + paramsEncoded;
+            if (this.core.dev) {
+                console.log("Fetching: " + url);
+            }
+            return new Promise(function (resolve, reject) {
+                return fetch(url, {
+                    method: "POST",
+                })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (response) {
+                    if ("error" in response) {
+                        throw new Error(response.error + ". " + response.msg);
+                    }
+                    else {
+                        resolve(response);
+                    }
+                })
+                    .catch(function (error) {
+                    reject(error.message);
+                });
             });
         });
     }

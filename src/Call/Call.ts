@@ -12,7 +12,7 @@ class Call extends Core {
     }
   }
 
-  public commit(args = {}, endpoint: string): Promise<any> {
+  public async commit(args = {}, endpoint: string): Promise<any> {
     var key = this.core.getKey();
     var session = this.core.getCoreSession();
     var baseURL = this.baseURL;
@@ -20,6 +20,8 @@ class Call extends Core {
     var finalArgs = {};
     if (args == null) {
       finalArgs = {};
+    } else {
+      finalArgs = args;
     }
 
     if (session != null) {
