@@ -1,9 +1,9 @@
 class Core {
-    key: string;
-    session: Session;
-    dev: boolean;
+    public key: string;
+    public session: Session;
+    public dev: boolean;
 
-    constructor(tool?: any, dev?) {
+    public constructor(tool?: any, dev?: boolean) {
         if (dev == null) {
             this.dev = false;
         } else {
@@ -16,9 +16,7 @@ class Core {
                 if (tool instanceof Session) {
                     this.session = tool;
                 } else {
-                    this.session = new Session(
-                        new Core(this.session, this.dev)
-                    ).fromArray(tool);
+                    this.session = Session.fromJSON(new Core(this.session, this.dev), tool);
                 }
             }
         }
@@ -30,129 +28,30 @@ class Core {
         return new CacheCollection();
     }
 
-    public getPlans() {
-        return new Promise(function (resolve, reject) {
-            try {
-                return fetch("https://api.purecore.io/rest/2/plan/list/", {
-                    method: "GET",
-                })
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error);
-                        } else {
-                            var response = new Array<Plan>();
-
-                            jsonresponse.forEach((planData) => {
-                                var plan = new Plan().fromArray(planData);
-                                response.push(plan);
-                            });
-
-                            resolve(response);
-                        }
-                    })
-                    .catch(function (error) {
-                        reject(error);
-                    });
-            } catch (e) {
-                reject(e);
-            }
-        });
+    public async requestGlobalHash(): Promise<Array<ConnectionHashGlobal>> {
+        return await new Call(this)
+            .commit({}, "session/hash/list/")
+            .then(json => json.map(hash => ConnectionHashGlobal.fromJSON(this, hash)));
     }
 
-    public requestGlobalHash() {
-        return new Promise(function (resolve, reject) {
-            try {
-                return fetch("https://api.purecore.io/rest/2/session/hash/list/", {
-                    method: "GET",
-                })
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error);
-                        } else {
-                            var response = new Array();
-
-                            jsonresponse.forEach((hashData) => {
-                                var hash = new ConnectionHashGlobal(new Core());
-                                response.push(hash.fromArray(hashData));
-                            });
-
-                            resolve(response);
-                        }
-                    })
-                    .catch(function (error) {
-                        reject(error);
-                    });
-            } catch (e) {
-                reject(e);
-            }
-        });
+    public getPlayersFromIds(ids: Array<string>): Array<Player> {
+        return ids.map(id => new Player(this, id));
     }
 
-    public getPlayersFromIds(ids): Array<Player> {
-        var playerList = new Array<Player>();
-        ids.forEach((id) => {
-            playerList.push(new Player(this, id));
-        });
-        return playerList;
+    public async getMachine(hash: string): Promise<Machine> {
+        return await new Call(this)
+            .commit({hash: hash}, "machine")
+            .then(Machine.fromJSON);
     }
 
-    public getMachine(hash) {
-        return new Promise(function (resolve, reject) {
-            try {
-                return fetch("https://api.purecore.io/rest/2/machine/?hash=" + hash, {
-                    method: "GET",
-                })
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            reject(new Error(jsonresponse.error + ". " + jsonresponse.msg));
-                        } else {
-                            resolve(new Machine().fromArray(jsonresponse));
-                        }
-                    });
-            } catch (e) {
-                reject(e);
-            }
-        });
-    }
-
-    public fromToken(GoogleToken: string) {
-        var obj = this;
-
-        return new Promise(function (resolve, reject) {
-            try {
-                return fetch(
-                    "https://api.purecore.io/rest/2/session/from/google/?token=" +
-                    GoogleToken,
-                    {method: "GET"}
-                )
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (response) {
-                        if ("error" in response) {
-                            throw new Error(response.error + ". " + response.msg);
-                        } else {
-                            var session = new Session(new Core(null)).fromArray(response);
-                            obj.session = session;
-                            resolve(obj);
-                        }
-                    })
-                    .catch(function (error) {
-                        throw error;
-                    });
-            } catch (e) {
-                reject(e.message);
-            }
-        });
+    public async fromToken(googleToken: string): Promise<Session> {
+        return await new Call(this)
+            .commit({token: googleToken}, "session/from/google")
+            .then(json => {
+                const session: Session = Session.fromJSON(new Core(null), json);
+                this.session = session;
+                return session;
+            });
     }
 
     public asBillingAddress(json: any): BillingAddress {
@@ -164,39 +63,12 @@ class Core {
     }
 
     public async pushFCM(token: string) {
-        var core = this;
-        var url;
-
-        if (core.getCoreSession() != null) {
-            if (this.getTool() instanceof Session) {
-                url =
-                    "https://api.purecore.io/rest/2/account/push/fcm/?hash=" +
-                    core.getCoreSession().getHash() +
-                    "&token=" +
-                    token;
-            }
-
-            try {
-                return await fetch(url, {method: "GET"})
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (jsonresponse) {
-                        if ("error" in jsonresponse) {
-                            throw new Error(jsonresponse.error + ". " + jsonresponse.msg);
-                        } else {
-                            return true;
-                        }
-                    });
-            } catch (e) {
-                throw new Error(e.message);
-            }
-        } else {
-            throw new Error("invalid account");
-        }
+        return await new Call(this)
+            .commit({token: token}, "account/push/fcm")
+            .then(() => true);
     }
 
-    public getTool() {
+    public getTool(): string | Session {
         if (this.key != null) {
             return this.key;
         } else {
@@ -204,7 +76,7 @@ class Core {
         }
     }
 
-    public getCoreSession() {
+    public getCoreSession(): Session {
         return this.session;
     }
 
@@ -212,7 +84,7 @@ class Core {
         return new Key(this, "UNK", null, this.key, null);
     }
 
-    public getKey() {
+    public getKey(): string {
         if (this.key == undefined) {
             return null;
         } else {
@@ -220,7 +92,7 @@ class Core {
         }
     }
 
-    public getElements() {
+    public getElements(): Elements {
         return new Elements(this);
     }
 
@@ -232,42 +104,20 @@ class Core {
         return this;
     }
 
-    public async fromDiscord(guildId: string, botToken: string, devkey: boolean) {
-        var obj = this;
+    public async fromDiscord(guildId: string, botToken: string, devkey: boolean): Promise<Core> {
+        let params: any = {
+            guildid: guildId,
+            token: botToken
+        };
 
-        return new Promise(function (resolve, reject) {
-            try {
-                var params = "";
+        if (devkey) params.devkey = true;
 
-                if (devkey == true) {
-                    params =
-                        "?guildid=" + guildId + "&token=" + botToken + "&devkey=true";
-                } else {
-                    params = "?guildid=" + guildId + "&token=" + botToken;
-                }
-
-                return fetch(
-                    "https://api.purecore.io/rest/2/key/from/discord/?token=" + params,
-                    {method: "GET"}
-                )
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (response) {
-                        if ("error" in response) {
-                            throw new Error(response.error + ". " + response.msg);
-                        } else {
-                            obj.key = response.hash;
-                            resolve(obj);
-                        }
-                    })
-                    .catch(function (error) {
-                        throw error;
-                    });
-            } catch (e) {
-                reject(e.message);
-            }
-        });
+        return await new Call(this)
+            .commit(params, "key/from/discord")
+            .then(json => {
+                this.key = json.hash;
+                return this;
+            });
     }
 }
 

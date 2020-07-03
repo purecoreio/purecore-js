@@ -46,4 +46,12 @@ class ConnectionHashGlobal extends Core {
         this.player = Player.fromJSON(this.core, array.player);
         return this;
     }
+
+    public static fromJSON(core: Core, json: any): ConnectionHashGlobal {
+        return new ConnectionHashGlobal(
+            core,
+            json.hash,
+            Player.fromJSON(core, json.player)
+        );
+    }
 }
