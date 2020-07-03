@@ -6,9 +6,9 @@ class Call extends Core {
         super(core.getTool(), core.dev);
         this.core = core;
         if (core.dev) {
-            this.baseURL = "http://localhost/rest/2/";
+            this.baseURL = "http://localhost/rest/2";
         } else {
-            this.baseURL = "https://api.purecore.io/rest/2/";
+            this.baseURL = "https://api.purecore.io/rest/2";
         }
     }
 
