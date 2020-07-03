@@ -5,7 +5,7 @@ class Owner extends Core {
     public surname: string;
     public email: string;
 
-    constructor(core: Core, id: string, name: string, surname: string, email: string) {
+    public constructor(core: Core, id: string, name: string, surname: string, email: string) {
         super(core.getTool());
 
         this.core = core;
@@ -79,7 +79,8 @@ class Owner extends Core {
             .then(BillingAddress.fromJSON);
     }
 
-    public async addPaymentMethod(pm): Promise<Object> {
+    //TODO: add types
+    public async addPaymentMethod(pm: string | any): Promise<Object> {
         let pmid;
         if (typeof pm == "string") {
             pmid = pm;
@@ -92,7 +93,8 @@ class Owner extends Core {
             .then(json => json);
     }
 
-    public async removePaymentMethod(pm): Promise<boolean> {
+    //TODO: add types
+    public async removePaymentMethod(pm: string | any): Promise<boolean> {
         let pmid = null;
         if (typeof pm == "string") {
             pmid = pm;

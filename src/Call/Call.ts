@@ -12,30 +12,25 @@ class Call extends Core {
         }
     }
 
-    public async commit(args: any, endpoint: string): Promise<any> {
+    public async commit(args: any, endpoint: string, request?: RequestInit): Promise<any> {
         if (args == null) args = {};
+        if (request == null) request = { method: "POST" };
 
         if (this.core.getCoreSession() !== null) {
-            args["hash"] = this.core.getCoreSession().getHash();
+            args.hash = this.core.getCoreSession().getHash();
         } else if (this.core.getKey() !== null) {
-            args["key"] = this.core.getKey();
+            args.key = this.core.getKey();
         }
 
-        const params: string = Object.keys(args)
+        const url = this.baseURL + Call.formatEndpoint(endpoint) + "?" + Object.keys(args)
             .filter(key => args.hasOwnProperty(key))
             .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
-            .join("&")
+            .join("&");
 
-        const url = this.baseURL + Call.formatEndpoint(endpoint) + "?" + params;
-
-        if (this.core.dev) {
-            console.log("Fetching: " + url);
-        }
+        if (this.core.dev) console.log("Fetching: " + url);
 
         return new Promise((resolve, reject) => {
-            return fetch(url, {
-                method: "POST",
-            })
+            return fetch(url, request)
                 .then((response: Response) => response.json())
                 .then((response: any) => {
                     if ("error" in response) {
