@@ -1,13 +1,12 @@
 {
     "name": "purecore",
-    "version": "1.14.2",
+    "version": "1.15.0",
     "description": "purecore js client",
     "main": "./compiled/core.js",
     "directories": {
         "test": "tests"
     },
     "dependencies": {
-        "@types/jquery": "^3.5.0",
         "@types/node": "^12.12.47"
     },
     "devDependencies": {},

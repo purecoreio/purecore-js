@@ -15,6 +15,7 @@ class CheckoutElement extends Core {
     }
 
     public loadInto(selector: string): void {
+        /*
         $.getScript("https://js.stripe.com/v3/", (
             data,
             textStatus,
@@ -26,6 +27,6 @@ class CheckoutElement extends Core {
                 "&items=" +
                 this.getJSON()
             );
-        });
+        });*/
     }
 }
