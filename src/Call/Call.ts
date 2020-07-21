@@ -15,10 +15,10 @@ class Call extends Core {
     public async commit(args: any, endpoint: string, request?: RequestInit): Promise<any> {
         if (args == null) args = {};
         if (request == null) request = { method: "POST" };
-
-        if (this.core.getCoreSession() !== null) {
+        
+        if (this.core.getCoreSession() != null) {
             args.hash = this.core.getCoreSession().getHash();
-        } else if (this.core.getKey() !== null) {
+        } else if (this.core.getKey() != null) {
             args.key = this.core.getKey();
         }
 

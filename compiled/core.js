@@ -24,7 +24,7 @@ class Core {
                     this.session = tool;
                 }
                 else {
-                    this.session = Session.fromJSON(new Core(this.session, this.dev), tool);
+                    this.session = new Session(new Core(this.session, this.dev)).fromArray(tool);
                 }
             }
         }
@@ -610,10 +610,10 @@ class Call extends Core {
                 args = {};
             if (request == null)
                 request = { method: "POST" };
-            if (this.core.getCoreSession() !== null) {
+            if (this.core.getCoreSession() != null) {
                 args.hash = this.core.getCoreSession().getHash();
             }
-            else if (this.core.getKey() !== null) {
+            else if (this.core.getKey() != null) {
                 args.key = this.core.getKey();
             }
             const url = this.baseURL + Call.formatEndpoint(endpoint) + "?" + Object.keys(args)

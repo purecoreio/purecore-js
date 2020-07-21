@@ -16,7 +16,7 @@ class Core {
                 if (tool instanceof Session) {
                     this.session = tool;
                 } else {
-                    this.session = Session.fromJSON(new Core(this.session, this.dev), tool);
+                    this.session = new Session(new Core(this.session, this.dev)).fromArray(tool);
                 }
             }
         }
@@ -40,13 +40,13 @@ class Core {
 
     public async getMachine(hash: string): Promise<Machine> {
         return await new Call(this)
-            .commit({hash: hash}, "machine")
+            .commit({ hash: hash }, "machine")
             .then(Machine.fromJSON);
     }
 
     public async fromToken(googleToken: string): Promise<Session> {
         return await new Call(this)
-            .commit({token: googleToken}, "session/from/google")
+            .commit({ token: googleToken }, "session/from/google")
             .then(json => {
                 const session: Session = Session.fromJSON(new Core(null), json);
                 this.session = session;
@@ -64,7 +64,7 @@ class Core {
 
     public async pushFCM(token: string) {
         return await new Call(this)
-            .commit({token: token}, "account/push/fcm")
+            .commit({ token: token }, "account/push/fcm")
             .then(() => true);
     }
 
