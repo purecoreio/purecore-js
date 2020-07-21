@@ -1,47 +1,61 @@
 class VotingSiteConfig extends Core {
-  public core: Core;
-  public network: Network;
-  public votingSite: VotingSite;
-  public url: string;
+    private readonly core: Core;
+    private network: Network;
+    private votingSite: VotingSite;
+    private url: string;
 
-  public constructor(
-    core: Core,
-    network?: Network,
-    votingSite?: VotingSite,
-    url?: string
-  ) {
-    super(core.getTool());
-    this.core = core;
-    this.network = network;
-    this.votingSite = votingSite;
-    this.url = url;
-  }
+    public constructor(core: Core, network?: Network, votingSite?: VotingSite, url?: string) {
+        super(core.getTool());
+        this.core = core;
+        this.network = network;
+        this.votingSite = votingSite;
+        this.url = url;
+    }
 
-  public fromArray(array): VotingSiteConfig {
-    this.votingSite = new VotingSite(this.core).fromArray(array.votingSite);
-    this.network = new Network(
-      this.core,
-      new Instance(this.core, array.network.uuid, array.network.name, "NTW")
-    );
-    this.url = array.url;
-    return this;
-  }
+    public async setURL(url: string): Promise<VotingSiteConfig> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.network.uuid,
+                    url: url,
+                    site: this.votingSite.getId(),
+                },
+                "instance/network/voting/site/setup/"
+            )
+            .then((json) => {
+                this.url = json.url;
+                return this;
+            });
+    }
 
-  public async setURL(url: string): Promise<VotingSiteConfig> {
-    let main = this;
+    public getNetwork(): Network {
+        return this.network;
+    }
 
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.network.uuid,
-          url: url,
-          site: this.votingSite.uuid,
-        },
-        "instance/network/voting/site/setup/"
-      )
-      .then((jsonresponse) => {
-        main.url = jsonresponse.url;
+    public getVotingSite(): VotingSite {
+        return this.votingSite;
+    }
+
+    public getUrl(): string {
+        return this.url;
+    }
+
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array): VotingSiteConfig {
+        this.votingSite = VotingSite.fromJSON(this.core, array.votingSite);
+        this.network = Network.fromJSON(this.core, array.network);
+        this.url = array.url;
         return this;
-      });
-  }
+    }
+
+    public static fromJSON(core: Core, json: any): VotingSiteConfig {
+        return new VotingSiteConfig(
+            core,
+            Network.fromJSON(core, json.network),
+            VotingSite.fromJSON(core, json.votingSite),
+            json.url
+        );
+    }
 }

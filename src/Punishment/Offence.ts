@@ -1,58 +1,62 @@
 class Offence extends Core {
-  public core: Core;
-  public uuid: string;
-  public type: string;
-  public network: Network;
-  public name: string;
-  public description: string;
-  public negativePoints;
+    public core: Core;
+    public uuid: string;
+    public type: string;
+    public network: Network;
+    public name: string;
+    public description: string;
+    public negativePoints: number;
 
-  constructor(
-    core: Core,
-    uuid?: string,
-    type?: string,
-    network?: Network,
-    name?: string,
-    description?: string,
-    negativePoints?
-  ) {
-    super(core.getTool());
-    this.core = core;
-    this.uuid = uuid;
-    this.type = type;
-    this.network = network;
-    this.name = name;
-    this.description = description;
-    this.negativePoints = negativePoints;
-  }
+    public constructor(core: Core, uuid?: string, type?: string, network?: Network, name?: string, description?: string, negativePoints?: number) {
+        super(core.getTool());
+        this.core = core;
+        this.uuid = uuid;
+        this.type = type;
+        this.network = network;
+        this.name = name;
+        this.description = description;
+        this.negativePoints = negativePoints;
+    }
 
-  public fromArray(array) {
-    this.uuid = array.uuid;
-    this.type = array.type;
-    this.network = new Network(
-      this.core,
-      new Instance(this.core, array.network.uuid, array.network.name, "NTW")
-    );
-    this.name = array.name;
-    this.description = array.description;
-    this.negativePoints = parseInt(array.negativePoints);
+    public getType(): string {
+        return this.type;
+    }
 
-    return this;
-  }
+    public getName(): string {
+        return this.name;
+    }
 
-  public getType() {
-    return this.type;
-  }
+    public getDescription(): string {
+        return this.description;
+    }
 
-  public getName() {
-    return this.name;
-  }
+    public getNegativePoints(): number {
+        return this.negativePoints;
+    }
 
-  public getDescription() {
-    return this.description;
-  }
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array) {
+        this.uuid = array.uuid;
+        this.type = array.type;
+        this.network = Network.fromJSON(this.core, array.network);
+        this.name = array.name;
+        this.description = array.description;
+        this.negativePoints = parseInt(array.negativePoints);
 
-  public getNegativePoints() {
-    return this.negativePoints;
-  }
+        return this;
+    }
+
+    public static fromJSON(core: Core, json: any): Offence {
+        return new Offence(
+            core,
+            json.uuid,
+            json.type,
+            Network.fromJSON(core, json.network),
+            json.name,
+            json.description,
+            parseInt(json.negativePoints)
+        );
+    }
 }

@@ -1,51 +1,61 @@
 class PerkCategory extends Core {
-  core: Core;
-  uuid: string;
-  name: string;
-  network: Network;
+    public readonly core: Core;
+    public uuid: string;
+    public name: string;
+    public network: Network;
 
-  constructor(core: Core, uuid?: string, name?: string, network?: Network) {
-    super(core.getTool());
-    this.core = core;
-    this.uuid = uuid;
-    this.name = name;
-    this.network = network;
-  }
-
-  fromArray(array): PerkCategory {
-    this.uuid = array.uuid;
-    this.name = array.name;
-    try {
-      this.network = new Network(
-        this.core,
-        new Instance(this.core, array.network.uuid, array.network.name, "NTW")
-      );
-    } catch (error) {
-      this.network = null;
+    constructor(core: Core, id?: string, name?: string, network?: Network) {
+        super(core.getTool());
+        this.core = core;
+        this.uuid = id;
+        this.name = name;
+        this.network = network;
     }
 
-    return this;
-  }
+    public async createPerk(name: string, description: string, type: string): Promise<Perk> {
+        return new Call(this.core)
+            .commit(
+                {
+                    network: this.uuid,
+                    name: name,
+                    description: description,
+                    type: type.toUpperCase(),
+                    category: this.uuid,
+                },
+                "store/perk/create/"
+            )
+            .then(json => Perk.fromJSON(this.core, json));
+    }
 
-  public async createPerk(
-    name: string,
-    description: string,
-    type: string
-  ): Promise<Perk> {
-    let core = this.core;
-    return new Call(this.core)
-      .commit(
-        {
-          network: this.uuid,
-          name: name,
-          description: description,
-          type: type.toUpperCase(),
-          category: this.uuid,
-        },
-        "store/perk/create/"
-      )
-      .then((jsonresponse) => {
-        return new Perk(core).fromArray(jsonresponse);
-      });
-  }
+    public getId(): string {
+        return this.uuid;
+    }
+
+    public getName(): string {
+        return this.name;
+    }
+
+    public getNetwork(): Network {
+        return this.network
+    }
+
+    /**
+     * @deprecated use static method fromJSON
+     */
+    public fromArray(array): PerkCategory {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.network = Network.fromJSON(this.core, array.network);
+
+        return this;
+    }
+
+    public static fromJSON(core: Core, json: any): PerkCategory {
+        return new PerkCategory(
+            core,
+            json.uuid,
+            json.name,
+            Network.fromJSON(core, json.network),
+        );
+    }
 }

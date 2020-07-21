@@ -1,192 +1,143 @@
 class Owner extends Core {
-  core: Core;
-  id: string;
-  name: string;
-  surname: string;
-  email: string;
+    public core: Core;
+    public id: string;
+    public name: string;
+    public surname: string;
+    public email: string;
 
-  constructor(
-    core: Core,
-    id: string,
-    name: string,
-    surname: string,
-    email: string
-  ) {
-    super(core.getTool());
-    this.core = core;
-    this.id = id;
-    this.name = name;
-    this.surname = surname;
-    this.email = email;
-  }
+    public constructor(core: Core, id: string, name: string, surname: string, email: string) {
+        super(core.getTool());
 
-  getName() {
-    return this.name;
-  }
-
-  getSurname() {
-    return this.surname;
-  }
-
-  getEmail() {
-    return this.email;
-  }
-
-  getId() {
-    return this.id;
-  }
-
-  getSession() {
-    return this.core.getTool();
-  }
-
-  public async stripeSubscribe(
-    plan: string,
-    billingAddress: BillingAddress,
-    pm?
-  ): Promise<StripeSubscription> {
-    var args = {};
-    if (pm == null) {
-      args = {
-        plan: plan,
-        billing: JSON.stringify(billingAddress),
-      };
-    } else {
-      var pmid = null;
-      if (typeof pm == "string") {
-        pmid = pm;
-      } else {
-        pmid = pm.paymentMethod.id;
-      }
-      args = {
-        plan: plan,
-        billing: JSON.stringify(billingAddress),
-        pm: pmid,
-      };
+        this.core = core;
+        this.id = id;
+        this.name = name;
+        this.surname = surname;
+        this.email = email;
     }
 
-    return await new Call(this.core)
-      .commit({}, "account/subscribe/stripe/")
-      .then(function (jsonresponse) {
-        return new StripeSubscription(jsonresponse.id);
-      });
-  }
-
-  public async paypalSubscribe(
-    plan: string,
-    billingAddress: BillingAddress
-  ): Promise<PayPalSubscription> {
-    return await new Call(this.core)
-      .commit(
-        {
-          plan: plan,
-          billing: JSON.stringify(billingAddress),
-        },
-        "account/subscribe/paypal/"
-      )
-      .then(function (jsonresponse) {
-        return new PayPalSubscription(jsonresponse.url, jsonresponse.id);
-      });
-  }
-
-  public async getBillingAddress(): Promise<BillingAddress> {
-    return await new Call(this.core)
-      .commit({}, "account/billing/get/")
-      .then(function (jsonresponse) {
-        return new BillingAddress().fromArray(jsonresponse);
-      });
-  }
-
-  public async addPaymentMethod(pm): Promise<Object> {
-    var pmid = null;
-    if (typeof pm == "string") {
-      pmid = pm;
-    } else {
-      pmid = pm.paymentMethod.id;
+    public getName(): string {
+        return this.name;
     }
 
-    return await new Call(this.core)
-      .commit(
-        {
-          pm: pmid,
-        },
-        "account/card/add/"
-      )
-      .then(function (jsonresponse) {
-        return jsonresponse;
-      });
-  }
-
-  public async removePaymentMethod(pm): Promise<boolean> {
-    var pmid = null;
-    if (typeof pm == "string") {
-      pmid = pm;
-    } else {
-      pmid = pm.paymentMethod.id;
+    public getSurname(): string {
+        return this.surname;
     }
 
-    return await new Call(this.core)
-      .commit(
-        {
-          pm: pmid,
-        },
-        "account/card/remove/"
-      )
-      .then(function (jsonresponse) {
-        return jsonresponse.success;
-      });
-  }
-
-  public async getPaymentMethods(): Promise<Array<Object>> {
-    return await new Call(this.core)
-      .commit({}, "account/card/list/")
-      .then(function (jsonresponse) {
-        // array of https://stripe.com/docs/api/payment_methods/object
-        return jsonresponse;
-      });
-  }
-
-  public async createNetwork(
-    name: string,
-    game: string,
-    cname: string,
-    ip?: string,
-    port?
-  ): Promise<Network> {
-    var core = this.core;
-
-    var args = {};
-    if (ip == null) {
-      args = {
-        name: name,
-        game: game,
-        cname: cname,
-      };
-    } else if (port == null) {
-      args = {
-        name: name,
-        game: game,
-        cname: cname,
-        ip: ip,
-      };
-    } else {
-      args = {
-        name: name,
-        game: game,
-        cname: cname,
-        ip: ip,
-        port: port,
-      };
+    public getEmail(): string {
+        return this.email;
     }
 
-    return await new Call(this.core)
-      .commit({}, "instance/network/create/")
-      .then(function (jsonresponse) {
-        var network = new Network(
-          core,
-          new Instance(core, jsonresponse.uuid, jsonresponse.name, "NTW")
+    public getId(): string {
+        return this.id;
+    }
+
+    public getSession() {
+        return this.core.getTool();
+    }
+
+    public async stripeSubscribe(plan: string, billingAddress: BillingAddress, pm?): Promise<StripeSubscription> {
+        let args: {};
+        if (pm == null) {
+            args = {
+                plan: plan,
+                billing: JSON.stringify(billingAddress),
+            };
+        } else {
+            let pmid;
+            if (typeof pm == "string") {
+                pmid = pm;
+            } else {
+                pmid = pm.paymentMethod.id;
+            }
+            args = {
+                plan: plan,
+                billing: JSON.stringify(billingAddress),
+                pm: pmid,
+            };
+        }
+
+        return await new Call(this.core)
+            .commit(args, "account/subscribe/stripe/")
+            .then(json => StripeSubscription.fromJSON(json));
+    }
+
+    public async paypalSubscribe(plan: string, billingAddress: BillingAddress): Promise<PayPalSubscription> {
+        return await new Call(this.core)
+            .commit(
+                {
+                    plan: plan,
+                    billing: JSON.stringify(billingAddress),
+                },
+                "account/subscribe/paypal/"
+            )
+            .then(json => PayPalSubscription.fromJSON(json));
+    }
+
+    public async getBillingAddress(): Promise<BillingAddress> {
+        return await new Call(this.core)
+            .commit({}, "account/billing/get/")
+            .then(BillingAddress.fromJSON);
+    }
+
+    //TODO: add types
+    public async addPaymentMethod(pm: string | any): Promise<Object> {
+        let pmid;
+        if (typeof pm == "string") {
+            pmid = pm;
+        } else {
+            pmid = pm.paymentMethod.id;
+        }
+
+        return await new Call(this.core)
+            .commit({pm: pmid}, "account/card/add/")
+            .then(json => json);
+    }
+
+    //TODO: add types
+    public async removePaymentMethod(pm: string | any): Promise<boolean> {
+        let pmid = null;
+        if (typeof pm == "string") {
+            pmid = pm;
+        } else {
+            pmid = pm.paymentMethod.id;
+        }
+
+        return await new Call(this.core)
+            .commit({pm: pmid}, "account/card/remove/")
+            .then(json => json.success);
+    }
+
+    /**
+     * @see https://stripe.com/docs/api/payment_methods/object
+     */
+    public async getPaymentMethods(): Promise<Array<StripePaymentMethodObject>> {
+        return await new Call(this.core)
+            .commit({}, "account/card/list/")
+            .then(json => json);
+    }
+
+    public async createNetwork(name: string, game: string, cname: string, ip?: string, port?: number): Promise<Network> {
+        let args: any = {
+            name: name,
+            game: game,
+            cname: cname,
+        };
+
+        if (ip != undefined) args.id = ip;
+        if (port != undefined) args.port = port;
+
+        return await new Call(this.core)
+            .commit(args, "instance/network/create/")
+            .then(json => Network.fromJSON(this.core, json));
+    }
+
+    public static fromJSON(core: Core, json: any): Owner {
+        return new Owner(
+            core,
+            json.id,
+            json.name,
+            json.surname,
+            json.email
         );
-        return network;
-      });
-  }
+    }
 }

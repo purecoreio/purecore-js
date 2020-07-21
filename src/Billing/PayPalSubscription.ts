@@ -1,17 +1,24 @@
 class PayPalSubscription {
-  public url;
-  public id;
+    public url: string;
+    public id: string;
 
-  public constructor(url: string, id: string) {
-    this.url = url;
-    this.id = id;
-  }
+    public constructor(url: string, id: string) {
+        this.url = url;
+        this.id = id;
+    }
 
-  public getURL() {
-    return this.url;
-  }
+    public getURL(): string {
+        return this.url;
+    }
 
-  public getID() {
-    return this.id;
-  }
+    public getID(): string {
+        return this.id;
+    }
+
+    public static fromJSON(json: any): PayPalSubscription {
+        return new PayPalSubscription(
+            json.url,
+            json.id
+        )
+    }
 }

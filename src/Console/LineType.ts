@@ -1,5 +1,5 @@
 enum LineType {
-  INFO,
-  WARNING,
-  ERROR,
+    INFO,
+    WARNING,
+    ERROR,
 }
