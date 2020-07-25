@@ -2307,6 +2307,14 @@ class Session extends Core {
         }
         this.user = user;
     }
+    getOwner() {
+        if (this.user == null || !(this.user instanceof Owner)) {
+            return new Owner(this.core, null, null, null, null);
+        }
+        else {
+            return this.user;
+        }
+    }
     getUser() {
         return this.user;
     }
@@ -2314,7 +2322,7 @@ class Session extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({ hash: sessionHash }, "session/get/")
-                .then(json => new Session(this.core).fromArray(json));
+                .then((json) => new Session(this.core).fromArray(json));
         });
     }
     getId() {
@@ -2330,14 +2338,14 @@ class Session extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({ hash: this.getHash() }, "machine/list/")
-                .then(json => json.map(machine => new Machine().fromArray(machine)));
+                .then((json) => json.map((machine) => new Machine().fromArray(machine)));
         });
     }
     getNetworks() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({}, "instance/network/list/")
-                .then(json => json.map(network => Network.fromJSON(this.core, network)));
+                .then((json) => json.map((network) => Network.fromJSON(this.core, network)));
         });
     }
     /**
@@ -2365,7 +2373,9 @@ class Session extends Core {
         return this;
     }
     static fromJSON(core, json) {
-        return new Session(core, json.uuid, json.hash, SessionDevice.fromJSON(json.device), SessionLocation.fromJSON(json.location), SessionUsage.fromJSON(json.usage), "network" in json ? Network.fromJSON(core, json.network) : null, "player" in json ? Player.fromJSON(core, json.network) : Owner.fromJSON(core, json.owner));
+        return new Session(core, json.uuid, json.hash, SessionDevice.fromJSON(json.device), SessionLocation.fromJSON(json.location), SessionUsage.fromJSON(json.usage), "network" in json ? Network.fromJSON(core, json.network) : null, "player" in json
+            ? Player.fromJSON(core, json.network)
+            : Owner.fromJSON(core, json.owner));
     }
 }
 class SessionDevice {
@@ -3311,9 +3321,9 @@ class Owner extends Core {
                 game: game,
                 cname: cname,
             };
-            if (ip != undefined)
-                args.id = ip;
-            if (port != undefined)
+            if (ip != null)
+                args.ip = ip;
+            if (port != null)
                 args.port = port;
             return yield new Call(this.core)
                 .commit(args, "instance/network/create/")

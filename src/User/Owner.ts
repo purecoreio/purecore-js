@@ -123,8 +123,8 @@ class Owner extends Core {
             cname: cname,
         };
 
-        if (ip != undefined) args.id = ip;
-        if (port != undefined) args.port = port;
+        if (ip != null) args.ip = ip;
+        if (port != null) args.port = port;
 
         return await new Call(this.core)
             .commit(args, "instance/network/create/")
