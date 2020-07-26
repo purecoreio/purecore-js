@@ -19,7 +19,7 @@ class VoteAnalytic {
     this.timestamp = timestamp * 1000;
   }
 
-  public fromArray(array): VoteAnalytic {
+  public fromObject(array): VoteAnalytic {
     this.uuid = array.uuid;
     this.network = null;
     this.voteCount = array.voteCount;

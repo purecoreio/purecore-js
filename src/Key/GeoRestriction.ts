@@ -1,49 +1,42 @@
 class GeoRestriction {
-    public index: string;
-    public country: string;
-    public state: string;
-    public city: string;
+  public index: string;
+  public country: string;
+  public state: string;
+  public city: string;
 
-    public constructor(index?: string, country?: string, state?: string, city?: string) {
-        this.index = index;
-        this.country = country;
-        this.state = state;
-        this.city = city;
-    }
+  public constructor(
+    index?: string,
+    country?: string,
+    state?: string,
+    city?: string
+  ) {
+    this.index = index;
+    this.country = country;
+    this.state = state;
+    this.city = city;
+  }
 
-    public getIndex(): string {
-        return this.index;
-    }
+  public fromObject(array): GeoRestriction {
+    this.index = array.index;
+    this.country = array.country;
+    this.state = array.state;
+    this.city = array.city;
+    return this;
+  }
 
-    public getCountry(): string {
-        return this.country;
-    }
+  public getIndex(): string {
+    return this.index;
+  }
 
-    public getState(): string {
-        return this.state;
-    }
+  public getCountry(): string {
+    return this.country;
+  }
 
-    public getCity(): string {
-        return this.city;
-    }
+  public getState(): string {
+    return this.state;
+  }
 
-    /**
-     * @deprecated use static method fromJSON
-     */
-    public fromArray(array): GeoRestriction {
-        this.index = array.index;
-        this.country = array.country;
-        this.state = array.state;
-        this.city = array.city;
-        return this;
-    }
-
-    public static fromJSON(json: any): GeoRestriction {
-        return new GeoRestriction(
-            json.index,
-            json.country,
-            json.state,
-            json.city
-        );
-    }
+  public getCity(): string {
+    return this.city;
+  }
 }

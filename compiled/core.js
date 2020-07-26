@@ -24,7 +24,7 @@ class Core {
                     this.session = tool;
                 }
                 else {
-                    this.session = new Session(new Core(this.session, this.dev)).fromArray(tool);
+                    this.session = new Session(new Core(this.session, this.dev)).fromObject(tool);
                 }
             }
         }
@@ -35,19 +35,31 @@ class Core {
     }
     requestGlobalHash() {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this;
             return yield new Call(this)
                 .commit({}, "session/hash/list/")
-                .then(json => json.map(hash => ConnectionHashGlobal.fromJSON(this, hash)));
+                .then((json) => {
+                var response = new Array();
+                json.forEach((hashData) => {
+                    var hash = new ConnectionHashGlobal(core);
+                    response.push(hash.fromObject(hashData));
+                });
+                return response;
+            });
         });
     }
     getPlayersFromIds(ids) {
-        return ids.map(id => new Player(this, id));
+        var playerList = new Array();
+        ids.forEach((id) => {
+            playerList.push(new Player(this, id));
+        });
+        return playerList;
     }
     getMachine(hash) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this)
                 .commit({ hash: hash }, "machine")
-                .then(Machine.fromJSON);
+                .then((data) => { return new Machine().fromObject(data); });
         });
     }
     fromToken(googleToken) {
@@ -55,14 +67,14 @@ class Core {
             return yield new Call(this)
                 .commit({ token: googleToken }, "session/from/google")
                 .then(json => {
-                const session = Session.fromJSON(new Core(null), json);
+                const session = new Session(this).fromObject(json);
                 this.session = session;
                 return session;
             });
         });
     }
-    asBillingAddress(json) {
-        return BillingAddress.fromJSON(json);
+    asBillingAddress(array) {
+        return new BillingAddress().fromObject(array);
     }
     getWorkbench() {
         return new Workbench();
@@ -75,7 +87,7 @@ class Core {
         });
     }
     getTool() {
-        if (this.key != null) {
+        if (this.key != null && this.key != undefined) {
             return this.key;
         }
         else {
@@ -193,7 +205,7 @@ class GrowthAnalytic {
     getLegacy() {
         return new Analytic(this.timestamp, this, this.getFields());
     }
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = null;
         this.instance = null;
         this.newPlayers = array.newPlayers;
@@ -229,7 +241,7 @@ class IncomeAnalytic {
     getLegacy() {
         return new Analytic(this.timestamp, this, this.getFields());
     }
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
         this.store = null;
         this.finalIncome = array.finalIncome;
@@ -256,7 +268,7 @@ class VoteAnalytic {
         this.voterCount = voterCount;
         this.timestamp = timestamp * 1000;
     }
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
         this.network = null;
         this.voteCount = array.voteCount;
@@ -375,9 +387,6 @@ class PayPalSubscription {
     getID() {
         return this.id;
     }
-    static fromJSON(json) {
-        return new PayPalSubscription(json.url, json.id);
-    }
 }
 class StripeSubscription {
     constructor(id) {
@@ -385,9 +394,6 @@ class StripeSubscription {
     }
     getID() {
         return this.id;
-    }
-    static fromJSON(json) {
-        return new StripeSubscription(json.id);
     }
 }
 class CacheCollection {
@@ -419,25 +425,26 @@ class CacheCollection {
     }
     connect(socketId, keyStr) {
         return __awaiter(this, void 0, void 0, function* () {
-            let credentials = new Core(keyStr);
+            let main = this;
+            var credentials = new Core(keyStr);
             return yield credentials
                 .getLegacyKey()
                 .update()
-                .then((keyData) => {
-                let cache = new InstanceCache(credentials, keyData.instance);
-                this.socketAssociation[socketId] = cache.createdOn.getTime();
-                if (!(cache.instance.uuid in this.uuidAssociation)) {
-                    this.uuidAssociation[cache.instance.uuid] = [];
+                .then(function (keyData) {
+                var cache = new InstanceCache(credentials, keyData.instance);
+                main.socketAssociation[socketId] = cache.createdOn.getTime();
+                if (!(cache.instance.uuid in main.uuidAssociation)) {
+                    main.uuidAssociation[cache.instance.uuid] = [];
                 }
-                this.uuidAssociation[cache.instance.uuid].push(cache.createdOn.getTime());
-                this.instanceCaches.push(cache);
+                main.uuidAssociation[cache.instance.uuid].push(cache.createdOn.getTime());
+                main.instanceCaches.push(cache);
                 return true;
             });
         });
     }
     // DATA REMOVAL
     removeCache(epoch) {
-        let cache = this.getCacheByEpoch(epoch);
+        var cache = this.getCacheByEpoch(epoch);
         cache.flush();
         // remove assoc (sockets)
         var socketIdsToRemove = [];
@@ -597,39 +604,51 @@ class Call extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
         this.core = core;
-        this.baseURL = "https://api.purecore.io/rest/2";
+        this.baseURL = "https://api.purecore.io/rest/2/";
     }
-    commit(args, endpoint, request) {
+    commit(args = {}, endpoint) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (args == null)
-                args = {};
-            if (request == null)
-                request = { method: "POST" };
-            if (this.core.getCoreSession() != null) {
-                args.hash = this.core.getCoreSession().getHash();
+            var key = this.core.getKey();
+            var session = this.core.getCoreSession();
+            var baseURL = this.baseURL;
+            var finalArgs = {};
+            if (args == null) {
+                finalArgs = {};
             }
-            else if (this.core.getKey() != null) {
-                args.key = this.core.getKey();
+            else {
+                finalArgs = args;
             }
-            const url = this.baseURL +
-                Call.formatEndpoint(endpoint) +
-                "?" +
-                Object.keys(args)
-                    .filter((key) => args.hasOwnProperty(key))
-                    .map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
-                    .join("&");
+            if (session != null) {
+                finalArgs["hash"] = session.getHash();
+            }
+            else if (key != null) {
+                finalArgs["key"] = key;
+            }
+            var paramsEncoded = Object.keys(finalArgs)
+                .filter(function (key) {
+                return finalArgs[key] ? true : false;
+            })
+                .map(function (key) {
+                return (encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key]));
+            })
+                .join("&");
+            var url = baseURL + endpoint + "?" + paramsEncoded;
             if (this.core.dev) {
-                var visibleArgs = args;
-                if (args.key != null)
+                var visibleArgs = finalArgs;
+                if (finalArgs["key"] != null)
                     visibleArgs.key = "***";
-                if (args.hash != null)
+                if (finalArgs["hash"] != null)
                     visibleArgs.hash = "***";
-                console.log(visibleArgs);
+                console.log(baseURL + endpoint, visibleArgs);
             }
-            return new Promise((resolve, reject) => {
-                return fetch(url, request)
-                    .then((response) => response.json())
-                    .then((response) => {
+            return new Promise(function (resolve, reject) {
+                return fetch(url, {
+                    method: "POST",
+                })
+                    .then(function (response) {
+                    return response.json();
+                })
+                    .then(function (response) {
                     if ("error" in response) {
                         throw new Error(response.error + ". " + response.msg);
                     }
@@ -637,33 +656,18 @@ class Call extends Core {
                         resolve(response);
                     }
                 })
-                    .catch((error) => reject(error.message));
+                    .catch(function (error) {
+                    reject(error.message);
+                });
             });
         });
     }
-    static formatEndpoint(endpoint) {
-        return ((endpoint.startsWith("/") ? "" : "/") +
-            endpoint +
-            (endpoint.endsWith("/") ? "" : "/"));
-    }
 }
 class Command {
-    constructor(id, command, network) {
-        this.id = id;
-        this.command = command;
+    constructor(uuid, cmd, network) {
+        this.uuid = uuid;
+        this.cmd = cmd;
         this.network = network;
-    }
-    getId() {
-        return this.id;
-    }
-    getCommand() {
-        return this.command;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    static fromJSON(network, json) {
-        return new Command(json.cmdId, json.cmdString, network);
     }
 }
 class ActivityMatch {
@@ -679,14 +683,8 @@ class ActivityMatch {
     getFinish() {
         return this.finishedOn;
     }
-    getActivity() {
-        return this.activity;
-    }
     getMatchList() {
         return this.matchList;
-    }
-    static fromJSON(json) {
-        return new ActivityMatch(new Date(json.startedOn * 1000), new Date(json.finishedOn * 1000), json.activity, json.matchList.map(matchingRange => new MatchingRange(new Date(matchingRange.startedOn * 1000), new Date(matchingRange.finishedOn * 1000), matchingRange.matchWith)));
     }
 }
 class Connection extends Core {
@@ -699,34 +697,19 @@ class Connection extends Core {
         this.status = status;
         this.uuid = uuid;
     }
-    getPlayer() {
-        return this.player;
-    }
-    getInstance() {
-        return this.instance;
-    }
-    getLocation() {
-        return this.location;
+    fromObject(array) {
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
+        this.location = new ConnectionLocation().fromObject(array.location);
+        this.status = new ConnectionStatus().fromObject(array.status);
+        this.uuid = array.uuid;
+        return this;
     }
     getStatus() {
         return this.status;
     }
-    getId() {
-        return this.uuid;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.player = Player.fromJSON(this.core, array.player);
-        this.instance = Instance.fromJSON(this.core, array.instance);
-        this.location = ConnectionLocation.fromJSON(array.location);
-        this.status = ConnectionStatus.fromJSON(array.status);
-        this.uuid = array.uuid;
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new Connection(core, Player.fromJSON(core, json.player), Instance.fromJSON(core, json.instance), ConnectionLocation.fromJSON(json.location), ConnectionStatus.fromJSON(json.status));
+    getInstance() {
+        return this.instance;
     }
 }
 class ConnectionHash extends Core {
@@ -738,6 +721,13 @@ class ConnectionHash extends Core {
         this.hash = hash;
         this.player = player;
     }
+    fromObject(array) {
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        return this;
+    }
     getPlayer() {
         return this.player;
     }
@@ -747,30 +737,19 @@ class ConnectionHash extends Core {
     getNetwork() {
         return this.network;
     }
-    getId() {
-        return this.uuid;
-    }
     requestSession() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ hash: this.hash }, "session/hash/token/")
-                .then(json => {
-                return new SessionRequest(this.core, json.uuid, json.token, json.validated, Player.fromJSON(this.core, json.player), Network.fromJSON(this.core, json.network), "player");
+                .commit({
+                hash: this.hash,
+            }, "session/hash/token/")
+                .then((jsonresponse) => {
+                var player = new Player(main.core, jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified);
+                var instance = new Network(main.core, new Instance(main.core, jsonresponse.network.uuid, jsonresponse.network.name, "NTW"));
+                return new SessionRequest(main.core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, instance, "player");
             });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.network = Network.fromJSON(this.core, array.network);
-        this.uuid = array.uuid;
-        this.hash = array.hash;
-        this.player = Player.fromJSON(this.core, array.player);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ConnectionHash(core, Network.fromJSON(core, json.network), json.uuid, json.hash, Player.fromJSON(core, json.player));
     }
 }
 class ConnectionHashGlobal extends Core {
@@ -780,6 +759,11 @@ class ConnectionHashGlobal extends Core {
         this.hash = hash;
         this.player = player;
     }
+    fromObject(array) {
+        this.hash = array.hash;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        return this;
+    }
     getPlayer() {
         return this.player;
     }
@@ -788,28 +772,24 @@ class ConnectionHashGlobal extends Core {
     }
     requestSession() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ hash: this.hash }, "session/hash/token/")
-                .then(json => {
-                if (this.core.getTool() != null) {
-                    return SessionRequest.fromJSON(this.core, json);
+                .commit({
+                hash: this.hash,
+            }, "session/hash/token/")
+                .then((jsonresponse) => {
+                var player = new Player(main.core, jsonresponse.player.coreid, jsonresponse.player.username, jsonresponse.player.uuid, jsonresponse.player.verified);
+                if (main.core.getTool() != null) {
+                    var instance = new Network(main.core, new Instance(main.core, jsonresponse.network.uuid, jsonresponse.network.name, "NTW"));
+                    var sessionRequest = new SessionRequest(main.core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, instance, "player");
+                    return sessionRequest;
                 }
                 else {
-                    return new SessionRequest(this.core, json.uuid, json.token, json.validated, Player.fromJSON(this.core, json.player), null, "masterplayer");
+                    var sessionRequest = new SessionRequest(main.core, jsonresponse.uuid, jsonresponse.token, jsonresponse.validated, player, null, "masterplayer");
+                    return sessionRequest;
                 }
             });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.hash = array.hash;
-        this.player = Player.fromJSON(this.core, array.player);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ConnectionHashGlobal(core, json.hash, Player.fromJSON(core, json.player));
     }
 }
 class ConnectionLocation {
@@ -820,25 +800,7 @@ class ConnectionLocation {
         this.lat = lat;
         this.long = long;
     }
-    getCity() {
-        return this.city;
-    }
-    getRegion() {
-        return this.region;
-    }
-    getCountry() {
-        return this.country;
-    }
-    getLat() {
-        return this.lat;
-    }
-    getLong() {
-        return this.long;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.city = array.city;
         this.region = array.region;
         this.country = array.country;
@@ -846,37 +808,33 @@ class ConnectionLocation {
         this.long = array.long;
         return this;
     }
-    static fromJSON(json) {
-        return new ConnectionLocation(json.city, json.region, json.country, json.lat, json.long);
-    }
 }
 class ConnectionStatus {
     constructor(openedOn, closedOn) {
         this.openedOn = openedOn;
         this.closedOn = closedOn;
     }
+    fromObject(array) {
+        this.openedOn = new Date(array.openedOn * 1000);
+        this.closedOn = new Date(array.closedOn * 1000);
+        return this;
+    }
     getOpenedOn() {
         return this.openedOn;
     }
     isActive() {
-        return this.closedOn == undefined;
+        if (this.closedOn == undefined || this.closedOn == null) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     isClosed() {
         return !this.isActive();
     }
     getClosedOn() {
         return this.closedOn;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.openedOn = new Date(array.openedOn * 1000);
-        this.closedOn = new Date(array.closedOn * 1000);
-        return this;
-    }
-    static fromJSON(json) {
-        return new ConnectionStatus(new Date(json.openedOn * 1000), json.closedOn == null ? null : new Date(json.closedOn * 1000));
     }
 }
 class MatchingRange {
@@ -907,15 +865,6 @@ class ConsoleLine {
         this.type = type;
         this.message = message;
     }
-    getDate() {
-        return this.date;
-    }
-    getType() {
-        return this.type;
-    }
-    getMessage() {
-        return this.message;
-    }
 }
 var LineType;
 (function (LineType) {
@@ -930,29 +879,11 @@ class DiscordGuild {
         this.uuid = uuid;
         this.memberCount = memberCount;
     }
-    getNetwork() {
-        return this.network;
-    }
-    getName() {
-        return this.name;
-    }
-    getId() {
-        return this.uuid;
-    }
-    getMemberCount() {
-        return this.memberCount;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.name = array.name;
         this.uuid = array.uuid;
         this.memberCount = array.memberCount;
         return this;
-    }
-    static fromJSON(network, json) {
-        return new DiscordGuild(network, json.name, json.uuid, json.memberCount);
     }
 }
 class CheckoutElement extends Core {
@@ -963,21 +894,27 @@ class CheckoutElement extends Core {
         document.addEventListener("paymentSuccess", successFunction);
     }
     getJSON() {
-        return JSON.stringify(this.products.map(product => product.getId()));
+        var finalProducts = new Array();
+        this.products.forEach((product) => {
+            finalProducts.push(product.getId());
+        });
+        return JSON.stringify(finalProducts);
     }
     loadInto(selector) {
+        var key = this.core.getKey();
+        var products = this.getJSON();
         /*
-        $.getScript("https://js.stripe.com/v3/", (
-            data,
-            textStatus,
-            jqxhr
-        ) => {
-            $(selector).load(
-                "https://api.purecore.io/rest/2/element/checkout/?key=" +
-                this.core +
-                "&items=" +
-                this.getJSON()
-            );
+        $.getScript("https://js.stripe.com/v3/", function (
+          data,
+          textStatus,
+          jqxhr
+        ) {
+          $(selector).load(
+            "https://api.purecore.io/rest/2/element/checkout/?key=" +
+              key +
+              "&items=" +
+              products
+          );
         });*/
     }
 }
@@ -1000,57 +937,47 @@ class ForumCategory extends Core {
         this.network = network;
         this.section = section;
     }
-    getPosts(page) {
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.description = array.description;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.section = new ForumSection(this.core).fromObject(array.section);
+        return this;
+    }
+    getPosts(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
+            if (page == null || page == undefined) {
                 page = 0;
+            }
+            let main = this;
             return new Call(this.core)
                 .commit({
                 category: this.uuid,
                 page: page.toString(),
             }, "forum/get/post/list/")
-                .then(json => json.map(post => ForumPost.fromJSON(this.core, post)));
+                .then((jsonresponse) => {
+                var finalResponse = new Array();
+                jsonresponse.forEach((postJSON) => {
+                    finalResponse.push(new ForumPost(main.network.core).fromObject(postJSON));
+                });
+                return finalResponse;
+            });
         });
     }
     createPost(title, content) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 category: this.uuid,
                 title: title,
                 content: escape(content),
             }, "forum/create/post/")
-                .then(json => ForumPost.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new ForumPost(main.core).fromObject(jsonresponse);
+            });
         });
-    }
-    getId() {
-        return this.uuid;
-    }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getSelection() {
-        return this.section;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.name = array.name;
-        this.description = array.description;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.section = ForumSection.fromJSON(this.core, array.session);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ForumCategory(core, json.uuid, json.name, json.description, Network.fromJSON(core, json.network), ForumSection.fromJSON(core, json.session));
     }
 }
 class Forum {
@@ -1059,34 +986,56 @@ class Forum {
     }
     getSections() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.network.core)
-                .commit({ network: this.network.uuid }, "forum/get/section/list/")
-                .then(json => json.map(section => ForumSection.fromJSON(this.network.core, section)));
+                .commit({
+                network: this.network.uuid,
+            }, "forum/get/section/list/")
+                .then((jsonresponse) => {
+                var finalResponse = new Array();
+                jsonresponse.forEach((sectionJSON) => {
+                    finalResponse.push(new ForumSection(main.network.core).fromObject(sectionJSON));
+                });
+                return finalResponse;
+            });
         });
     }
-    getCategory(categoryId) {
+    getCategory(catid) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.network.core)
-                .commit({ category: categoryId }, "forum/get/category/")
-                .then(json => ForumCategory.fromJSON(this.network.core, json));
+                .commit({
+                category: catid,
+            }, "forum/get/category/")
+                .then((jsonresponse) => {
+                return new ForumCategory(main.network.core).fromObject(jsonresponse);
+            });
         });
     }
-    getPost(postId) {
+    getPost(postid) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.network.core)
-                .commit({ post: postId }, "forum/get/post/")
-                .then(json => ForumPost.fromJSON(this.network.core, json));
+                .commit({
+                post: postid,
+            }, "forum/get/post/")
+                .then((jsonresponse) => {
+                return new ForumPost(main.network.core).fromObject(jsonresponse);
+            });
         });
     }
     createSection(name, description) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.network.core)
                 .commit({
                 network: this.network.uuid,
                 name: name,
                 description: description,
             }, "forum/create/section/")
-                .then(json => ForumSection.fromJSON(this.network.core, json));
+                .then((jsonresponse) => {
+                return new ForumSection(main.network.core).fromObject(jsonresponse);
+            });
         });
     }
 }
@@ -1102,64 +1051,48 @@ class ForumPost extends Core {
         this.network = network;
         this.category = category;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.title = array.title;
+        this.content = array.content;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        this.open = array.open;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.category = new ForumCategory(this.core).fromObject(array.category);
+        return this;
+    }
     createReply(content) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 object: this.uuid,
                 content: escape(content),
             }, "forum/create/reply/")
-                .then(json => ForumReply.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new ForumReply(main.core).fromObject(jsonresponse);
+            });
         });
     }
     getReplies(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
+            if (page == null || page == undefined) {
                 page = 0;
+            }
+            let main = this;
             return new Call(this.core)
                 .commit({
                 object: this.uuid,
                 page: page.toString(),
             }, "forum/get/reply/list/")
-                .then(json => json.map(reply => ForumReply.fromJSON(this.core, reply)));
+                .then((jsonresponse) => {
+                var replies = new Array();
+                jsonresponse.forEach((response) => {
+                    replies.push(new ForumReply(main.core).fromObject(response));
+                });
+                return replies;
+            });
         });
-    }
-    getId() {
-        return this.uuid;
-    }
-    getTitle() {
-        return this.title;
-    }
-    getContent() {
-        return this.content;
-    }
-    getPlayer() {
-        return this.player;
-    }
-    isOpen() {
-        return this.open;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getCategory() {
-        return this.category;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.title = array.title;
-        this.content = array.content;
-        this.player = Player.fromJSON(this.core, array.player);
-        this.open = array.open;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.category = ForumCategory.fromJSON(this.core, array.category);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ForumPost(core, json.uuid, json.title, json.content, Player.fromJSON(core, json.player), json.open, Network.fromJSON(core, json.network), ForumCategory.fromJSON(core, json.category));
     }
 }
 class ForumReply extends Core {
@@ -1172,58 +1105,51 @@ class ForumReply extends Core {
         this.network = network;
         this.replyingTo = replyingTo;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.content = array.content;
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        if ("title" in array.responseTo) {
+            this.replyingTo = new ForumPost(this.core).fromObject(array.responseTo);
+        }
+        else {
+            this.replyingTo = new ForumReply(this.core).fromObject(array.responseTo);
+        }
+        return this;
+    }
     createReply(content) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 object: this.uuid,
                 content: escape(content),
             }, "forum/create/reply/")
-                .then(json => ForumReply.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new ForumReply(main.core).fromObject(jsonresponse);
+            });
         });
     }
-    getReplies(page) {
+    getReplies(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
+            if (page == null || page == undefined) {
                 page = 0;
+            }
+            let main = this;
             return new Call(this.core)
                 .commit({
                 object: this.uuid,
                 page: page.toString(),
             }, "forum/get/reply/list/")
-                .then(json => json.map(reply => ForumReply.fromJSON(this.core, reply)));
+                .then((jsonresponse) => {
+                var replies = new Array();
+                jsonresponse.forEach((response) => {
+                    replies.push(new ForumReply(main.core).fromObject(response));
+                });
+                return replies;
+            });
         });
-    }
-    getId() {
-        return this.uuid;
-    }
-    getContent() {
-        return this.content;
-    }
-    getPlayer() {
-        return this.player;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getReplyingTo() {
-        return this.replyingTo;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.content = array.content;
-        this.player = Player.fromJSON(this.core, array.player);
-        this.network = Network.fromJSON(this.core, array.network);
-        this.replyingTo = "title" in array.responseTo ? ForumPost.fromJSON(this.core, array.responseTo) :
-            ForumReply.fromJSON(this.core, array.responseTo);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ForumReply(core, json.uuid, json.content, Player.fromJSON(core, json.player), Network.fromJSON(core, json.network), "title" in json.responseTo ? ForumPost.fromJSON(core, json.responseTo) :
-            ForumReply.fromJSON(core, json.responseTo));
     }
 }
 class ForumSection extends Core {
@@ -1235,53 +1161,47 @@ class ForumSection extends Core {
         this.description = description;
         this.network = network;
     }
-    getId() {
-        return this.uuid;
-    }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getNetwork() {
-        return this.network;
-    }
     getCategories() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ section: this.uuid }, "forum/get/category/list/")
-                .then(json => json.map(category => ForumCategory.fromJSON(this.core, category)));
+                .commit({
+                section: this.uuid,
+            }, "forum/get/category/list/")
+                .then((jsonresponse) => {
+                var finalResponse = new Array();
+                jsonresponse.forEach((categoryJSON) => {
+                    finalResponse.push(new ForumCategory(main.core).fromObject(categoryJSON));
+                });
+                return finalResponse;
+            });
         });
+    }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.description = array.description;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        return this;
     }
     createCategory(name, description) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new Call(this.core)
+            let main = this;
+            return new Call(this.network.core)
                 .commit({
                 section: this.uuid,
                 name: name,
                 description: description,
             }, "forum/create/category/")
-                .then(json => ForumCategory.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new ForumCategory(main.core).fromObject(jsonresponse);
+            });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.name = array.name;
-        this.description = array.description;
-        this.network = Network.fromJSON(this.core, array.network);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new ForumSection(core, json.uuid, json.name, json.description, Network.fromJSON(core, json.network));
     }
 }
 class Instance extends Core {
     constructor(core, uuid, name, type) {
-        super(core.getTool(), core.dev);
+        super(core.getTool());
         this.core = core;
         this.uuid = uuid;
         this.name = name;
@@ -1289,16 +1209,36 @@ class Instance extends Core {
     }
     closeOpenConnections() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ instance: this.uuid }, "instance/connections/close/all/")
-                .then((json) => json.map((connection) => Connection.fromJSON(this.core, connection)));
+                .commit({
+                instance: this.uuid,
+            }, "instance/connections/close/all/")
+                .then((jsonresponse) => {
+                var connectionList = new Array();
+                jsonresponse.forEach((connectionJson) => {
+                    var connection = new Connection(main.core).fromObject(connectionJson);
+                    connectionList.push(connection);
+                });
+                return connectionList;
+            });
         });
     }
     getOpenConnections() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ instance: this.uuid }, "instance/connections/open/list/")
-                .then((json) => json.map((connection) => Connection.fromJSON(this.core, connection)));
+                .commit({
+                instance: this.uuid,
+            }, "instance/connections/open/list/")
+                .then((jsonresponse) => {
+                var connectionList = new Array();
+                jsonresponse.forEach((connectionJson) => {
+                    var connection = new Connection(main.core).fromObject(connectionJson);
+                    connectionList.push(connection);
+                });
+                return connectionList;
+            });
         });
     }
     getGrowthAnalytics(span = 3600 * 24) {
@@ -1308,21 +1248,42 @@ class Instance extends Core {
                 instance: this.uuid,
                 span: span,
             }, "instance/growth/analytics/")
-                .then((json) => json.map((growthAnalytic) => new GrowthAnalytic().fromArray(growthAnalytic)));
+                .then((jsonresponse) => {
+                var growthAnalytics = new Array();
+                jsonresponse.forEach((growthAnalyticJSON) => {
+                    var growthAnalytic = new GrowthAnalytic().fromObject(growthAnalyticJSON);
+                    growthAnalytics.push(growthAnalytic);
+                });
+                return growthAnalytics;
+            });
         });
     }
     delete() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ instance: this.uuid }, "instance/delete/")
-                .then(() => true); //TODO: process return
+                .commit({
+                instance: this.uuid,
+            }, "instance/delete/")
+                .then(() => {
+                return true;
+            });
         });
     }
     getKeys() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ instance: this.uuid }, "instance/key/list/")
-                .then((json) => json.map((key) => Key.fromJSON(this.core, key)));
+                .commit({
+                instance: this.uuid,
+            }, "instance/key/list/")
+                .then((jsonresponse) => {
+                var keyList = new Array();
+                jsonresponse.forEach((jsonKey) => {
+                    keyList.push(new Key(main.core).fromObject(jsonKey));
+                });
+                return keyList;
+            });
         });
     }
     getName() {
@@ -1331,41 +1292,37 @@ class Instance extends Core {
     getId() {
         return this.uuid;
     }
-    getType() {
-        return this.type;
-    }
     asNetwork() {
         return new Network(this.core, this);
     }
     update() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ instance: this.uuid }, "instance/info/")
-                .then((json) => {
-                if (json.server == null) {
-                    this.type = "NTW";
-                    this.uuid = json.network.uuid;
-                    this.name = json.network.name;
+                .commit({
+                instance: this.uuid,
+            }, "instance/info/")
+                .then((jsonresponse) => {
+                if (jsonresponse.server == null) {
+                    main.type = "NTW";
+                    main.uuid = jsonresponse.network.uuid;
+                    main.name = jsonresponse.network.name;
                 }
                 else {
-                    this.type = "SVR";
-                    this.uuid = json.server.uuid;
-                    this.name = json.server.name;
+                    main.type = "SVR";
+                    main.uuid = jsonresponse.server.uuid;
+                    main.name = jsonresponse.server.name;
                 }
-                return this;
+                return main;
             });
         });
-    }
-    static fromJSON(core, json, type) {
-        return new Instance(core, json.uuid, json.name, type == undefined ? "UNK" : type //TODO: check api calls for json.type
-        );
     }
 }
 class InstanceVital {
 }
 class Network extends Core {
     constructor(core, instance) {
-        super(core.getTool(), core.dev);
+        super(core.getTool());
         this.core = core;
         this.uuid = instance.getId();
         this.name = instance.getName();
@@ -1381,30 +1338,55 @@ class Network extends Core {
     }
     getDevKey() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "key/get/dev/")
-                .then((json) => Key.fromJSON(this.core, json));
+                .commit({
+                network: this.uuid,
+            }, "key/get/dev/")
+                .then((jsonresponse) => {
+                return new Key(main.core).fromObject(jsonresponse);
+            });
         });
     }
     getKeyFromId(keyid) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ keyid: keyid }, "key/from/id/")
-                .then((json) => Key.fromJSON(this.core, json));
+                .commit({
+                keyid: keyid,
+            }, "key/from/id/")
+                .then((jsonresponse) => {
+                return new Key(main.core).fromObject(jsonresponse);
+            });
         });
     }
     createServer(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ name: name, network: this.uuid }, "instance/server/create/")
-                .then((json) => Instance.fromJSON(this.core, json, "SVR"));
+                .commit({
+                name: name,
+                network: this.uuid
+            }, "instance/server/create/")
+                .then((jsonresponse) => {
+                return new Instance(main.core, jsonresponse.uuid, jsonresponse.name, "SVR");
+            });
         });
     }
     getServers() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "instance/server/list/")
-                .then((json) => json.map((server) => Instance.fromJSON(this.core, server, "SVR")));
+                .commit({
+                network: this.uuid,
+            }, "instance/server/list/")
+                .then((jsonresponse) => {
+                var servers = new Array();
+                jsonresponse.forEach((serverInstance) => {
+                    servers.push(new Instance(main.core, serverInstance.uuid, serverInstance.name, "SVR"));
+                });
+                return servers;
+            });
         });
     }
     asInstance() {
@@ -1417,121 +1399,236 @@ class Network extends Core {
                 network: this.uuid,
                 span: span,
             }, "instance/network/voting/analytics/")
-                .then((json) => json.map((analytic) => new VoteAnalytic().fromArray(analytic)));
+                .then((jsonresponse) => {
+                var votingAnalytics = new Array();
+                jsonresponse.forEach((votingAnalyticJSON) => {
+                    var votingAnalytic = new VoteAnalytic().fromObject(votingAnalyticJSON);
+                    votingAnalytics.push(votingAnalytic);
+                });
+                return votingAnalytics;
+            });
         });
     }
     getVotingSites() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "instance/network/voting/site/list/")
-                .then((json) => json.map((site) => VotingSite.fromJSON(this.core, site)));
+                .commit({
+                network: this.uuid,
+            }, "instance/network/voting/site/list/")
+                .then((jsonresponse) => {
+                var siteArray = new Array();
+                jsonresponse.forEach((votingSite) => {
+                    var site = new VotingSite(main.core).fromObject(votingSite);
+                    siteArray.push(site);
+                });
+                return siteArray;
+            });
         });
     }
     getSetupVotingSites(displaySetup = true) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var url;
+            if (displaySetup) {
+                url = "instance/network/voting/site/list/setup/config/";
+            }
+            else {
+                url = "instance/network/voting/site/list/setup/";
+            }
             return new Call(this.core)
-                .commit({ network: this.uuid }, "instance/network/voting/site/list/setup/" +
-                (displaySetup ? "config" : ""))
-                .then((json) => displaySetup
-                ? json.map((site) => VotingSiteConfig.fromJSON(this.core, site))
-                : json.map((site) => VotingSite.fromJSON(this.core, site)));
+                .commit({
+                network: this.uuid,
+            }, url)
+                .then((jsonresponse) => {
+                if (displaySetup) {
+                    var configArray = new Array();
+                    jsonresponse.forEach((votingSite) => {
+                        var siteConfig = new VotingSiteConfig(main.core).fromObject(votingSite);
+                        configArray.push(siteConfig);
+                    });
+                    return configArray;
+                }
+                else {
+                    var siteArray = new Array();
+                    jsonresponse.forEach((votingSite) => {
+                        var site = new VotingSite(main.core).fromObject(votingSite);
+                        siteArray.push(site);
+                    });
+                    return siteArray;
+                }
+            });
         });
     }
     getGuild() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "instance/network/discord/get/guild/")
-                .then((json) => DiscordGuild.fromJSON(this, json));
+                .commit({
+                network: this.uuid,
+            }, "instance/network/discord/get/guild/")
+                .then((jsonresponse) => {
+                return new DiscordGuild(main).fromObject(jsonresponse);
+            });
         });
     }
     setGuild(discordGuildId) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ guildid: discordGuildId, network: this.uuid }, "/instance/network/discord/setguild/")
-                .then(() => true); //TODO: process response
+                .commit({
+                guildid: discordGuildId,
+            }, "/instance/network/discord/setguild/")
+                .then(() => {
+                return true;
+            });
         });
     }
     setSessionChannel(channelId) {
         return __awaiter(this, void 0, void 0, function* () {
+            var key = this.core.getKey();
             return new Call(this.core)
-                .commit({ channelid: channelId, network: this.uuid }, "instance/network/discord/setchannel/session/")
-                .then(() => true); //TODO: process response
+                .commit({
+                channelid: channelId,
+            }, "instance/network/discord/setchannel/session/")
+                .then(() => {
+                return true;
+            });
         });
     }
     setDonationChannel(channelId) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ channelid: channelId, network: this.uuid }, "instance/network/discord/setchannel/donation/")
-                .then(() => true); //TODO: process response
+                .commit({
+                channelid: channelId,
+            }, "instance/network/discord/setchannel/donation/")
+                .then(() => {
+                return true;
+            });
         });
     }
     getHashes() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({}, "session/hash/list/")
-                .then((json) => json.map((connection) => ConnectionHash.fromJSON(this.core, connection)));
+                .then((jsonresponse) => {
+                var response = new Array();
+                jsonresponse.forEach((hashData) => {
+                    var hash = new ConnectionHash(main.core);
+                    response.push(hash.fromObject(hashData));
+                });
+                return response;
+            });
         });
     }
     getOffences() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "punishment/offence/list/")
-                .then((json) => json.map((offence) => Offence.fromJSON(this.core, offence)));
+                .commit({
+                network: this.uuid,
+            }, "punishment/offence/list/")
+                .then((jsonresponse) => {
+                var response = new Array();
+                jsonresponse.forEach((offenceData) => {
+                    var offence = new Offence(main.core);
+                    response.push(offence.fromObject(offenceData));
+                });
+                return response;
+            });
         });
     }
     getOffenceActions() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "punishment/action/list/")
-                .then((json) => json.map((action) => OffenceAction.fromJSON(this.core, action)));
+                .commit({
+                network: this.uuid,
+            }, "punishment/action/list/")
+                .then((jsonresponse) => {
+                var response = new Array();
+                jsonresponse.forEach((actionData) => {
+                    var offence = new OffenceAction(main.core);
+                    response.push(offence.fromObject(actionData));
+                });
+                return response;
+            });
         });
     }
     searchPlayers(username, uuid, coreid) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 username: username,
             }, "player/from/minecraft/username/search/")
-                .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
+                .then((jsonresponse) => {
+                var finalPlayerList = new Array();
+                jsonresponse.forEach((playerData) => {
+                    var player = new Player(main.core, playerData.coreid, playerData.username, playerData.uuid, playerData.verified);
+                    finalPlayerList.push(player);
+                });
+                return finalPlayerList;
+            });
         });
     }
     getPlayer(coreid) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
-                .commit({ player: coreid, network: this.uuid }, "player/from/core/id/")
-                .then((json) => Player.fromJSON(this.core, json));
+                .commit({
+                player: coreid,
+            }, "player/from/core/id/")
+                .then((jsonresponse) => {
+                var player = new Player(main.core, jsonresponse.coreid, jsonresponse.username, jsonresponse.uuid, jsonresponse.verified);
+                return player;
+            });
         });
     }
     getPlayers(page) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
+            let main = this;
+            var queryPage = 0;
+            if (page != undefined && page != null) {
+                queryPage = page;
+            }
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
-                page: page,
+                page: queryPage,
             }, "instance/network/list/players/")
-                .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
+                .then((jsonresponse) => {
+                var players = new Array();
+                jsonresponse.forEach((playerJson) => {
+                    var player = new Player(main.core, playerJson.coreid, playerJson.username, playerJson.uuid, playerJson.verified);
+                    players.push(player);
+                });
+                return players;
+            });
         });
     }
-    getPunishments(page) {
+    getPunishments(page = 0) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
+            let main = this;
+            var queryPage = 0;
+            if (page != undefined && page != null) {
+                queryPage = page;
+            }
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
-                page: page,
+                page: queryPage,
             }, "punishment/list/")
-                .then((json) => json.map((punishment) => Punishment.fromJSON(this.core, punishment)));
+                .then((jsonresponse) => {
+                var response = new Array();
+                jsonresponse.forEach((punishmentData) => {
+                    var punishment = new Punishment(main.core);
+                    response.push(punishment.fromObject(punishmentData));
+                });
+                return response;
+            });
         });
-    }
-    static fromJSON(core, json) {
-        if (json != null)
-            return new Network(core, new Instance(core, json.uuid, json.name, "NTW"));
-        if (json == null)
-            return new Network(core, new Instance(core, null, null, "NTW"));
     }
 }
 class GeoRestriction {
@@ -1540,6 +1637,13 @@ class GeoRestriction {
         this.country = country;
         this.state = state;
         this.city = city;
+    }
+    fromObject(array) {
+        this.index = array.index;
+        this.country = array.country;
+        this.state = array.state;
+        this.city = array.city;
+        return this;
     }
     getIndex() {
         return this.index;
@@ -1553,22 +1657,9 @@ class GeoRestriction {
     getCity() {
         return this.city;
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.index = array.index;
-        this.country = array.country;
-        this.state = array.state;
-        this.city = array.city;
-        return this;
-    }
-    static fromJSON(json) {
-        return new GeoRestriction(json.index, json.country, json.state, json.city);
-    }
 }
 class Key extends Core {
-    constructor(core, type, uuid, hash, instance, restrict, allowedReferrers, allowedRegions) {
+    constructor(core, type, uuid, hash, instance) {
         super(core.getTool());
         this.core = core;
         this.type = type;
@@ -1576,44 +1667,49 @@ class Key extends Core {
         this.hash = hash;
         this.instance = instance;
     }
-    getType() {
-        return this.type;
-    }
-    getId() {
-        return this.uuid;
-    }
-    getHash() {
-        return this.hash;
-    }
-    getInstance() {
-        return this.instance;
-    }
-    isRestricted() {
-        return this.restrict;
-    }
-    getAllowedReferrers() {
-        return this.allowedReferrers;
-    }
-    getAllowedRegions() {
-        return this.allowedRegions;
+    fromObject(array) {
+        this.type = array.type;
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
+        this.restrict = array.restrict;
+        this.allowedReferrers = new Array();
+        array.allowedReferrers.forEach((referrerJSON) => {
+            this.allowedReferrers.push(new RefererRestriction().fromObject(referrerJSON));
+        });
+        this.allowedRegions = new Array();
+        array.allowedRegions.forEach((regionJSON) => {
+            this.allowedRegions.push(new GeoRestriction().fromObject(regionJSON));
+        });
+        return this;
     }
     update() {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 keyid: this.uuid,
             }, "key/from/id/")
-                .then(json => Key.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new Key(main.core).fromObject(jsonresponse);
+            });
         });
     }
     setRestrict(restrict) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var enableStr = "false";
+            if (restrict) {
+                enableStr = "true";
+            }
             return new Call(this.core)
                 .commit({
                 keyid: this.uuid,
-                enable: restrict,
+                enable: enableStr,
             }, "key/restriction/enable/")
-                .then(json => Key.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new Key(main.core).fromObject(jsonresponse);
+            });
         });
     }
     addReferer(ipOrHostname) {
@@ -1623,7 +1719,9 @@ class Key extends Core {
                 keyid: this.uuid,
                 host: ipOrHostname,
             }, "key/restriction/host/add/")
-                .then(json => RefererRestriction.fromJSON(json));
+                .then((jsonresponse) => {
+                return new RefererRestriction().fromObject(jsonresponse);
+            });
         });
     }
     removeReferer(index) {
@@ -1633,21 +1731,27 @@ class Key extends Core {
                 keyid: this.uuid,
                 index: index,
             }, "restriction/host/remove/")
-                .then(json => RefererRestriction.fromJSON(json));
+                .then((jsonresponse) => {
+                return new RefererRestriction().fromObject(jsonresponse);
+            });
         });
     }
     addGeo(country, state, city) {
         return __awaiter(this, void 0, void 0, function* () {
-            const args = {};
+            var args = {};
             args["keyid"] = this.uuid;
             args["country"] = country;
-            if (state != null)
+            if (state != null) {
                 args["state"] = state;
-            if (city != null)
+            }
+            if (city != null) {
                 args["city"] = city;
+            }
             return new Call(this.core)
                 .commit(args, "restriction/geo/add/")
-                .then(json => GeoRestriction.fromJSON(json));
+                .then((jsonresponse) => {
+                return new GeoRestriction().fromObject(jsonresponse);
+            });
         });
     }
     removeGeo(index) {
@@ -1657,24 +1761,10 @@ class Key extends Core {
                 keyid: this.uuid,
                 index: index,
             }, "key/restriction/geo/remove/")
-                .then(json => GeoRestriction.fromJSON(json));
+                .then((jsonresponse) => {
+                return new GeoRestriction().fromObject(jsonresponse);
+            });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.type = array.type;
-        this.uuid = array.uuid;
-        this.hash = array.hash;
-        this.instance = new Instance(this.core, array.instance.uuid, array.instance.name, array.instance.type);
-        this.restrict = array.restrict;
-        this.allowedReferrers = array.allowedReferrers.map(RefererRestriction.fromJSON);
-        this.allowedRegions = array.allowedRegions.map(GeoRestriction.fromJSON);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new Key(core, json.type, json.uuid, json.hash, new Instance(core, json.instance.uuid, json.instance.name, json.instance.type), json.restrict, json.allowedReferrers.map(RefererRestriction.fromJSON), json.allowedRegions.map(GeoRestriction.fromJSON));
     }
 }
 class RefererRestriction {
@@ -1682,6 +1772,12 @@ class RefererRestriction {
         this.index = index;
         this.domain = domain;
         this.ip = ip;
+    }
+    fromObject(array) {
+        this.index = array.index;
+        this.domain = array.domain;
+        this.ip = array.ip;
+        return this;
     }
     getIndex() {
         return this.index;
@@ -1692,46 +1788,19 @@ class RefererRestriction {
     getIP() {
         return this.ip;
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.index = array.index;
-        this.domain = array.domain;
-        this.ip = array.ip;
-        return this;
-    }
-    static fromJSON(json) {
-        return new RefererRestriction(json.index, json.domain, json.ip);
-    }
 }
 class BIOS {
     constructor(vendor, version) {
         this.vendor = vendor;
         this.version = version;
     }
-    asArray() {
-        return {
-            vendor: this.vendor,
-            version: this.version
-        };
-    }
-    getVendor() {
-        return this.vendor;
-    }
-    getVersion() {
-        return this.version;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.vendor = array.vendor;
         this.version = array.version;
         return this;
     }
-    static fromJSON(json) {
-        return new BIOS(json.vendor, json.version);
+    asArray() {
+        return { vendor: this.vendor, version: this.version };
     }
 }
 class CPU {
@@ -1744,26 +1813,15 @@ class CPU {
         this.physicalCores = physicalCores;
         this.virtualCores = virtualCores;
     }
-    getManufacturer() {
-        return this.manufacturer;
-    }
-    getBrand() {
-        return this.brand;
-    }
-    getVendor() {
-        return this.vendor;
-    }
-    getSpeed() {
-        return this.speed;
-    }
-    getMaxSpeed() {
-        return this.maxSpeed;
-    }
-    getPhysicalCores() {
-        return this.physicalCores;
-    }
-    getVirtualCores() {
-        return this.virtualCores;
+    fromObject(array) {
+        this.manufacturer = array.manufacturer;
+        this.brand = array.brand;
+        this.vendor = array.vendor;
+        this.speed = array.speed;
+        this.maxSpeed = array.maxSpeed;
+        this.physicalCores = array.physicalCores;
+        this.virtualCores = array.virtualCores;
+        return this;
     }
     asArray() {
         return {
@@ -1776,37 +1834,12 @@ class CPU {
             virtualCores: this.virtualCores,
         };
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.manufacturer = array.manufacturer;
-        this.brand = array.brand;
-        this.vendor = array.vendor;
-        this.speed = array.speed;
-        this.maxSpeed = array.maxSpeed;
-        this.physicalCores = array.physicalCores;
-        this.virtualCores = array.virtualCores;
-        return this;
-    }
-    static fromJSON(json) {
-        return new CPU(json.manufacturer, json.brand, json.vendor, json.speed, json.maxSpeed, json.physicalCores, json.virtualCores);
-    }
 }
 class CPUUsage {
     constructor(clockSpeed, relativeUsage, mainThreadSlip) {
         this.clockSpeed = clockSpeed;
         this.relativeUsage = relativeUsage;
         this.mainThreadSlip = mainThreadSlip;
-    }
-    getClockSpeed() {
-        return this.clockSpeed;
-    }
-    getRelativeUsage() {
-        return this.relativeUsage;
-    }
-    getMainThreadSlip() {
-        return this.mainThreadSlip;
     }
 }
 class Drive {
@@ -1817,20 +1850,13 @@ class Drive {
         this.interfaceType = interfaceType;
         this.serialNum = serialNum;
     }
-    getSize() {
-        return this.size;
-    }
-    getName() {
-        return this.name;
-    }
-    getType() {
-        return this.type;
-    }
-    getInterfaceType() {
-        return this.interfaceType;
-    }
-    getSerialNumber() {
-        return this.serialNum;
+    fromObject(array) {
+        this.size = array.size;
+        this.name = array.name;
+        this.type = array.type;
+        this.interfaceType = array.interfaceType;
+        this.serialNum = array.serialNum;
+        return this;
     }
     asArray() {
         return {
@@ -1841,31 +1867,11 @@ class Drive {
             serialNum: this.serialNum,
         };
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.size = array.size;
-        this.name = array.name;
-        this.type = array.type;
-        this.interfaceType = array.interfaceType;
-        this.serialNum = array.serialNum;
-        return this;
-    }
-    static fromJSON(json) {
-        return new Drive(json.size, json.name, json.type, json.interfaceType, json.serialNum);
-    }
 }
 class DriveUsage {
     constructor(max, used) {
         this.max = max;
         this.used = used;
-    }
-    getMax() {
-        return this.max;
-    }
-    getUsed() {
-        return this.used;
     }
 }
 class Machine {
@@ -1887,78 +1893,126 @@ class Machine {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(new Core(null, this.owner.core.dev))
                 .commit({ ipv6: ip, hash: this.hash }, "machine/update/")
-                .then(() => ip);
+                .then(function () {
+                return ip;
+            });
         });
     }
     setIPV4(ip) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(new Core(null, this.owner.core.dev))
                 .commit({ ipv4: ip, hash: this.hash }, "machine/update/")
-                .then(() => ip);
+                .then(function () {
+                return ip;
+            });
         });
     }
-    //TODO: si better name and type
+    fromObject(array) {
+        if (array.uuid != null && array.uuid != undefined) {
+            this.uuid = array.uuid;
+        }
+        if (array.hash != null && array.hash != undefined) {
+            this.hash = array.hash;
+        }
+        if (array.owner != null && array.owner != undefined) {
+            this.owner = new Owner(new Core(), array.id, array.name, array.surname, array.email);
+        }
+        if (array.ipv4 != null && array.ipv4 != undefined) {
+            this.ipv4 = array.ipv4;
+        }
+        if (array.ipv6 != null && array.ipv6 != undefined) {
+            this.ipv6 = array.ipv6;
+        }
+        if (array.port != null && array.port != undefined) {
+            this.port = array.port;
+        }
+        if (array.bios != null && array.bios != undefined) {
+            this.bios = new BIOS().fromObject(array.bios);
+        }
+        if (array.motherboard != null && array.motherboard != undefined) {
+            this.motherboard = new Motherboard().fromObject(array.motherboard);
+        }
+        if (array.cpu != null && array.cpu != undefined) {
+            this.cpu = new CPU().fromObject(array.cpu);
+        }
+        this.ram = new Array();
+        array.ram.forEach((ramDim) => {
+            this.ram.push(new RAM().fromObject(ramDim));
+        });
+        this.drives = new Array();
+        array.drives.forEach((drive) => {
+            this.drives.push(new Drive().fromObject(drive));
+        });
+        this.adapters = new Array();
+        array.adapters.forEach((adapter) => {
+            this.adapters.push(new NetworkAdapter().fromObject(adapter));
+        });
+        return this;
+    }
     updateComponents(si, bios, motherboard, cpu, ram, drives, adapters) {
         return __awaiter(this, void 0, void 0, function* () {
+            let mainObj = this;
             if (si != null) {
-                bios = BIOS.fromJSON(si.bios);
-                motherboard = Motherboard.fromJSON(si.baseboard);
-                cpu = CPU.fromJSON(si.cpu);
-                ram = si.memLayout.map(RAM.fromJSON);
-                drives = si.diskLayout.map(Drive.fromJSON);
-                adapters = si.net.map(NetworkAdapter.fromJSON);
+                bios = new BIOS(si.bios.vendor, si.bios.version);
+                motherboard = new Motherboard(si.baseboard.manufacturer, si.baseboard.model);
+                cpu = new CPU(si.cpu.manufacturer, si.cpu.brand, si.cpu.vendor, si.cpu.speed, si.cpu.speedmax, si.cpu.physicalCores, si.cpu.cores);
+                ram = new Array();
+                si.memLayout.forEach((ramStick) => {
+                    ram.push(new RAM(ramStick.size, ramStick.clockSpeed, ramStick.manufacturer));
+                });
+                drives = new Array();
+                si.diskLayout.forEach((disk) => {
+                    drives.push(new Drive(disk.size, disk.name, disk.type, disk.interfaceType, disk.serialNum));
+                });
+                adapters = new Array();
+                si.net.forEach((adapter) => {
+                    adapters.push(new NetworkAdapter(adapter.speed, adapter.ifaceName));
+                });
             }
-            let params = {};
-            if (bios != null) {
+            var params = {};
+            if (bios != null && bios != undefined) {
                 this.bios = bios;
                 params["bios"] = JSON.stringify(bios.asArray());
             }
-            if (motherboard != null) {
+            if (motherboard != null && motherboard != undefined) {
                 this.motherboard = motherboard;
                 params["motherboard"] = JSON.stringify(motherboard.asArray());
             }
-            if (cpu != null) {
+            if (cpu != null && cpu != undefined) {
                 this.cpu = cpu;
                 params["cpu"] = JSON.stringify(cpu.asArray());
             }
-            if (ram != null) {
+            if (ram != null && ram != undefined) {
                 this.ram = ram;
-                params["ram"] = JSON.stringify(ram.map(stick => stick.asArray()));
+                var ramDims = [];
+                ram.forEach((ramDim) => {
+                    ramDims.push(ramDim.asArray());
+                });
+                params["ram"] = JSON.stringify(ramDims);
             }
-            if (drives != null) {
+            if (drives != null && drives != undefined) {
                 this.drives = drives;
-                params["drives"] = JSON.stringify(drives.map(drives => drives.asArray()));
+                var drivesArray = [];
+                drives.forEach((drive) => {
+                    drivesArray.push(drive.asArray());
+                });
+                params["drives"] = JSON.stringify(drivesArray);
             }
-            if (adapters != null) {
+            if (adapters != null && adapters != undefined) {
                 this.adapters = adapters;
-                params["adapters"] = JSON.stringify(adapters.map(adapter => adapter.asArray()));
+                var adapterArray = [];
+                adapters.forEach((adapter) => {
+                    adapterArray.push(adapter.asArray());
+                });
+                params["adapters"] = JSON.stringify(adapterArray);
             }
             params["hash"] = this.hash;
             return yield new Call(new Core(null, this.owner.core.dev))
                 .commit(params, "machine/update/")
-                .then(() => this);
+                .then(function () {
+                return mainObj;
+            });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.hash = array.hash;
-        this.owner = Owner.fromJSON(new Core(), array); //TODO: new Core()?
-        this.ipv4 = array.ipv4;
-        this.ipv6 = array.ipv6;
-        this.port = array.port;
-        this.bios = BIOS.fromJSON(array.bios);
-        this.motherboard = Motherboard.fromJSON(array.motherboard);
-        this.cpu = CPU.fromJSON(array.cpu);
-        this.ram = array.ram.map(RAM.fromJSON);
-        this.drives = array.drives.map(Drive.fromJSON);
-        this.adapters = array.adapters.map(NetworkAdapter.fromJSON);
-        return this;
-    }
-    static fromJSON(json) {
-        return new Machine(json.uuid, json.hash, Owner.fromJSON(new Core(), json), json.ipv4, json.ipv6, json.port, BIOS.fromJSON(json.bios), Motherboard.fromJSON(json.motherboard), CPU.fromJSON(json.cpu), json.ram.map(RAM.fromJSON), json.drives.map(Drive.fromJSON), json.adapters.map(NetworkAdapter.fromJSON));
     }
 }
 class Motherboard {
@@ -1966,28 +2020,13 @@ class Motherboard {
         this.manufacturer = manufacturer;
         this.model = model;
     }
-    getManufacturer() {
-        return this.manufacturer;
-    }
-    getModel() {
-        return this.model;
-    }
-    asArray() {
-        return {
-            manufacturer: this.manufacturer,
-            model: this.model
-        };
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.manufacturer = array.manufacturer;
         this.model = array.model;
         return this;
     }
-    static fromJSON(json) {
-        return new Motherboard(json.manufacturer, json.model);
+    asArray() {
+        return { manufacturer: this.manufacturer, model: this.model };
     }
 }
 class NetworkAdapter {
@@ -1995,28 +2034,13 @@ class NetworkAdapter {
         this.speed = speed;
         this.name = name;
     }
-    getSpeed() {
-        return this.speed;
-    }
-    getName() {
-        return this.name;
-    }
-    asArray() {
-        return {
-            speed: this.speed,
-            name: this.name
-        };
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.speed = array.speed;
         this.name = array.name;
         return this;
     }
-    static fromJSON(json) {
-        return new NetworkAdapter(json.speed, json.name);
+    asArray() {
+        return { speed: this.speed, name: this.name };
     }
 }
 class RAM {
@@ -2026,17 +2050,12 @@ class RAM {
         this.manufacturer = manufacturer;
         this.voltage = voltage;
     }
-    getSize() {
-        return this.size;
-    }
-    getClockSpeed() {
-        return this.clockSpeed;
-    }
-    getManufacturer() {
-        return this.manufacturer;
-    }
-    getVoltage() {
-        return this.voltage;
+    fromObject(array) {
+        this.size = array.size;
+        this.clockSpeed = array.clockSpeed;
+        this.manufacturer = array.manufacturer;
+        this.voltage = array.voltage;
+        return this;
     }
     asArray() {
         return {
@@ -2046,30 +2065,11 @@ class RAM {
             voltage: this.voltage,
         };
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.size = array.size;
-        this.clockSpeed = array.clockSpeed;
-        this.manufacturer = array.manufacturer;
-        this.voltage = array.voltage;
-        return this;
-    }
-    static fromJSON(json) {
-        return new RAM(json.size, json.clockSpeed, json.manufacturer, json.voltage);
-    }
 }
 class RAMUsage {
     constructor(max, used) {
         this.max = max;
         this.used = used;
-    }
-    getMax() {
-        return this.max;
-    }
-    getUsed() {
-        return this.used;
     }
 }
 class Appeal extends Core {
@@ -2082,24 +2082,6 @@ class Appeal extends Core {
         this.staffMember = staffMember;
         this.accepted = accepted;
     }
-    getId() {
-        return this.uuid;
-    }
-    getPunishment() {
-        return this.punishment;
-    }
-    getContext() {
-        return this.content;
-    }
-    getStaffResponse() {
-        return this.staffResponse;
-    }
-    getStaffMember() {
-        return this.staffMember;
-    }
-    isAccepted() {
-        return this.accepted;
-    }
 }
 class AppealStatus extends Core {
     constructor(core, status, appealId) {
@@ -2108,19 +2090,10 @@ class AppealStatus extends Core {
         this.appealId = appealId;
     }
     getAppeal() {
-        //TODO: appeal fetching
-    }
-    getStatus() {
-        return this.status;
-    }
-    getAppealId() {
-        return this.appealId;
+        // to-do
     }
     toString() {
         return this.status;
-    }
-    static fromJSON(core, json) {
-        return new AppealStatus(core, json.status, json.appealId);
     }
 }
 class Offence extends Core {
@@ -2134,6 +2107,15 @@ class Offence extends Core {
         this.description = description;
         this.negativePoints = negativePoints;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.type = array.type;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.name = array.name;
+        this.description = array.description;
+        this.negativePoints = parseInt(array.negativePoints);
+        return this;
+    }
     getType() {
         return this.type;
     }
@@ -2145,21 +2127,6 @@ class Offence extends Core {
     }
     getNegativePoints() {
         return this.negativePoints;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.type = array.type;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.name = array.name;
-        this.description = array.description;
-        this.negativePoints = parseInt(array.negativePoints);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new Offence(core, json.uuid, json.type, Network.fromJSON(core, json.network), json.name, json.description, parseInt(json.negativePoints));
     }
 }
 class OffenceAction extends Core {
@@ -2175,36 +2142,9 @@ class OffenceAction extends Core {
         this.name = name;
         this.description = description;
     }
-    getId() {
-        return this.uuid;
-    }
-    getCommand() {
-        return this.cmd;
-    }
-    getRequiredPoints() {
-        return this.requiredPoints;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getPointsType() {
-        return this.pointsType;
-    }
-    getPunishmentType() {
-        return this.punishmentType;
-    }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
-        this.network = Network.fromJSON(this.core, array.network);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
         this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
         this.requiredPoints = parseInt(array.requiredPoints);
         this.pointsType = array.pointsType;
@@ -2213,13 +2153,9 @@ class OffenceAction extends Core {
         this.description = array.description;
         return this;
     }
-    static fromJSON(core, json) {
-        const network = Network.fromJSON(core, json.network);
-        return new OffenceAction(core, json.uuid, Command.fromJSON(network, json.cmd), parseInt(json.requiredPoints), network, json.pointsType, json.punishmentType, json.name, json.description);
-    }
 }
 class Punishment extends Core {
-    constructor(core, uuid, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes, appealStatus) {
+    constructor(core, player, offenceList, moderator, network, pointsChat, pointsGameplay, report, notes, appealStatus) {
         super(core.getTool());
         this.core = core;
         this.player = player;
@@ -2232,53 +2168,17 @@ class Punishment extends Core {
         this.notes = notes;
         this.appealStatus = appealStatus;
     }
-    getId() {
-        return this.uuid;
-    }
-    getPlayer() {
-        return this.player;
-    }
-    getOffenceList() {
-        return this.offenceList;
-    }
-    getModerator() {
-        return this.moderator;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getPointsChat() {
-        return this.pointsChat;
-    }
-    getPointsGameplay() {
-        return this.pointsGameplay;
-    }
-    getReport() {
-        return this.report;
-    }
-    getNotes() {
-        return this.notes;
-    }
-    getAppealStatus() {
-        return this.appealStatus;
-    }
-    getPoints(type) {
-        if (type === "GMT") {
-            return this.pointsGameplay;
-        }
-        else if (type === "CHT") {
-            return this.pointsChat;
-        }
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
-        this.player = Player.fromJSON(this.core, array.player);
-        this.offenceList = array.offenceList.map(offence => Offence.fromJSON(this.core, offence));
-        this.moderator = Player.fromJSON(this.core, array.createdBy);
-        this.network = Network.fromJSON(this.core, array.network);
+        this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        var finalOffenceList = new Array();
+        array.offenceList.forEach((offenceArray) => {
+            var offence = new Offence(this.core);
+            finalOffenceList.push(offence.fromObject(offenceArray));
+        });
+        this.offenceList = finalOffenceList;
+        this.moderator = new Player(this.core, array.createdBy.coreid, array.createdBy.username, array.createdBy.uuid, array.createdBy.verified);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
         this.pointsChat = array.pointsAddedChat;
         this.pointsGameplay = array.pointsAddedGameplay;
         if (array.report == null) {
@@ -2287,17 +2187,32 @@ class Punishment extends Core {
         else {
             // to-do: report implementation
         }
-        this.appealStatus = AppealStatus.fromJSON(this.core, array.appealStatus);
+        this.appealStatus = new AppealStatus(this.core, array.appealStatus.status, array.appealStatus.appealId);
         return this;
     }
-    static fromJSON(core, json) {
-        return new Punishment(core, json.uuid, Player.fromJSON(core, json.player), json.offenceList.map(offence => Offence.fromJSON(core, offence)), Player.fromJSON(core, json.createdBy), Network.fromJSON(core, json.network), json.pointsAddedChat, json.pointsAddedGameplay, null, //TODO: report
-        json.notes, AppealStatus.fromJSON(core, json.appealStatus));
+    getStatus() {
+        return this.appealStatus;
+    }
+    getPlayer() {
+        return this.player;
+    }
+    getOffenceList() {
+        return this.offenceList;
+    }
+    getPoints(type) {
+        if (type == "GMP") {
+            return this.pointsGameplay;
+        }
+        else if (type == "CHT") {
+            return this.pointsChat;
+        }
+        else {
+            throw new Error("invalid point selection type");
+        }
     }
 }
 class Report {
-    constructor(parameters) {
-    }
+    constructor(parameters) { }
 }
 class Session extends Core {
     constructor(core, uuid, hash, device, location, usage, network, user) {
@@ -2315,24 +2230,54 @@ class Session extends Core {
         else if (user instanceof Owner) {
             this.owner = user;
         }
-        this.user = user;
     }
     getOwner() {
-        if (this.user == null || !(this.user instanceof Owner)) {
+        if (this.owner == null) {
             return new Owner(this.core, null, null, null, null);
         }
         else {
-            return this.user;
+            return this.owner;
         }
     }
     getUser() {
-        return this.user;
+        if (this.player == undefined && this.owner != undefined) {
+            return new Owner(this.core, this.owner.getId(), this.owner.getName(), this.owner.getSurname(), this.owner.getEmail());
+        }
+        else {
+            return new Player(this.core, this.player.getId(), this.player.getUsername(), this.player.getUuid(), this.player.verified);
+        }
+    }
+    fromObject(array) {
+        var core = this.core;
+        this.uuid = array.uuid;
+        this.hash = array.hash;
+        this.device = new SessionDevice(array.device.brand, array.device.device, array.device.model, array.device.os);
+        this.location = new SessionLocation(array.location.city, array.location.state, array.location.country_code);
+        this.usage = new SessionUsage(array.usage.creation, array.usage.uses);
+        if ("network" in array) {
+            this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+            this.core = new Core(new Session(new Core(null, core.dev), this.uuid, this.hash, this.device, this.location, this.usage, this.network, null), core.dev);
+        }
+        else {
+            this.core = new Core(new Session(new Core(null, core.dev), this.uuid, this.hash, this.device, this.location, this.usage, null, null), core.dev);
+        }
+        if ("player" in array) {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        else if ("owner" in array) {
+            this.owner = new Owner(this.core, array.owner.uuid, array.owner.name, array.owner.surname, array.owner.email);
+        }
+        return this;
     }
     fromHash(sessionHash) {
         return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var hash = sessionHash;
             return yield new Call(this.core)
-                .commit({ hash: sessionHash }, "session/get/")
-                .then((json) => new Session(this.core).fromArray(json));
+                .commit({ hash: hash }, "session/get/")
+                .then(function (jsonresponse) {
+                return new Session(core).fromObject(jsonresponse);
+            });
         });
     }
     getId() {
@@ -2342,50 +2287,40 @@ class Session extends Core {
         return this.hash;
     }
     getPlayer() {
-        return this.player;
+        if (this.player == null) {
+            return new Player(this.core, null);
+        }
+        else {
+            return this.player;
+        }
     }
     getMachines() {
         return __awaiter(this, void 0, void 0, function* () {
+            var hash = this.hash;
             return yield new Call(this.core)
-                .commit({ hash: this.getHash() }, "machine/list/")
-                .then((json) => json.map((machine) => new Machine().fromArray(machine)));
+                .commit({ hash: hash }, "machine/list/")
+                .then(function (jsonresponse) {
+                var machines = new Array();
+                jsonresponse.forEach((machineJSON) => {
+                    machines.push(new Machine().fromObject(machineJSON));
+                });
+                return machines;
+            });
         });
     }
     getNetworks() {
         return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
             return yield new Call(this.core)
                 .commit({}, "instance/network/list/")
-                .then((json) => json.map((network) => Network.fromJSON(this.core, network)));
+                .then(function (jsonresponse) {
+                var networks = new Array();
+                jsonresponse.forEach((network) => {
+                    networks.push(new Network(core, new Instance(core, network.uuid, network.name, "NTW")));
+                });
+                return networks;
+            });
         });
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.hash = array.hash;
-        this.device = SessionDevice.fromJSON(array.device);
-        this.location = SessionLocation.fromJSON(array.location);
-        this.usage = SessionUsage.fromJSON(array.usage);
-        if ("network" in array) {
-            this.network = Network.fromJSON(this.core, array.network);
-            this.core = new Core(this, this.core.dev);
-        }
-        else {
-            this.core = new Core(this, this.core.dev);
-        }
-        if ("player" in array) {
-            this.player = Player.fromJSON(this.core, array.player);
-        }
-        else if ("owner" in array) {
-            this.owner = Owner.fromJSON(this.core, array.owner);
-        }
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new Session(core, json.uuid, json.hash, SessionDevice.fromJSON(json.device), SessionLocation.fromJSON(json.location), SessionUsage.fromJSON(json.usage), "network" in json ? Network.fromJSON(core, json.network) : null, "player" in json
-            ? Player.fromJSON(core, json.network)
-            : Owner.fromJSON(core, json.owner));
     }
 }
 class SessionDevice {
@@ -2395,42 +2330,12 @@ class SessionDevice {
         this.model = model;
         this.os = os;
     }
-    getBrand() {
-        return this.brand;
-    }
-    getDevice() {
-        return this.device;
-    }
-    getModel() {
-        return this.model;
-    }
-    getOs() {
-        return this.os;
-    }
-    static fromJSON(json) {
-        return new SessionDevice(json.brand, json.device, json.model, json.os);
-    }
 }
 class SessionLocation {
     constructor(city, state, country_code) {
         this.city = city;
         this.state = state;
         this.country_code = country_code;
-    }
-    getCity() {
-        return this.city;
-    }
-    getState() {
-        return this.state;
-    }
-    getCountry() {
-        return this.country_code;
-    }
-    getOs() {
-        return this.os;
-    }
-    static fromJSON(json) {
-        return new SessionLocation(json.city, json.state, json.country_code);
     }
 }
 class SessionRequest extends Core {
@@ -2448,35 +2353,30 @@ class SessionRequest extends Core {
         return this.validated;
     }
     getValidationUrl() {
-        return `https://api.purecore.io/link/discord/redirect/?uuid=${this.uuid}&hash=${this.token};`;
+        return ("https://api.purecore.io/link/discord/redirect/?uuid=" +
+            this.uuid +
+            "&hash=" +
+            this.token);
     }
     getToken() {
         return this.token;
     }
     getSession() {
         return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var token = this.token;
             return yield new Call(this.core)
-                .commit({ token: this.token }, "session/hash/token/exchange/")
-                .then(json => new Session(this.core).fromArray(json));
+                .commit({ token: token }, "session/hash/token/exchange/")
+                .then(function (jsonresponse) {
+                return new Session(core).fromObject(jsonresponse);
+            });
         });
-    }
-    static fromJSON(core, json) {
-        return new SessionRequest(core, json.uuid, json.token, json.validated, Player.fromJSON(core, json.player), Network.fromJSON(core, json.network), "player");
     }
 }
 class SessionUsage {
     constructor(creation, uses) {
         this.creation = creation;
         this.uses = uses;
-    }
-    getCreation() {
-        return this.creation;
-    }
-    getUses() {
-        return this.uses;
-    }
-    static fromJSON(json) {
-        return new SessionUsage(json.creation, json.uses);
     }
 }
 class StoreCategory extends Core {
@@ -2489,8 +2389,20 @@ class StoreCategory extends Core {
         this.network = network;
         this.upgradable = upgradable;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        this.description = array.description;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.upgradable = array.upgradable;
+        return this;
+    }
+    getId() {
+        return this.uuid;
+    }
     createItem(name, description, price) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 network: this.network.uuid,
@@ -2499,37 +2411,10 @@ class StoreCategory extends Core {
                 category: this.uuid,
                 price: price,
             }, "store/item/create/")
-                .then(item => StoreItem.fromJSON(this.core, item));
+                .then((jsonresponse) => {
+                return new StoreItem(main.core).fromObject(jsonresponse);
+            });
         });
-    }
-    getId() {
-        return this.uuid;
-    }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    isUpgradable() {
-        return this.upgradable;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.name = array.name;
-        this.description = array.description;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.upgradable = array.upgradable;
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new StoreCategory(core, json.uuid, json.name, json.description, Network.fromJSON(core, json.network), json.upgradable);
     }
 }
 class StoreItem extends Core {
@@ -2542,112 +2427,94 @@ class StoreItem extends Core {
         this.category = category;
         this.network = network;
         this.price = price;
-        this.perks = contextualizedPerks;
+        this.perks = new Array();
     }
-    addPerk(perk, quantity) {
+    addPerk(perk, quantity = "undefined") {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            var perkId = null;
+            if (typeof perk == "string") {
+                perkId = perk;
+            }
+            else {
+                perkId = perk.uuid;
+            }
             return new Call(this.core)
                 .commit({
                 network: this.network.uuid,
                 item: this.uuid,
-                perk: typeof perk == "string" ? perk : perk.getUuid(),
+                perk: perkId,
                 quantity: quantity,
             }, "store/item/add/perk/")
-                .then(json => PerkContextualized.fromJSON(this.core, json));
-        });
-    }
-    getOrganizedPerks() {
-        const perkOrganized = {};
-        this.perks.forEach((perk) => {
-            const uuid = perk.getPerk().getCategory().getId();
-            if (uuid in perkOrganized) {
-                perkOrganized[uuid].push(perk);
-            }
-            else {
-                perkOrganized[uuid] = new Array();
-                perkOrganized[uuid].push(perk);
-            }
-        });
-        return Object.keys(perkOrganized)
-            .map(key => {
-            let category = null;
-            perkOrganized[key].forEach((conperk) => {
-                if (conperk.perk.category.uuid == key) {
-                    category = conperk.perk.category;
-                }
+                .then((jsonresponse) => {
+                return new PerkContextualized(main.core).fromObject(jsonresponse);
             });
-            return new OrganizedPerkCategory(category, perkOrganized[key]);
         });
     }
     getId() {
         return this.uuid;
     }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getCategory() {
-        return this.category;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getPrice() {
-        return this.price;
-    }
-    getPerks() {
-        return this.perks;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
         this.name = array.name;
         this.description = array.description;
-        this.category = StoreCategory.fromJSON(this.core, array.category);
+        this.category = new StoreCategory(this.core).fromObject(array.category);
         this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
         this.price = array.price;
         if (array.perks != null) {
-            this.perks = array.perks.map(perk => PerkContextualized.fromJSON(this.core, perk));
+            array.perks.forEach((perkJson) => {
+                this.perks.push(new PerkContextualized(this.core).fromObject(perkJson));
+            });
         }
         else {
             this.perks = new Array();
         }
         return this;
     }
-    static fromJSON(core, json) {
-        return new StoreItem(core, json.uuid, json.name, json.description, StoreCategory.fromJSON(core, json.category), Network.fromJSON(core, json.network), json.price, json.perks.map(perk => PerkContextualized.fromJSON(core, perk)));
+    getOrganizedPerks() {
+        var perkOrganized = [];
+        this.perks.forEach((perk) => {
+            if (perk.perk.category.uuid in perkOrganized) {
+                perkOrganized[perk.perk.category.uuid].push(perk);
+            }
+            else {
+                perkOrganized[perk.perk.category.uuid] = new Array();
+                perkOrganized[perk.perk.category.uuid].push(perk);
+            }
+        });
+        var organizedPerkCategories = new Array();
+        for (const key in perkOrganized) {
+            var category = null;
+            perkOrganized[key].forEach((conperk) => {
+                if (conperk.perk.category.uuid == key) {
+                    category = conperk.perk.category;
+                }
+            });
+            var organizedCat = new OrganizedPerkCategory(category, perkOrganized[key]);
+            organizedPerkCategories.push(organizedCat);
+        }
+        return organizedPerkCategories;
     }
 }
 class NestedItem extends Core {
-    constructor(core, uuid, items, category) {
+    constructor(core) {
         super(core.getTool());
         this.core = core;
     }
-    getId() {
-        return this.uuid;
+    fromObject(array) {
+        this.category = new StoreCategory(this.core).fromObject(array.category);
+        this.uuid = this.category.getId();
+        this.items = new Array();
+        array.products.forEach((product) => {
+            this.items.push(new StoreItem(this.core).fromObject(product));
+        });
+        return this;
     }
     getCategory() {
         return this.category;
     }
     getItems() {
         return this.items;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.category = StoreCategory.fromJSON(this.core, array.category);
-        this.uuid = this.category.getId();
-        this.items = array.products.map(product => StoreItem.fromJSON(this.core, product));
-        return this;
-    }
-    static fromJSON(core, json) {
-        const category = StoreCategory.fromJSON(core, json.category);
-        return new NestedItem(core, category.getId(), json.products.map(product => StoreItem.fromJSON(core, product)), category);
     }
 }
 class OrganizedPerkCategory {
@@ -2674,9 +2541,31 @@ class Perk extends Core {
         this.category = category;
         this.commands = commands;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.name = array.name;
+        this.description = array.description;
+        this.type = array.type;
+        this.category = new PerkCategory(this.core).fromObject(array.category);
+        var commands = new Array();
+        array.commands.forEach((cmd) => {
+            commands.push(new StoreCommand(this.core).fromObject(cmd));
+        });
+        this.commands = commands;
+        return this;
+    }
     addCmd(cmd, needsOnline, executeOn) {
         return __awaiter(this, void 0, void 0, function* () {
-            const ids = executeOn.map(instance => instance.uuid);
+            let core = this.core;
+            var ids = [];
+            executeOn.forEach((instance) => {
+                ids.push(instance.uuid);
+            });
+            var needsOnlineStr = "false";
+            if (needsOnline) {
+                needsOnlineStr = "true";
+            }
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
@@ -2685,57 +2574,38 @@ class Perk extends Core {
                 needsOnline: needsOnline,
                 instances: JSON.stringify(ids),
             }, "store/perk/cmd/add/")
-                .then(json => json.map(command => StoreCommand.fromJSON(this.core, command)));
+                .then((jsonresponse) => {
+                var commands = new Array();
+                jsonresponse.forEach((cmd) => {
+                    commands.push(new StoreCommand(core).fromObject(cmd));
+                });
+                return commands;
+            });
         });
-    }
-    getUuid() {
-        return this.uuid;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getName() {
-        return this.name;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getType() {
-        return this.type;
-    }
-    getCategory() {
-        return this.category;
-    }
-    getCommands() {
-        return this.commands;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.name = array.name;
-        this.description = array.description;
-        this.type = array.type;
-        this.category = PerkCategory.fromJSON(this.core, array.category);
-        this.commands = array.commands.map(command => StoreCommand.fromJSON(this.core, command));
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new Perk(core, json.uuid, Network.fromJSON(core, json.network), json.name, json.description, json.type, PerkCategory.fromJSON(core, json.category), json.commands.map(command => StoreCommand.fromJSON(core, command)));
     }
 }
 class PerkCategory extends Core {
-    constructor(core, id, name, network) {
+    constructor(core, uuid, name, network) {
         super(core.getTool());
         this.core = core;
-        this.uuid = id;
+        this.uuid = uuid;
         this.name = name;
         this.network = network;
     }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.name = array.name;
+        try {
+            this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        }
+        catch (error) {
+            this.network = null;
+        }
+        return this;
+    }
     createPerk(name, description, type) {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this.core;
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
@@ -2744,29 +2614,10 @@ class PerkCategory extends Core {
                 type: type.toUpperCase(),
                 category: this.uuid,
             }, "store/perk/create/")
-                .then(json => Perk.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new Perk(core).fromObject(jsonresponse);
+            });
         });
-    }
-    getId() {
-        return this.uuid;
-    }
-    getName() {
-        return this.name;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.name = array.name;
-        this.network = Network.fromJSON(this.core, array.network);
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new PerkCategory(core, json.uuid, json.name, Network.fromJSON(core, json.network));
     }
 }
 class PerkContextualized extends Core {
@@ -2776,22 +2627,10 @@ class PerkContextualized extends Core {
         this.perk = perk;
         this.quantity = quantity;
     }
-    getPerk() {
-        return this.perk;
-    }
-    getQuantity() {
-        return this.quantity;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.perk = Perk.fromJSON(this.core, array.perk);
+    fromObject(array) {
+        this.perk = new Perk(this.core).fromObject(array.perk);
         this.quantity = array.quantity;
         return this;
-    }
-    static fromJSON(core, json) {
-        return new PerkContextualized(core, Perk.fromJSON(core, json.perk), json.quantity);
     }
 }
 class Store extends Network {
@@ -2806,76 +2645,151 @@ class Store extends Network {
                 network: this.uuid,
                 span: span,
             }, "store/income/analytics/")
-                .then(json => json.map(new IncomeAnalytic().fromArray));
+                .then((jsonresponse) => {
+                var IncomeAnalytics = new Array();
+                jsonresponse.forEach((IncomeAnalyticJSON) => {
+                    var IncomeAnalyticD = new IncomeAnalytic().fromObject(IncomeAnalyticJSON);
+                    IncomeAnalytics.push(IncomeAnalyticD);
+                });
+                return IncomeAnalytics;
+            });
         });
     }
     getItem(id) {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this.core;
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 item: id,
             }, "store/item/")
-                .then(item => StoreItem.fromJSON(this.core, item));
+                .then((jsonresponse) => {
+                return new StoreItem(core).fromObject(jsonresponse);
+            });
         });
     }
     getPerks() {
         return __awaiter(this, void 0, void 0, function* () {
-            let args = {
-                network: this.uuid
-            };
-            if (this.core.getTool() instanceof Session) {
-                args.hash = this.core.getCoreSession().getHash();
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/store/?key=" + core.getKey();
             }
             return new Call(this.core)
-                .commit(args, "perk/list/")
-                .then(json => json.map(perk => Perk.fromJSON(this.core, perk)));
+                .commit({
+                network: this.uuid,
+            }, "perk/list/")
+                .then((jsonresponse) => {
+                var perklist = new Array();
+                jsonresponse.forEach((element) => {
+                    perklist.push(new Perk(core).fromObject(element));
+                });
+                return perklist;
+            });
         });
     }
     getPerkCategories() {
         return __awaiter(this, void 0, void 0, function* () {
-            let args = {
-                network: this.uuid
-            };
-            if (this.core.getTool() instanceof Session) {
-                args.hash = this.core.getCoreSession().getHash();
+            var core = this.core;
+            let main = this;
+            var url;
+            if (core.getTool() instanceof Session) {
+                url =
+                    "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" +
+                        core.getCoreSession().getHash() +
+                        "&network=" +
+                        main.uuid;
+            }
+            else {
+                url = "https://api.purecore.io/rest/2/?key=" + core.getKey();
             }
             return new Call(this.core)
-                .commit(args, "store/perk/category/list/")
-                .then(json => json.map(perk => PerkCategory.fromJSON(this.core, perk)));
+                .commit({
+                network: this.uuid,
+            }, "store/perk/category/list/")
+                .then((jsonresponse) => {
+                var perklist = new Array();
+                jsonresponse.forEach((element) => {
+                    perklist.push(new PerkCategory(core).fromObject(element));
+                });
+                return perklist;
+            });
         });
     }
     getGateways() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ network: this.uuid }, "store/gateway/list/")
-                .then(json => json.map(gateway => new Gateway(gateway.name, null, null, null)));
+                .commit({
+                network: this.uuid,
+            }, "store/gateway/list/")
+                .then((jsonresponse) => {
+                var methods = new Array();
+                jsonresponse.forEach((gtw) => {
+                    var gtf = new Gateway(gtw.name, null, null, null);
+                    methods.push(gtf);
+                });
+                return methods;
+            });
         });
     }
-    itemIdList(array) {
-        return array.map(item => new StoreItem(new Core(), item.getId()));
+    itemIdList(list) {
+        var finalList = new Array();
+        list.forEach((item) => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
     }
     itemIdListFromJSON(json) {
-        return json.map(item => new StoreItem(new Core(), item.uuid));
+        var finalList = new Array();
+        json.forEach((item) => {
+            finalList.push(new StoreItem(new Core(), item.uuid));
+        });
+        return finalList;
     }
     getStripeWalletLink() {
-        return `https://api.purecore.io/link/stripe/wallet/?hash=
-        ${this.network.core.getCoreSession().getHash()}&network=${this.network.getId()}`;
+        var hash = this.network.core.getCoreSession().getHash();
+        var ntwid = this.network.getId();
+        return ("https://api.purecore.io/link/stripe/wallet/?hash=" +
+            hash +
+            "&network=" +
+            ntwid);
     }
     getPayPalWalletLink() {
-        return `https://api.purecore.io/link/paypal/wallet/?hash=
-        ${this.network.core.getCoreSession().getHash()}&network=${this.network.getId()}`;
+        var hash = this.network.core.getCoreSession().getHash();
+        var ntwid = this.network.getId();
+        return ("https://api.purecore.io/link/paypal/wallet/?hash=" +
+            hash +
+            "&network=" +
+            ntwid);
     }
     requestPayment(itemList, username, billingAddress) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (billingAddress == null) {
+                billingAddress = new BillingAddress();
+            }
+            let core = this.network.core;
+            var idList = [];
+            itemList.forEach((item) => {
+                idList.push(item.uuid);
+            });
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 username: username,
-                products: escape(JSON.stringify(itemList.map(item => item.getId()))),
+                products: escape(JSON.stringify(idList)),
                 billing: JSON.stringify(billingAddress),
             }, "payment/request/")
-                .then(json => CorePaymentRequest.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new CorePaymentRequest(core).fromObject(jsonresponse);
+            });
         });
     }
     getNetwork() {
@@ -2883,14 +2797,23 @@ class Store extends Network {
     }
     getPayments(page) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
+            var core = this.network.core;
+            var queryPage = 0;
+            if (page != undefined || page != null) {
+                queryPage = page;
+            }
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 page: page,
             }, "/payment/list/")
-                .then(json => json.map(payment => Payment.fromJSON(this.core, payment)));
+                .then((jsonresponse) => {
+                var payments = new Array();
+                jsonresponse.forEach((paymentJson) => {
+                    payments.push(new Payment(core).fromObject(paymentJson));
+                });
+                return payments;
+            });
         });
     }
     unlinkGateway(gatewayName) {
@@ -2900,49 +2823,71 @@ class Store extends Network {
                 network: this.uuid,
                 gateway: gatewayName,
             }, "store/gateway/unlink/")
-                .then(json => json.success);
+                .then((jsonresponse) => {
+                return jsonresponse.success;
+            });
         });
     }
     createPerkCategory(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this.core;
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 name: name,
             }, "store/perk/category/create/")
-                .then(json => PerkCategory.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new PerkCategory(core).fromObject(jsonresponse);
+            });
         });
     }
     createCategory(name, description) {
         return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
                 name: name,
                 description: description,
             }, "store/category/create/")
-                .then(json => StoreCategory.fromJSON(this.core, json));
+                .then((jsonresponse) => {
+                return new StoreCategory(core).fromObject(jsonresponse);
+            });
         });
     }
-    //TODO: return type
     getCategories() {
         return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => {
-                this.getPackages()
-                    .then((nestedItems) => resolve(nestedItems.map(item => item.getCategory())))
-                    .catch(reject);
+            return new Promise(function (resolve, reject) {
+                try {
+                    this.getPackages().then(function (nestedItems) {
+                        var categories = new Array();
+                        nestedItems.forEach((nestedItem) => {
+                            categories.push(nestedItem.category);
+                        });
+                        resolve(categories);
+                    });
+                }
+                catch (e) {
+                    reject(e);
+                }
             });
         });
     }
     getPackages() {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this.network.core;
             return new Call(this.core)
-                .commit({ network: this.uuid }, "store/item/list/")
-                .then(json => json.map(item => NestedItem.fromJSON(this.core, item)));
+                .commit({
+                network: this.uuid,
+            }, "store/item/list/")
+                .then((jsonresponse) => {
+                var response = new Array();
+                jsonresponse.forEach((nestedData) => {
+                    response.push(new NestedItem(core).fromObject(nestedData));
+                });
+                return response;
+            });
         });
-    }
-    static fromJSON(core, json) {
-        return new Store(Network.fromJSON(core, json.network));
     }
 }
 class StoreCommand extends Core {
@@ -2955,90 +2900,44 @@ class StoreCommand extends Core {
         this.executeOn = executeOn;
         this.listId = listId;
     }
-    getNetwork() {
-        return this.network;
-    }
-    isNeedsOnline() {
-        return this.needsOnline;
-    }
-    getExecuteOn() {
-        return this.executeOn;
-    }
-    getListId() {
-        return this.listId;
+    fromObject(array) {
+        this.network = new Instance(this.core, array.network.uuid, array.network.name, "NTW").asNetwork();
+        if (typeof array.cmd == "string") {
+            this.cmd = new Command(array.cmd, null, this.network);
+        }
+        else {
+            this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+        }
+        this.needsOnline = array.needs_online;
+        this.listId = array.listid;
+        var instances = new Array();
+        array.execute_on.forEach((instance) => {
+            if (typeof instance == "string") {
+                instances.push(new Instance(this.core, instance, null, "UNK"));
+            }
+            else {
+                instances.push(new Instance(this.core, instance.uuid, instance.name, "UNK"));
+            }
+        });
+        this.executeOn = instances;
+        return this;
     }
     getCommand() {
         return this.cmd;
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.network = Network.fromJSON(this.core, array.network);
-        if (typeof array.command == "string") {
-            this.cmd = new Command(array.command, null, this.network);
-        }
-        else {
-            this.cmd = new Command(array.command.cmdId, array.command.cmdString, this.network);
-        }
-        this.needsOnline = array.needs_online;
-        this.listId = array.listid;
-        this.executeOn = array.execute_on.map(instance => {
-            if (typeof instance == "string") {
-                return new Instance(this.core, instance, null, "UNK");
-            }
-            else {
-                return Instance.fromJSON(this.core, instance);
-            }
-        });
-        return this;
-    }
-    static fromJSON(core, json) {
-        const network = Network.fromJSON(core, json.network);
-        return new StoreCommand(core, network, typeof json.command == "string" ? new Command(json.command, null, network) :
-            Command.fromJSON(network, json.command), json.needs_online, json.execute_on.map(instance => typeof instance == "string" ? new Instance(core, instance, null, "UNK") :
-            Instance.fromJSON(core, json.instance)), json.listid);
-    }
 }
 class BillingAddress {
-    constructor(name, email, country, state, city, postalCode, line1, line2) {
+    constructor(name, email, country, state, city, postalcode, line1, line2) {
         this.name = name;
         this.email = email;
         this.city = city;
         this.country = country;
         this.state = state;
-        this.postalcode = postalCode;
+        this.postalcode = postalcode;
         this.line1 = line1;
         this.line2 = line2;
     }
-    getName() {
-        return this.name;
-    }
-    getEmail() {
-        return this.email;
-    }
-    getCountry() {
-        return this.country;
-    }
-    getState() {
-        return this.state;
-    }
-    getCity() {
-        return this.city;
-    }
-    getPostalCode() {
-        return this.postalcode;
-    }
-    getLine1() {
-        return this.line1;
-    }
-    getLine2() {
-        return this.line2;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.name = array.name;
         this.email = array.email;
         this.country = array.country;
@@ -3046,34 +2945,21 @@ class BillingAddress {
         this.city = array.city;
         this.postalcode = array.postalcode;
         this.line1 = array.line1;
-        this.line2 = array.line2 == "" ? null : array.line2;
+        if (array.line2 != null && array.line2 != "") {
+            this.line2 = array.line2;
+        }
+        else {
+            this.line2 = null;
+        }
         return this;
-    }
-    static fromJSON(json) {
-        return new BillingAddress(json.name, json.email, json.country, json.state, json.city, json.postalcode, json.line1, json.line2 == "" ? null : json.line2);
     }
 }
 class Discount {
-    constructor(type, id, description, amount) {
+    constructor(type, uuid, description, amount) {
         this.type = type;
-        this.id = id;
+        this.uuid = uuid;
         this.description = description;
         this.amount = amount;
-    }
-    getType() {
-        return this.type;
-    }
-    getId() {
-        return this.id;
-    }
-    getDescription() {
-        return this.description;
-    }
-    getAmount() {
-        return this.amount;
-    }
-    static fromJSON(json) {
-        return new Discount(json.type, json.id, json.description, json.amount);
     }
 }
 class Gateway {
@@ -3082,21 +2968,6 @@ class Gateway {
         this.url = url;
         this.color = color;
         this.logo = logo;
-    }
-    getName() {
-        return this.name;
-    }
-    getUrl() {
-        return this.url;
-    }
-    getColor() {
-        return this.color;
-    }
-    getLogo() {
-        return this.logo;
-    }
-    static fromJSON(json) {
-        return new Gateway(json.name, json.url, json.color, json.logo);
     }
 }
 class Payment extends Core {
@@ -3110,93 +2981,92 @@ class Payment extends Core {
         this.network = network;
         this.legacyUsername = legacyUsername;
         this.player = player;
-        this.sessions = sessions;
-    }
-    getId() {
-        return this.uuid;
-    }
-    getRequest() {
-        return this.request;
-    }
-    getGateway() {
-        return this.gateway;
-    }
-    getMetadata() {
-        return this.metadata;
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getLegacyUsername() {
-        return this.legacyUsername;
-    }
-    getPlayer() {
-        return this.player;
-    }
-    getSessions() {
-        return this.sessions;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.request = CorePaymentRequest.fromJSON(this.core, array.request);
-        this.gateway = Gateway.fromJSON(array.gateway);
-        this.metadata = array.metadata;
-        this.network = Network.fromJSON(this.core, array.network);
-        this.legacyUsername = array.legacyUsername;
-        this.player = Player.fromJSON(this.core, array.player);
         this.sessions = new Array();
+    }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.request = new CorePaymentRequest(this.core).fromObject(array.request);
+        this.gateway = new Gateway(array.gateway.name, array.gateway.url, array.gateway.color, array.gateway.logo);
+        this.metadata = array.metadata;
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.legacyUsername = array.legacyUsername;
+        try {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        catch (error) {
+            this.player = null;
+        }
         // this.sessions = ... (TODO)
         return this;
     }
-    static fromJSON(core, json) {
-        return new Payment(core, json.uuid, CorePaymentRequest.fromJSON(core, json.request), Gateway.fromJSON(json.gateway), json.metadata, Network.fromJSON(core, json.network), json.legacyUsername, Player.fromJSON(core, json.player), new Array() //TODO: add connections parsing
-        );
-    }
 }
 class CorePaymentRequest extends Core {
-    constructor(core, uuid, store, products, username, player, sessionList, warnings, discounts, gateways, due, currency) {
+    constructor(core) {
         super(core.getTool());
         this.core = new Core(core.getTool());
-        this.uuid = uuid;
-        this.store = store;
-        this.products = products == null ? new Array() : products;
-        this.username = username;
-        this.sessionList = sessionList == null ? new Array() : sessionList;
-        this.warnings = warnings == null ? new Array() : warnings;
-        this.discounts = discounts == null ? new Array() : discounts;
-        this.gateways = gateways == null ? new Array() : gateways;
-        this.due = due;
-        this.currency = currency;
+        this.products = new Array();
+        this.sessionList = new Array();
+        this.warnings = new Array();
+        this.discounts = new Array();
+        this.gateways = new Array();
     }
     isPaid() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ request: this.uuid }, "payment/request/isPaid/")
-                .then(json => json.paid);
+                .commit({
+                request: this.uuid,
+            }, "payment/request/isPaid/")
+                .then((jsonresponse) => {
+                return jsonresponse.paid;
+            });
         });
     }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
+    fromObject(array) {
         this.uuid = array.uuid;
-        this.store = Store.fromJSON(this.core, array.store);
-        this.products = array.products.map(product => StoreItem.fromJSON(this.core, product));
+        this.store = new Store(new Network(this.core, new Instance(this.core, array.store.network.uuid, array.store.network.name, "NTW")));
+        array.products.forEach((product) => {
+            this.products.push(new StoreItem(this.core).fromObject(product));
+        });
         this.username = array.username;
-        this.player = Player.fromJSON(this.core, array.player);
-        this.sessionList = array.sessionList.map(session => ConnectionHash.fromJSON(this.core, session)); //TODO: check implementation as it was a todo previously
-        this.warnings = array.warnings.map(Warning.fromJSON);
-        this.discounts = array.discounts.map(Discount.fromJSON);
-        this.gateways = array.gateways.map(Gateway.fromJSON);
+        try {
+            this.player = new Player(this.core, array.player.coreid, array.player.username, array.player.uuid, array.player.verified);
+        }
+        catch (error) {
+            this.player = null;
+        }
+        if (array.sessionList != null) {
+            array.sessionList.forEach((session) => {
+                // TODO
+            });
+        }
+        if (array.warnings != null) {
+            array.warnings.forEach((warning) => {
+                try {
+                    this.warnings.push(new Warning(warning.cause, warning.text));
+                }
+                catch (error) {
+                    // ignore
+                }
+            });
+        }
+        if (array.discounts != null) {
+            array.discounts.forEach((discount) => {
+                try {
+                    this.discounts.push(new Discount(discount.type, discount.id, discount.description, discount.amount));
+                }
+                catch (error) {
+                    // ignore
+                }
+            });
+        }
+        if (array.gateways != null) {
+            array.gateways.forEach((gateway) => {
+                this.gateways.push(new Gateway(gateway.name, gateway.url, gateway.color, gateway.logo));
+            });
+        }
         this.due = array.due;
         this.currency = array.currency;
         return this;
-    }
-    static fromJSON(core, json) {
-        return new CorePaymentRequest(core, json.uuid, Store.fromJSON(core, json.store), json.products.map(product => StoreItem.fromJSON(core, product)), json.username, Player.fromJSON(core, json.player), json.sessionList.map(session => ConnectionHash.fromJSON(core, session)), json.warnings.map(Warning.fromJSON), json.discounts.map(Discount.fromJSON), json.gateways.map(Gateway.fromJSON), json.due, json.currency);
     }
 }
 class Warning {
@@ -3204,17 +3074,7 @@ class Warning {
         this.cause = cause;
         this.text = text;
     }
-    getCause() {
-        return this.cause;
-    }
-    getText() {
-        return this.text;
-    }
-    static fromJSON(json) {
-        return new Warning(json.cause, json.text);
-    }
 }
-///<reference path="StripePaymentMethodType.ts"/>
 class Owner extends Core {
     constructor(core, id, name, surname, email) {
         super(core.getTool());
@@ -3241,7 +3101,7 @@ class Owner extends Core {
     }
     stripeSubscribe(plan, billingAddress, pm) {
         return __awaiter(this, void 0, void 0, function* () {
-            let args;
+            var args = {};
             if (pm == null) {
                 args = {
                     plan: plan,
@@ -3249,7 +3109,7 @@ class Owner extends Core {
                 };
             }
             else {
-                let pmid;
+                var pmid = null;
                 if (typeof pm == "string") {
                     pmid = pm;
                 }
@@ -3263,8 +3123,10 @@ class Owner extends Core {
                 };
             }
             return yield new Call(this.core)
-                .commit(args, "account/subscribe/stripe/")
-                .then(json => StripeSubscription.fromJSON(json));
+                .commit({}, "account/subscribe/stripe/")
+                .then(function (jsonresponse) {
+                return new StripeSubscription(jsonresponse.id);
+            });
         });
     }
     paypalSubscribe(plan, billingAddress) {
@@ -3274,20 +3136,23 @@ class Owner extends Core {
                 plan: plan,
                 billing: JSON.stringify(billingAddress),
             }, "account/subscribe/paypal/")
-                .then(json => PayPalSubscription.fromJSON(json));
+                .then(function (jsonresponse) {
+                return new PayPalSubscription(jsonresponse.url, jsonresponse.id);
+            });
         });
     }
     getBillingAddress() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({}, "account/billing/get/")
-                .then(BillingAddress.fromJSON);
+                .then(function (jsonresponse) {
+                return new BillingAddress().fromObject(jsonresponse);
+            });
         });
     }
-    //TODO: add types
     addPaymentMethod(pm) {
         return __awaiter(this, void 0, void 0, function* () {
-            let pmid;
+            var pmid = null;
             if (typeof pm == "string") {
                 pmid = pm;
             }
@@ -3295,14 +3160,17 @@ class Owner extends Core {
                 pmid = pm.paymentMethod.id;
             }
             return yield new Call(this.core)
-                .commit({ pm: pmid }, "account/card/add/")
-                .then(json => json);
+                .commit({
+                pm: pmid,
+            }, "account/card/add/")
+                .then(function (jsonresponse) {
+                return jsonresponse;
+            });
         });
     }
-    //TODO: add types
     removePaymentMethod(pm) {
         return __awaiter(this, void 0, void 0, function* () {
-            let pmid = null;
+            var pmid = null;
             if (typeof pm == "string") {
                 pmid = pm;
             }
@@ -3310,38 +3178,59 @@ class Owner extends Core {
                 pmid = pm.paymentMethod.id;
             }
             return yield new Call(this.core)
-                .commit({ pm: pmid }, "account/card/remove/")
-                .then(json => json.success);
+                .commit({
+                pm: pmid,
+            }, "account/card/remove/")
+                .then(function (jsonresponse) {
+                return jsonresponse.success;
+            });
         });
     }
-    /**
-     * @see https://stripe.com/docs/api/payment_methods/object
-     */
     getPaymentMethods() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({}, "account/card/list/")
-                .then(json => json);
+                .then(function (jsonresponse) {
+                // array of https://stripe.com/docs/api/payment_methods/object
+                return jsonresponse;
+            });
         });
     }
     createNetwork(name, game, cname, ip, port) {
         return __awaiter(this, void 0, void 0, function* () {
-            let args = {
-                name: name,
-                game: game,
-                cname: cname,
-            };
-            if (ip != null)
-                args.ip = ip;
-            if (port != null)
-                args.port = port;
+            var core = this.core;
+            var args = {};
+            if (ip == null) {
+                args = {
+                    name: name,
+                    game: game,
+                    cname: cname,
+                };
+            }
+            else if (port == null) {
+                args = {
+                    name: name,
+                    game: game,
+                    cname: cname,
+                    ip: ip,
+                };
+            }
+            else {
+                args = {
+                    name: name,
+                    game: game,
+                    cname: cname,
+                    ip: ip,
+                    port: port,
+                };
+            }
             return yield new Call(this.core)
-                .commit(args, "instance/network/create/")
-                .then(json => Network.fromJSON(this.core, json));
+                .commit({}, "instance/network/create/")
+                .then(function (jsonresponse) {
+                var network = new Network(core, new Instance(core, jsonresponse.uuid, jsonresponse.name, "NTW"));
+                return network;
+            });
         });
-    }
-    static fromJSON(core, json) {
-        return new Owner(core, json.id, json.name, json.surname, json.email);
     }
 }
 class Player extends Core {
@@ -3355,92 +3244,164 @@ class Player extends Core {
     }
     closeConnections(instance) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield new Call(this.core)
+            var core = this.core;
+            return yield new Call(core)
                 .commit({ instance: instance.getId() }, "connection/close/all/")
-                .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+                .then(function (jsonresponse) {
+                var connectionsClosed = new Array();
+                jsonresponse.forEach((connectionJson) => {
+                    connectionsClosed.push(new Connection(core).fromObject(connectionJson));
+                });
+                return connectionsClosed;
+            });
         });
     }
     openConnection(ip, instance) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield new Call(this.core)
+            var core = this.core;
+            return yield new Call(core)
                 .commit({
                 instance: instance.getId(),
                 ip: ip,
                 username: this.username,
                 uuid: this.uuid,
             }, "connection/new/")
-                .then(json => Connection.fromJSON(this.core, json));
+                .then(function (jsonresponse) {
+                return new Connection(core).fromObject(jsonresponse);
+            });
         });
     }
     getBillingAddress() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield new Call(this.core)
+            var core = this.core;
+            return yield new Call(core)
                 .commit({}, "player/billing/get/")
-                .then(BillingAddress.fromJSON);
+                .then(function (jsonresponse) {
+                return new BillingAddress().fromObject(jsonresponse);
+            });
         });
     }
     getPunishments(network, page) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
-            let args = {
-                player: this.id,
-                page: page.toString(),
-            };
-            if (network != null)
-                args.network = network.getId();
-            return yield new Call(this.core)
+            var id = this.id;
+            var core = this.core;
+            var queryPage = 0;
+            if (page != undefined || page != null) {
+                queryPage = page;
+            }
+            var args = {};
+            if (network != null) {
+                args = {
+                    page: page.toString(),
+                    player: id,
+                    network: network.getId(),
+                };
+            }
+            else {
+                args = {
+                    player: id,
+                    page: page.toString(),
+                };
+            }
+            return yield new Call(core)
                 .commit(args, "player/punishment/list/")
-                .then(json => json.map(punishment => Punishment.fromJSON(this.core, punishment)));
+                .then(function (jsonresponse) {
+                var punishments = new Array();
+                jsonresponse.forEach((punishmentJson) => {
+                    punishments.push(new Punishment(core).fromObject(punishmentJson));
+                });
+                return punishments;
+            });
         });
     }
     getPayments(store, page) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
-            return yield new Call(this.core)
+            var id = this.id;
+            var core = this.core;
+            var queryPage = 0;
+            if (page != undefined || page != null) {
+                queryPage = page;
+            }
+            return yield new Call(core)
                 .commit({
                 network: store.getNetwork().getId(),
-                page: page.toString(),
-                player: this.id,
+                page: queryPage.toString(),
+                player: id,
             }, "player/payment/list/")
-                .then(json => json.map(payment => Payment.fromJSON(this.core, payment)));
+                .then(function (jsonresponse) {
+                var payments = new Array();
+                jsonresponse.forEach((paymentJson) => {
+                    payments.push(new Payment(core).fromObject(paymentJson));
+                });
+                return payments;
+            });
         });
     }
     getDiscordId() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({}, "player/payment/list/")
-                .then(json => json.id);
+                .then(function (jsonresponse) {
+                return String(jsonresponse.id);
+            });
         });
     }
     getConnections(instance, page) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
-            let args = {
-                page: page,
-                player: this.id
-            };
-            if (instance != null)
-                args.instance = instance.getId();
+            var id = this.id;
+            var core = this.core;
+            var queryPage = 0;
+            if (page != undefined || page != null) {
+                queryPage = page;
+            }
+            var args = {};
+            if (instance != null) {
+                args = { page: queryPage, player: id, instance: instance.getId() };
+            }
+            else {
+                args = { page: queryPage, player: id };
+            }
             return yield new Call(this.core)
                 .commit(args, "player/connection/list/")
-                .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+                .then(function (jsonresponse) {
+                var connections = new Array();
+                jsonresponse.forEach((connectionJson) => {
+                    connections.push(new Connection(core).fromObject(connectionJson));
+                });
+                return connections;
+            });
         });
     }
     getMatchingConnections(instance, page, playerList) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (page == undefined)
-                page = 0;
+            var id = this.id;
+            var queryPage = 0;
+            var playerListIds = [];
+            playerList.forEach((player) => {
+                playerListIds.push(player.getId());
+            });
+            if (page != undefined || page != null) {
+                queryPage = page;
+            }
             return yield new Call(this.core)
                 .commit({
                 instance: instance.getId(),
-                page: page,
-                players: JSON.stringify(playerList.map(player => player.getId())),
-                player: this.id,
+                page: queryPage,
+                players: JSON.stringify(playerListIds),
+                player: id,
             }, "connection/list/match/players/")
-                .then(json => json.map(activity => ActivityMatch.fromJSON(activity)));
+                .then(function (jsonresponse) {
+                var activityMatch = new Array();
+                jsonresponse.forEach((activity) => {
+                    var matchingRanges = new Array();
+                    activity.matchList.forEach((matchingRangeJson) => {
+                        var matchingRange = new MatchingRange(new Date(matchingRangeJson.startedOn * 1000), new Date(matchingRangeJson.finishedOn * 1000), matchingRangeJson.matchWith);
+                        matchingRanges.push(matchingRange);
+                    });
+                    activityMatch.push(new ActivityMatch(new Date(activity.startedOn * 1000), new Date(activity.finishedOn * 1000), activity.activity, matchingRanges));
+                });
+                return activityMatch;
+            });
         });
     }
     getId() {
@@ -3451,12 +3412,6 @@ class Player extends Core {
     }
     getUsername() {
         return this.username;
-    }
-    isVerified() {
-        return this.verified;
-    }
-    static fromJSON(core, json) {
-        return new Player(core, json.id, json.username, json.uuid, json.verified);
     }
 }
 class VotingSite extends Core {
@@ -3469,7 +3424,16 @@ class VotingSite extends Core {
         this.timezone = timezone;
         this.name = name;
         this.url = url;
-        this.technicalName = technicalName;
+    }
+    fromObject(array) {
+        this.uuid = array.uuid;
+        this.supervisor = new Owner(this.core, array.supervisor.id, array.supervisor.name, array.supervisor.surname, array.supervisor.email);
+        this.resetTimes = array.resetTimes;
+        this.timezone = array.timezone;
+        this.name = array.name;
+        this.url = array.url;
+        this.technicalName = array.technicalName;
+        return this;
     }
     getConfig(network, empty = true) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -3482,43 +3446,6 @@ class VotingSite extends Core {
             }
         });
     }
-    getId() {
-        return this.uuid;
-    }
-    getSupervisor() {
-        return this.supervisor;
-    }
-    getResetTimes() {
-        return this.resetTimes;
-    }
-    getTimezone() {
-        return this.timezone;
-    }
-    getName() {
-        return this.name;
-    }
-    getUrl() {
-        return this.url;
-    }
-    getTechnicalName() {
-        return this.technicalName;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.uuid = array.uuid;
-        this.supervisor = Owner.fromJSON(this.core, array.supervisor);
-        this.resetTimes = array.resetTimes;
-        this.timezone = array.timezone;
-        this.name = array.name;
-        this.url = array.url;
-        this.technicalName = array.technicalName;
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new VotingSite(core, json.uuid, Owner.fromJSON(core, json.supervisor), json.resetTimes, json.timezone, json.name, json.url, json.technicalName);
-    }
 }
 class VotingSiteConfig extends Core {
     constructor(core, network, votingSite, url) {
@@ -3528,39 +3455,25 @@ class VotingSiteConfig extends Core {
         this.votingSite = votingSite;
         this.url = url;
     }
+    fromObject(array) {
+        this.votingSite = new VotingSite(this.core).fromObject(array.votingSite);
+        this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
+        this.url = array.url;
+        return this;
+    }
     setURL(url) {
         return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
             return new Call(this.core)
                 .commit({
                 network: this.network.uuid,
                 url: url,
-                site: this.votingSite.getId(),
+                site: this.votingSite.uuid,
             }, "instance/network/voting/site/setup/")
-                .then((json) => {
-                this.url = json.url;
+                .then((jsonresponse) => {
+                main.url = jsonresponse.url;
                 return this;
             });
         });
-    }
-    getNetwork() {
-        return this.network;
-    }
-    getVotingSite() {
-        return this.votingSite;
-    }
-    getUrl() {
-        return this.url;
-    }
-    /**
-     * @deprecated use static method fromJSON
-     */
-    fromArray(array) {
-        this.votingSite = VotingSite.fromJSON(this.core, array.votingSite);
-        this.network = Network.fromJSON(this.core, array.network);
-        this.url = array.url;
-        return this;
-    }
-    static fromJSON(core, json) {
-        return new VotingSiteConfig(core, Network.fromJSON(core, json.network), VotingSite.fromJSON(core, json.votingSite), json.url);
     }
 }

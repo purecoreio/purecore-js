@@ -1,4 +1,4 @@
 node_modules/
 tests/
-package-lock.json
-.idea
+.idea/
+.DS_Store

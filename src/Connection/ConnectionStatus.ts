@@ -1,41 +1,35 @@
 class ConnectionStatus {
-    public openedOn: Date;
-    public closedOn: Date;
+  public openedOn: Date;
+  public closedOn: Date;
 
-    public constructor(openedOn?: Date, closedOn?: Date) {
-        this.openedOn = openedOn;
-        this.closedOn = closedOn;
-    }
+  public constructor(openedOn?: Date, closedOn?: Date) {
+    this.openedOn = openedOn;
+    this.closedOn = closedOn;
+  }
 
-    public getOpenedOn(): Date {
-        return this.openedOn;
-    }
+  public fromObject(array): ConnectionStatus {
+    this.openedOn = new Date(array.openedOn * 1000);
+    this.closedOn = new Date(array.closedOn * 1000);
+    return this;
+  }
 
-    public isActive(): boolean {
-        return this.closedOn == undefined;
-    }
+  public getOpenedOn(): Date {
+    return this.openedOn;
+  }
 
-    public isClosed(): boolean {
-        return !this.isActive();
+  public isActive(): boolean {
+    if (this.closedOn == undefined || this.closedOn == null) {
+      return true;
+    } else {
+      return false;
     }
+  }
 
-    public getClosedOn(): Date {
-        return this.closedOn;
-    }
+  public isClosed(): boolean {
+    return !this.isActive();
+  }
 
-    /**
-     * @deprecated use static method fromJSON
-     */
-    public fromArray(array): ConnectionStatus {
-        this.openedOn = new Date(array.openedOn * 1000);
-        this.closedOn = new Date(array.closedOn * 1000);
-        return this;
-    }
-
-    public static fromJSON(json: any): ConnectionStatus {
-        return new ConnectionStatus(
-            new Date(json.openedOn * 1000),
-            json.closedOn == null ? null : new Date(json.closedOn * 1000)
-        );
-    }
+  public getClosedOn(): Date {
+    return this.closedOn;
+  }
 }

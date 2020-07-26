@@ -1,15 +1,11 @@
 class StripeSubscription {
-    public id: string;
+  public id;
 
-    public constructor(id: string) {
-        this.id = id;
-    }
+  public constructor(id: string) {
+    this.id = id;
+  }
 
-    public getID(): string {
-        return this.id;
-    }
-
-    public static fromJSON(json: any): StripeSubscription {
-        return new StripeSubscription(json.id);
-    }
+  public getID() {
+    return this.id;
+  }
 }

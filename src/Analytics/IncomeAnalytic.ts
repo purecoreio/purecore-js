@@ -29,7 +29,7 @@ class IncomeAnalytic {
     return new Analytic(this.timestamp, this, this.getFields());
   }
 
-  public fromArray(array): IncomeAnalytic {
+  public fromObject(array): IncomeAnalytic {
     this.uuid = array.uuid;
     this.store = null;
     this.finalIncome = array.finalIncome;

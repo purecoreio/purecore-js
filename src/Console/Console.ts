@@ -1,3 +1,3 @@
 class InstanceConsole {
-    public messages: Array<ConsoleLine>;
+  messages: Array<ConsoleLine>;
 }

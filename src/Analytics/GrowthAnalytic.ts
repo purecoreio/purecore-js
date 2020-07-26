@@ -41,7 +41,7 @@ class GrowthAnalytic {
     return new Analytic(this.timestamp, this, this.getFields());
   }
 
-  public fromArray(array): GrowthAnalytic {
+  public fromObject(array): GrowthAnalytic {
     this.uuid = null;
     this.instance = null;
 

@@ -1,16 +1,11 @@
 class Instance extends Core {
-  public core: Core;
-  public uuid: string;
-  public name: string;
-  public type: CoreInstanceType;
+  core: Core;
+  uuid: string;
+  name: string;
+  type: string;
 
-  public constructor(
-    core: Core,
-    uuid: string,
-    name: string,
-    type: CoreInstanceType
-  ) {
-    super(core.getTool(), core.dev);
+  constructor(core: Core, uuid: string, name: string, type: string) {
+    super(core.getTool());
     this.core = core;
     this.uuid = uuid;
     this.name = name;
@@ -18,19 +13,43 @@ class Instance extends Core {
   }
 
   public async closeOpenConnections(): Promise<Array<Connection>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ instance: this.uuid }, "instance/connections/close/all/")
-      .then((json) =>
-        json.map((connection) => Connection.fromJSON(this.core, connection))
-      );
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/connections/close/all/"
+      )
+      .then((jsonresponse) => {
+        var connectionList = new Array<Connection>();
+        jsonresponse.forEach((connectionJson) => {
+          var connection = new Connection(main.core).fromObject(connectionJson);
+          connectionList.push(connection);
+        });
+        return connectionList;
+      });
   }
 
   public async getOpenConnections(): Promise<Array<Connection>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ instance: this.uuid }, "instance/connections/open/list/")
-      .then((json) =>
-        json.map((connection) => Connection.fromJSON(this.core, connection))
-      );
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/connections/open/list/"
+      )
+      .then((jsonresponse) => {
+        var connectionList = new Array<Connection>();
+        jsonresponse.forEach((connectionJson) => {
+          var connection = new Connection(main.core).fromObject(connectionJson);
+          connectionList.push(connection);
+        });
+        return connectionList;
+      });
   }
 
   public async getGrowthAnalytics(
@@ -44,35 +63,58 @@ class Instance extends Core {
         },
         "instance/growth/analytics/"
       )
-      .then((json) =>
-        json.map((growthAnalytic) =>
-          new GrowthAnalytic().fromArray(growthAnalytic)
-        )
-      );
+      .then((jsonresponse) => {
+        var growthAnalytics = new Array<GrowthAnalytic>();
+        jsonresponse.forEach((growthAnalyticJSON) => {
+          var growthAnalytic = new GrowthAnalytic().fromObject(
+            growthAnalyticJSON
+          );
+          growthAnalytics.push(growthAnalytic);
+        });
+        return growthAnalytics;
+      });
   }
 
   public async delete(): Promise<boolean> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ instance: this.uuid }, "instance/delete/")
-      .then(() => true); //TODO: process return
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/delete/"
+      )
+      .then(() => {
+        return true;
+      });
   }
 
   public async getKeys(): Promise<Array<Key>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ instance: this.uuid }, "instance/key/list/")
-      .then((json) => json.map((key) => Key.fromJSON(this.core, key)));
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/key/list/"
+      )
+      .then((jsonresponse) => {
+        var keyList = new Array<Key>();
+        jsonresponse.forEach((jsonKey) => {
+          keyList.push(new Key(main.core).fromObject(jsonKey));
+        });
+        return keyList;
+      });
   }
 
-  public getName(): string {
+  public getName() {
     return this.name;
   }
 
-  public getId(): string {
+  public getId() {
     return this.uuid;
-  }
-
-  public getType(): CoreInstanceType {
-    return this.type;
   }
 
   public asNetwork(): Network {
@@ -80,32 +122,26 @@ class Instance extends Core {
   }
 
   public async update(): Promise<Instance> {
-    return new Call(this.core)
-      .commit({ instance: this.uuid }, "instance/info/")
-      .then((json) => {
-        if (json.server == null) {
-          this.type = "NTW";
-          this.uuid = json.network.uuid;
-          this.name = json.network.name;
-        } else {
-          this.type = "SVR";
-          this.uuid = json.server.uuid;
-          this.name = json.server.name;
-        }
-        return this;
-      });
-  }
+    let main = this;
 
-  public static fromJSON(
-    core: Core,
-    json: any,
-    type?: CoreInstanceType
-  ): Instance {
-    return new Instance(
-      core,
-      json.uuid,
-      json.name,
-      type == undefined ? "UNK" : type //TODO: check api calls for json.type
-    );
+    return new Call(this.core)
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/info/"
+      )
+      .then((jsonresponse) => {
+        if (jsonresponse.server == null) {
+          main.type = "NTW";
+          main.uuid = jsonresponse.network.uuid;
+          main.name = jsonresponse.network.name;
+        } else {
+          main.type = "SVR";
+          main.uuid = jsonresponse.server.uuid;
+          main.name = jsonresponse.server.name;
+        }
+        return main;
+      });
   }
 }

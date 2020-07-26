@@ -1,28 +1,28 @@
 {
-    "name": "purecore",
-    "version": "1.15.8",
-    "description": "purecore js client",
-    "main": "./compiled/core.js",
-    "directories": {
-        "test": "tests"
-    },
-    "dependencies": {
-        "@types/node": "^12.12.47"
-    },
-    "devDependencies": {},
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/purecoreio/purecore-js.git"
-    },
-    "keywords": [
-        "purecore",
-        "minecraft",
-        "mojang"
-    ],
-    "author": "quiquelhappy",
-    "license": "ISC",
-    "homepage": "https://github.com/purecoreio/purecore-js/blob/master/README.md"
+  "name": "purecore",
+  "version": "1.16.2",
+  "description": "purecore js client",
+  "main": "./compiled/core.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "@types/node": "^12.12.28"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/purecoreio/purecore-js.git"
+  },
+  "keywords": [
+    "purecore",
+    "minecraft",
+    "mojang"
+  ],
+  "author": "quiquelhappy",
+  "license": "ISC",
+  "homepage": "https://github.com/purecoreio/purecore-js/blob/master/README.md"
 }

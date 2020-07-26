@@ -1,1 +1,0 @@
-type PointType = "GMT" | "CHT"

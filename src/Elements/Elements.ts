@@ -1,12 +1,12 @@
 class Elements extends Core {
-    public core: Core;
+  core: Core;
 
-    public constructor(core: Core) {
-        super(core.getKey());
-        this.core = core;
-    }
+  constructor(core: Core) {
+    super(core.getKey());
+    this.core = core;
+  }
 
-    public getCheckoutElement(products: Array<StoreItem>, successFunction): CheckoutElement {
-        return new CheckoutElement(this.core, products, successFunction);
-    }
+  getCheckoutElement(products: Array<StoreItem>, successFunction) {
+    return new CheckoutElement(this.core, products, successFunction);
+  }
 }

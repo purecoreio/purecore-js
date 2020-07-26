@@ -1,3 +1,4 @@
+# javascript
 # purecore.io javascript wrapper 
 [![npm version](https://img.shields.io/npm/v/purecore)](https://www.npmjs.com/package/purecore)
 [![discord guild](https://img.shields.io/discord/622819380958461984.svg)](https://discord.com/invite/CVnQAh?utm_source=Discord%20Widget&utm_medium=Connect)

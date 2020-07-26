@@ -1,64 +1,68 @@
 class Call extends Core {
-  private readonly baseURL: string;
-  private readonly core: Core;
+  public baseURL;
+  public core;
 
   public constructor(core: Core) {
     super(core.getTool(), core.dev);
     this.core = core;
-    this.baseURL = "https://api.purecore.io/rest/2";
+    this.baseURL = "https://api.purecore.io/rest/2/";
   }
 
-  public async commit(
-    args: any,
-    endpoint: string,
-    request?: RequestInit
-  ): Promise<any> {
-    if (args == null) args = {};
-    if (request == null) request = { method: "POST" };
+  public async commit(args = {}, endpoint: string): Promise<any> {
+    var key = this.core.getKey();
+    var session = this.core.getCoreSession();
+    var baseURL = this.baseURL;
 
-    if (this.core.getCoreSession() != null) {
-      args.hash = this.core.getCoreSession().getHash();
-    } else if (this.core.getKey() != null) {
-      args.key = this.core.getKey();
+    var finalArgs = {};
+    if (args == null) {
+      finalArgs = {};
+    } else {
+      finalArgs = args;
     }
 
-    const url =
-      this.baseURL +
-      Call.formatEndpoint(endpoint) +
-      "?" +
-      Object.keys(args)
-        .filter((key) => args.hasOwnProperty(key))
-        .map(
-          (key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key])
-        )
-        .join("&");
+    if (session != null) {
+      finalArgs["hash"] = session.getHash();
+    } else if (key != null) {
+      finalArgs["key"] = key;
+    }
+
+    var paramsEncoded = Object.keys(finalArgs)
+      .filter(function (key) {
+        return finalArgs[key] ? true : false;
+      })
+      .map(function (key) {
+        return (
+          encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key])
+        );
+      })
+      .join("&");
+
+    var url = baseURL + endpoint + "?" + paramsEncoded;
 
     if (this.core.dev) {
-      var visibleArgs: any = args;
-      if (args.key != null) visibleArgs.key = "***";
-      if (args.hash != null) visibleArgs.hash = "***";
-      console.log(visibleArgs);
+      var visibleArgs: any = finalArgs;
+      if (finalArgs["key"] != null) visibleArgs.key = "***";
+      if (finalArgs["hash"] != null) visibleArgs.hash = "***";
+      console.log(baseURL + endpoint, visibleArgs);
     }
 
-    return new Promise((resolve, reject) => {
-      return fetch(url, request)
-        .then((response: Response) => response.json())
-        .then((response: any) => {
+    return new Promise(function (resolve, reject) {
+      return fetch(url, {
+        method: "POST",
+      })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (response) {
           if ("error" in response) {
             throw new Error(response.error + ". " + response.msg);
           } else {
             resolve(response);
           }
         })
-        .catch((error) => reject(error.message));
+        .catch(function (error) {
+          reject(error.message);
+        });
     });
-  }
-
-  private static formatEndpoint(endpoint: string): string {
-    return (
-      (endpoint.startsWith("/") ? "" : "/") +
-      endpoint +
-      (endpoint.endsWith("/") ? "" : "/")
-    );
   }
 }

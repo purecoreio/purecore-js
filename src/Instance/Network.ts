@@ -1,51 +1,101 @@
 class Network extends Core {
-  public core: Core;
-  public uuid: string;
-  public name: string;
+  core: Core;
+  uuid: string;
+  name: string;
 
-  public constructor(core: Core, instance: Instance) {
-    super(core.getTool(), core.dev);
+  constructor(core: Core, instance: Instance) {
+    super(core.getTool());
     this.core = core;
     this.uuid = instance.getId();
     this.name = instance.getName();
   }
 
-  public getStore(): Store {
+  getStore(): Store {
     return new Store(this);
   }
 
-  public getForum(): Forum {
+  getForum(): Forum {
     return new Forum(this);
   }
 
-  public getId(): string {
+  getId() {
     return this.uuid;
   }
 
   public async getDevKey(): Promise<Key> {
+    let main = this;
     return new Call(this.core)
-      .commit({ network: this.uuid }, "key/get/dev/")
-      .then((json) => Key.fromJSON(this.core, json));
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "key/get/dev/"
+      )
+      .then((jsonresponse) => {
+        return new Key(main.core).fromObject(jsonresponse);
+      });
   }
 
   public async getKeyFromId(keyid: string): Promise<Key> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ keyid: keyid }, "key/from/id/")
-      .then((json) => Key.fromJSON(this.core, json));
+      .commit(
+        {
+          keyid: keyid,
+        },
+        "key/from/id/"
+      )
+      .then((jsonresponse) => {
+        return new Key(main.core).fromObject(jsonresponse);
+      });
   }
 
   public async createServer(name: string): Promise<Instance> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ name: name, network: this.uuid }, "instance/server/create/")
-      .then((json) => Instance.fromJSON(this.core, json, "SVR"));
+      .commit(
+        {
+          name: name,
+          network: this.uuid
+        },
+        "instance/server/create/"
+      )
+      .then((jsonresponse) => {
+        return new Instance(
+          main.core,
+          jsonresponse.uuid,
+          jsonresponse.name,
+          "SVR"
+        );
+      });
   }
 
   public async getServers(): Promise<Array<Instance>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ network: this.uuid }, "instance/server/list/")
-      .then((json) =>
-        json.map((server) => Instance.fromJSON(this.core, server, "SVR"))
-      );
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/server/list/"
+      )
+      .then((jsonresponse) => {
+        var servers = new Array<Instance>();
+        jsonresponse.forEach((serverInstance) => {
+          servers.push(
+            new Instance(
+              main.core,
+              serverInstance.uuid,
+              serverInstance.name,
+              "SVR"
+            )
+          );
+        });
+        return servers;
+      });
   }
 
   public asInstance(): Instance {
@@ -53,7 +103,7 @@ class Network extends Core {
   }
 
   public async getVotingAnalytics(
-    span: number = 3600 * 24
+    span = 3600 * 24
   ): Promise<Array<VoteAnalytic>> {
     return new Call(this.core)
       .commit(
@@ -63,88 +113,184 @@ class Network extends Core {
         },
         "instance/network/voting/analytics/"
       )
-      .then((json) =>
-        json.map((analytic) => new VoteAnalytic().fromArray(analytic))
-      );
+      .then((jsonresponse) => {
+        var votingAnalytics = new Array<VoteAnalytic>();
+        jsonresponse.forEach((votingAnalyticJSON) => {
+          var votingAnalytic = new VoteAnalytic().fromObject(votingAnalyticJSON);
+          votingAnalytics.push(votingAnalytic);
+        });
+        return votingAnalytics;
+      });
   }
 
   async getVotingSites(): Promise<Array<VotingSite>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ network: this.uuid }, "instance/network/voting/site/list/")
-      .then((json) => json.map((site) => VotingSite.fromJSON(this.core, site)));
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/network/voting/site/list/"
+      )
+      .then((jsonresponse) => {
+        var siteArray = new Array<VotingSite>();
+        jsonresponse.forEach((votingSite) => {
+          var site = new VotingSite(main.core).fromObject(votingSite);
+          siteArray.push(site);
+        });
+        return siteArray;
+      });
   }
 
   public async getSetupVotingSites(
     displaySetup: boolean = true
   ): Promise<Array<VotingSite | VotingSiteConfig>> {
+    let main = this;
+    var url;
+
+    if (displaySetup) {
+      url = "instance/network/voting/site/list/setup/config/";
+    } else {
+      url = "instance/network/voting/site/list/setup/";
+    }
+
     return new Call(this.core)
       .commit(
-        { network: this.uuid },
-        "instance/network/voting/site/list/setup/" +
-          (displaySetup ? "config" : "")
+        {
+          network: this.uuid,
+        },
+        url
       )
-      .then((json) =>
-        displaySetup
-          ? json.map((site) => VotingSiteConfig.fromJSON(this.core, site))
-          : json.map((site) => VotingSite.fromJSON(this.core, site))
-      );
+      .then((jsonresponse) => {
+        if (displaySetup) {
+          var configArray = new Array<VotingSiteConfig>();
+          jsonresponse.forEach((votingSite) => {
+            var siteConfig = new VotingSiteConfig(main.core).fromObject(
+              votingSite
+            );
+            configArray.push(siteConfig);
+          });
+          return configArray;
+        } else {
+          var siteArray = new Array<VotingSite>();
+          jsonresponse.forEach((votingSite) => {
+            var site = new VotingSite(main.core).fromObject(votingSite);
+            siteArray.push(site);
+          });
+          return siteArray;
+        }
+      });
   }
 
   public async getGuild(): Promise<DiscordGuild> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ network: this.uuid }, "instance/network/discord/get/guild/")
-      .then((json) => DiscordGuild.fromJSON(this, json));
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/network/discord/get/guild/"
+      )
+      .then((jsonresponse) => {
+        return new DiscordGuild(main).fromObject(jsonresponse);
+      });
   }
 
   public async setGuild(discordGuildId: string): Promise<boolean> {
     return new Call(this.core)
       .commit(
-        { guildid: discordGuildId, network: this.uuid },
+        {
+          guildid: discordGuildId,
+        },
         "/instance/network/discord/setguild/"
       )
-      .then(() => true); //TODO: process response
+      .then(() => {
+        return true;
+      });
   }
 
   public async setSessionChannel(channelId: string): Promise<boolean> {
+    var key = this.core.getKey();
+
     return new Call(this.core)
       .commit(
-        { channelid: channelId, network: this.uuid },
+        {
+          channelid: channelId,
+        },
         "instance/network/discord/setchannel/session/"
       )
-      .then(() => true); //TODO: process response
+      .then(() => {
+        return true;
+      });
   }
 
   public async setDonationChannel(channelId: string): Promise<boolean> {
     return new Call(this.core)
       .commit(
-        { channelid: channelId, network: this.uuid },
+        {
+          channelid: channelId,
+        },
         "instance/network/discord/setchannel/donation/"
       )
-      .then(() => true); //TODO: process response
+      .then(() => {
+        return true;
+      });
   }
 
   public async getHashes(): Promise<Array<ConnectionHash>> {
+    let main = this;
     return new Call(this.core)
       .commit({}, "session/hash/list/")
-      .then((json) =>
-        json.map((connection) => ConnectionHash.fromJSON(this.core, connection))
-      );
+      .then((jsonresponse) => {
+        var response = new Array<ConnectionHash>();
+        jsonresponse.forEach((hashData) => {
+          var hash = new ConnectionHash(main.core);
+          response.push(hash.fromObject(hashData));
+        });
+        return response;
+      });
   }
 
   public async getOffences(): Promise<Array<Offence>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ network: this.uuid }, "punishment/offence/list/")
-      .then((json) =>
-        json.map((offence) => Offence.fromJSON(this.core, offence))
-      );
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "punishment/offence/list/"
+      )
+      .then((jsonresponse) => {
+        var response = new Array<Offence>();
+        jsonresponse.forEach((offenceData) => {
+          var offence = new Offence(main.core);
+          response.push(offence.fromObject(offenceData));
+        });
+        return response;
+      });
   }
 
   public async getOffenceActions(): Promise<Array<OffenceAction>> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ network: this.uuid }, "punishment/action/list/")
-      .then((json) =>
-        json.map((action) => OffenceAction.fromJSON(this.core, action))
-      );
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "punishment/action/list/"
+      )
+      .then((jsonresponse) => {
+        var response = new Array<OffenceAction>();
+        jsonresponse.forEach((actionData) => {
+          var offence = new OffenceAction(main.core);
+          response.push(offence.fromObject(actionData));
+        });
+        return response;
+      });
   }
 
   public async searchPlayers(
@@ -152,6 +298,8 @@ class Network extends Core {
     uuid?: string,
     coreid?: string
   ): Promise<Array<Player>> {
+    let main = this;
+
     return new Call(this.core)
       .commit(
         {
@@ -160,49 +308,102 @@ class Network extends Core {
         },
         "player/from/minecraft/username/search/"
       )
-      .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
+      .then((jsonresponse) => {
+        var finalPlayerList = new Array<Player>();
+        jsonresponse.forEach((playerData) => {
+          var player = new Player(
+            main.core,
+            playerData.coreid,
+            playerData.username,
+            playerData.uuid,
+            playerData.verified
+          );
+          finalPlayerList.push(player);
+        });
+        return finalPlayerList;
+      });
   }
 
   public async getPlayer(coreid: string): Promise<Player> {
+    let main = this;
+
     return new Call(this.core)
-      .commit({ player: coreid, network: this.uuid }, "player/from/core/id/")
-      .then((json) => Player.fromJSON(this.core, json));
+      .commit(
+        {
+          player: coreid,
+        },
+        "player/from/core/id/"
+      )
+      .then((jsonresponse) => {
+        var player = new Player(
+          main.core,
+          jsonresponse.coreid,
+          jsonresponse.username,
+          jsonresponse.uuid,
+          jsonresponse.verified
+        );
+        return player;
+      });
   }
 
-  public async getPlayers(page?: number): Promise<Array<Player>> {
-    if (page == undefined) page = 0;
+  public async getPlayers(page?): Promise<Array<Player>> {
+    let main = this;
+
+    var queryPage = 0;
+    if (page != undefined && page != null) {
+      queryPage = page;
+    }
 
     return new Call(this.core)
       .commit(
         {
           network: this.uuid,
-          page: page,
+          page: queryPage,
         },
         "instance/network/list/players/"
       )
-      .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
+      .then((jsonresponse) => {
+        var players = new Array<Player>();
+
+        jsonresponse.forEach((playerJson) => {
+          var player = new Player(
+            main.core,
+            playerJson.coreid,
+            playerJson.username,
+            playerJson.uuid,
+            playerJson.verified
+          );
+          players.push(player);
+        });
+
+        return players;
+      });
   }
 
-  public async getPunishments(page?: number): Promise<Array<Punishment>> {
-    if (page == undefined) page = 0;
+  public async getPunishments(page = 0): Promise<Array<Punishment>> {
+    let main = this;
+
+    var queryPage = 0;
+    if (page != undefined && page != null) {
+      queryPage = page;
+    }
 
     return new Call(this.core)
       .commit(
         {
           network: this.uuid,
-          page: page,
+          page: queryPage,
         },
         "punishment/list/"
       )
-      .then((json) =>
-        json.map((punishment) => Punishment.fromJSON(this.core, punishment))
-      );
-  }
+      .then((jsonresponse) => {
+        var response = new Array<Punishment>();
+        jsonresponse.forEach((punishmentData) => {
+          var punishment = new Punishment(main.core);
+          response.push(punishment.fromObject(punishmentData));
+        });
 
-  public static fromJSON(core: Core, json: any): Network {
-    if (json != null)
-      return new Network(core, new Instance(core, json.uuid, json.name, "NTW"));
-    if (json == null)
-      return new Network(core, new Instance(core, null, null, "NTW"));
+        return response;
+      });
   }
 }
