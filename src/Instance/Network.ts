@@ -200,6 +200,9 @@ class Network extends Core {
   }
 
   public static fromJSON(core: Core, json: any): Network {
-    return new Network(core, new Instance(core, json.uuid, json.name, "NTW"));
+    if (json != null)
+      return new Network(core, new Instance(core, json.uuid, json.name, "NTW"));
+    if (json == null)
+      return new Network(core, new Instance(core, null, null, "NTW"));
   }
 }
