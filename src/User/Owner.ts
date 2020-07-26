@@ -180,7 +180,7 @@ class Owner extends Core {
     }
 
     return await new Call(this.core)
-      .commit({}, "instance/network/create/")
+      .commit(args, "instance/network/create/")
       .then(function (jsonresponse) {
         var network = new Network(
           core,

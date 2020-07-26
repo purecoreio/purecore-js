@@ -604,51 +604,39 @@ class Call extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
         this.core = core;
-        this.baseURL = "https://api.purecore.io/rest/2/";
+        this.baseURL = "https://api.purecore.io/rest/2";
     }
-    commit(args = {}, endpoint) {
+    commit(args, endpoint, request) {
         return __awaiter(this, void 0, void 0, function* () {
-            var key = this.core.getKey();
-            var session = this.core.getCoreSession();
-            var baseURL = this.baseURL;
-            var finalArgs = {};
-            if (args == null) {
-                finalArgs = {};
+            if (args == null)
+                args = {};
+            if (request == null)
+                request = { method: "POST" };
+            if (this.core.getCoreSession() != null) {
+                args.hash = this.core.getCoreSession().getHash();
             }
-            else {
-                finalArgs = args;
+            else if (this.core.getKey() != null) {
+                args.key = this.core.getKey();
             }
-            if (session != null) {
-                finalArgs["hash"] = session.getHash();
-            }
-            else if (key != null) {
-                finalArgs["key"] = key;
-            }
-            var paramsEncoded = Object.keys(finalArgs)
-                .filter(function (key) {
-                return finalArgs[key] ? true : false;
-            })
-                .map(function (key) {
-                return (encodeURIComponent(key) + "=" + encodeURIComponent(finalArgs[key]));
-            })
-                .join("&");
-            var url = baseURL + endpoint + "?" + paramsEncoded;
+            const url = this.baseURL +
+                Call.formatEndpoint(endpoint) +
+                "?" +
+                Object.keys(args)
+                    .filter((key) => args.hasOwnProperty(key))
+                    .map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
+                    .join("&");
             if (this.core.dev) {
-                var visibleArgs = finalArgs;
-                if (finalArgs["key"] != null)
+                var visibleArgs = args;
+                if (args.key != null)
                     visibleArgs.key = "***";
-                if (finalArgs["hash"] != null)
+                if (args.hash != null)
                     visibleArgs.hash = "***";
-                console.log(baseURL + endpoint, visibleArgs);
+                console.log(visibleArgs);
             }
-            return new Promise(function (resolve, reject) {
-                return fetch(url, {
-                    method: "POST",
-                })
-                    .then(function (response) {
-                    return response.json();
-                })
-                    .then(function (response) {
+            return new Promise((resolve, reject) => {
+                return fetch(url, request)
+                    .then((response) => response.json())
+                    .then((response) => {
                     if ("error" in response) {
                         throw new Error(response.error + ". " + response.msg);
                     }
@@ -656,11 +644,14 @@ class Call extends Core {
                         resolve(response);
                     }
                 })
-                    .catch(function (error) {
-                    reject(error.message);
-                });
+                    .catch((error) => reject(error.message));
             });
         });
+    }
+    static formatEndpoint(endpoint) {
+        return ((endpoint.startsWith("/") ? "" : "/") +
+            endpoint +
+            (endpoint.endsWith("/") ? "" : "/"));
     }
 }
 class Command {
@@ -3225,7 +3216,7 @@ class Owner extends Core {
                 };
             }
             return yield new Call(this.core)
-                .commit({}, "instance/network/create/")
+                .commit(args, "instance/network/create/")
                 .then(function (jsonresponse) {
                 var network = new Network(core, new Instance(core, jsonresponse.uuid, jsonresponse.name, "NTW"));
                 return network;
