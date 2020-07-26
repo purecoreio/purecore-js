@@ -597,12 +597,7 @@ class Call extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
         this.core = core;
-        if (core.dev) {
-            this.baseURL = "http://localhost/rest/2";
-        }
-        else {
-            this.baseURL = "https://api.purecore.io/rest/2";
-        }
+        this.baseURL = "https://api.purecore.io/rest/2";
     }
     commit(args, endpoint, request) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -616,12 +611,21 @@ class Call extends Core {
             else if (this.core.getKey() != null) {
                 args.key = this.core.getKey();
             }
-            const url = this.baseURL + Call.formatEndpoint(endpoint) + "?" + Object.keys(args)
-                .filter(key => args.hasOwnProperty(key))
-                .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
-                .join("&");
-            if (this.core.dev)
-                console.log("Fetching: " + url);
+            const url = this.baseURL +
+                Call.formatEndpoint(endpoint) +
+                "?" +
+                Object.keys(args)
+                    .filter((key) => args.hasOwnProperty(key))
+                    .map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key]))
+                    .join("&");
+            if (this.core.dev) {
+                var visibleArgs = args;
+                if (args.key != null)
+                    visibleArgs.key = "***";
+                if (args.hash != null)
+                    visibleArgs.hash = "***";
+                console.log(visibleArgs);
+            }
             return new Promise((resolve, reject) => {
                 return fetch(url, request)
                     .then((response) => response.json())
@@ -633,12 +637,14 @@ class Call extends Core {
                         resolve(response);
                     }
                 })
-                    .catch(error => reject(error.message));
+                    .catch((error) => reject(error.message));
             });
         });
     }
     static formatEndpoint(endpoint) {
-        return (endpoint.startsWith('/') ? '' : '/') + endpoint + (endpoint.endsWith('/') ? '' : '/');
+        return ((endpoint.startsWith("/") ? "" : "/") +
+            endpoint +
+            (endpoint.endsWith("/") ? "" : "/"));
     }
 }
 class Command {
@@ -1275,7 +1281,7 @@ class ForumSection extends Core {
 }
 class Instance extends Core {
     constructor(core, uuid, name, type) {
-        super(core.getTool());
+        super(core.getTool(), core.dev);
         this.core = core;
         this.uuid = uuid;
         this.name = name;
@@ -1285,14 +1291,14 @@ class Instance extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ instance: this.uuid }, "instance/connections/close/all/")
-                .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+                .then((json) => json.map((connection) => Connection.fromJSON(this.core, connection)));
         });
     }
     getOpenConnections() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ instance: this.uuid }, "instance/connections/open/list/")
-                .then(json => json.map(connection => Connection.fromJSON(this.core, connection)));
+                .then((json) => json.map((connection) => Connection.fromJSON(this.core, connection)));
         });
     }
     getGrowthAnalytics(span = 3600 * 24) {
@@ -1302,7 +1308,7 @@ class Instance extends Core {
                 instance: this.uuid,
                 span: span,
             }, "instance/growth/analytics/")
-                .then(json => json.map(growthAnalytic => new GrowthAnalytic().fromArray(growthAnalytic)));
+                .then((json) => json.map((growthAnalytic) => new GrowthAnalytic().fromArray(growthAnalytic)));
         });
     }
     delete() {
@@ -1316,7 +1322,7 @@ class Instance extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ instance: this.uuid }, "instance/key/list/")
-                .then(json => json.map(key => Key.fromJSON(this.core, key)));
+                .then((json) => json.map((key) => Key.fromJSON(this.core, key)));
         });
     }
     getName() {
@@ -1335,7 +1341,7 @@ class Instance extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ instance: this.uuid }, "instance/info/")
-                .then(json => {
+                .then((json) => {
                 if (json.server == null) {
                     this.type = "NTW";
                     this.uuid = json.network.uuid;
@@ -1359,7 +1365,7 @@ class InstanceVital {
 }
 class Network extends Core {
     constructor(core, instance) {
-        super(core.getTool());
+        super(core.getTool(), core.dev);
         this.core = core;
         this.uuid = instance.getId();
         this.name = instance.getName();
@@ -1377,28 +1383,28 @@ class Network extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "key/get/dev/")
-                .then(json => Key.fromJSON(this.core, json));
+                .then((json) => Key.fromJSON(this.core, json));
         });
     }
     getKeyFromId(keyid) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ keyid: keyid }, "key/from/id/")
-                .then(json => Key.fromJSON(this.core, json));
+                .then((json) => Key.fromJSON(this.core, json));
         });
     }
     createServer(name) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ name: name }, "instance/server/create/")
-                .then(json => Instance.fromJSON(this.core, json, "SVR"));
+                .commit({ name: name, network: this.uuid }, "instance/server/create/")
+                .then((json) => Instance.fromJSON(this.core, json, "SVR"));
         });
     }
     getServers() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "instance/server/list/")
-                .then(json => json.map(server => Instance.fromJSON(this.core, server, "SVR")));
+                .then((json) => json.map((server) => Instance.fromJSON(this.core, server, "SVR")));
         });
     }
     asInstance() {
@@ -1411,14 +1417,14 @@ class Network extends Core {
                 network: this.uuid,
                 span: span,
             }, "instance/network/voting/analytics/")
-                .then(json => json.map(analytic => new VoteAnalytic().fromArray(analytic)));
+                .then((json) => json.map((analytic) => new VoteAnalytic().fromArray(analytic)));
         });
     }
     getVotingSites() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "instance/network/voting/site/list/")
-                .then(json => json.map(site => VotingSite.fromJSON(this.core, site)));
+                .then((json) => json.map((site) => VotingSite.fromJSON(this.core, site)));
         });
     }
     getSetupVotingSites(displaySetup = true) {
@@ -1426,35 +1432,36 @@ class Network extends Core {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "instance/network/voting/site/list/setup/" +
                 (displaySetup ? "config" : ""))
-                .then(json => displaySetup ? json.map(site => VotingSiteConfig.fromJSON(this.core, site)) :
-                json.map(site => VotingSite.fromJSON(this.core, site)));
+                .then((json) => displaySetup
+                ? json.map((site) => VotingSiteConfig.fromJSON(this.core, site))
+                : json.map((site) => VotingSite.fromJSON(this.core, site)));
         });
     }
     getGuild() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "instance/network/discord/get/guild/")
-                .then(json => DiscordGuild.fromJSON(this, json));
+                .then((json) => DiscordGuild.fromJSON(this, json));
         });
     }
     setGuild(discordGuildId) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ guildid: discordGuildId }, "/instance/network/discord/setguild/")
+                .commit({ guildid: discordGuildId, network: this.uuid }, "/instance/network/discord/setguild/")
                 .then(() => true); //TODO: process response
         });
     }
     setSessionChannel(channelId) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ channelid: channelId }, "instance/network/discord/setchannel/session/")
+                .commit({ channelid: channelId, network: this.uuid }, "instance/network/discord/setchannel/session/")
                 .then(() => true); //TODO: process response
         });
     }
     setDonationChannel(channelId) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ channelid: channelId }, "instance/network/discord/setchannel/donation/")
+                .commit({ channelid: channelId, network: this.uuid }, "instance/network/discord/setchannel/donation/")
                 .then(() => true); //TODO: process response
         });
     }
@@ -1462,21 +1469,21 @@ class Network extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({}, "session/hash/list/")
-                .then(json => json.map(connection => ConnectionHash.fromJSON(this.core, connection)));
+                .then((json) => json.map((connection) => ConnectionHash.fromJSON(this.core, connection)));
         });
     }
     getOffences() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "punishment/offence/list/")
-                .then(json => json.map(offence => Offence.fromJSON(this.core, offence)));
+                .then((json) => json.map((offence) => Offence.fromJSON(this.core, offence)));
         });
     }
     getOffenceActions() {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({ network: this.uuid }, "punishment/action/list/")
-                .then(json => json.map(action => OffenceAction.fromJSON(this.core, action)));
+                .then((json) => json.map((action) => OffenceAction.fromJSON(this.core, action)));
         });
     }
     searchPlayers(username, uuid, coreid) {
@@ -1486,14 +1493,14 @@ class Network extends Core {
                 network: this.uuid,
                 username: username,
             }, "player/from/minecraft/username/search/")
-                .then(json => json.map(player => Player.fromJSON(this.core, player)));
+                .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
         });
     }
     getPlayer(coreid) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
-                .commit({ player: coreid }, "player/from/core/id/")
-                .then(json => Player.fromJSON(this.core, json));
+                .commit({ player: coreid, network: this.uuid }, "player/from/core/id/")
+                .then((json) => Player.fromJSON(this.core, json));
         });
     }
     getPlayers(page) {
@@ -1505,7 +1512,7 @@ class Network extends Core {
                 network: this.uuid,
                 page: page,
             }, "instance/network/list/players/")
-                .then(json => json.map(player => Player.fromJSON(this.core, player)));
+                .then((json) => json.map((player) => Player.fromJSON(this.core, player)));
         });
     }
     getPunishments(page) {
@@ -1517,7 +1524,7 @@ class Network extends Core {
                 network: this.uuid,
                 page: page,
             }, "punishment/list/")
-                .then(json => json.map(punishment => Punishment.fromJSON(this.core, punishment)));
+                .then((json) => json.map((punishment) => Punishment.fromJSON(this.core, punishment)));
         });
     }
     static fromJSON(core, json) {
