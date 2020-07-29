@@ -47,25 +47,13 @@ class Store extends Network {
 
   public async getPerks(): Promise<Array<Perk>> {
     var core = this.core;
-    let main = this;
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/store/perk/list/?hash=" +
-        core.getCoreSession().getHash() +
-        "&network=" +
-        main.uuid;
-    } else {
-      url = "https://api.purecore.io/rest/2/store/?key=" + core.getKey();
-    }
 
     return new Call(this.core)
       .commit(
         {
           network: this.uuid,
         },
-        "perk/list/"
+        "store/perk/list/"
       )
       .then((jsonresponse) => {
         var perklist = new Array<Perk>();
@@ -78,18 +66,6 @@ class Store extends Network {
 
   public async getPerkCategories(): Promise<Array<PerkCategory>> {
     var core = this.core;
-    let main = this;
-    var url;
-
-    if (core.getTool() instanceof Session) {
-      url =
-        "https://api.purecore.io/rest/2/store/perk/category/list/?hash=" +
-        core.getCoreSession().getHash() +
-        "&network=" +
-        main.uuid;
-    } else {
-      url = "https://api.purecore.io/rest/2/?key=" + core.getKey();
-    }
 
     return new Call(this.core)
       .commit(
