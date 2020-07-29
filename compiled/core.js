@@ -631,7 +631,8 @@ class Call extends Core {
                     visibleArgs.key = "***";
                 if (args.hash != null)
                     visibleArgs.hash = "***";
-                console.log(visibleArgs);
+                console.log(this.baseURL +
+                    Call.formatEndpoint(endpoint), visibleArgs);
             }
             return new Promise((resolve, reject) => {
                 return fetch(url, request)
@@ -2520,8 +2521,14 @@ class OrganizedPerkCategory {
         return this.perkCategory;
     }
 }
+class ParamRequirement {
+    constructor(type, value) {
+        this.type = type;
+        this.value = value;
+    }
+}
 class Perk extends Core {
-    constructor(core, uuid, network, name, description, type, category, commands) {
+    constructor(core, uuid, network, name, description, type, category, commands, params) {
         super(core.getTool());
         this.core = core;
         this.uuid = uuid;
@@ -2531,6 +2538,7 @@ class Perk extends Core {
         this.type = type;
         this.category = category;
         this.commands = commands;
+        this.params = params;
     }
     fromObject(array) {
         this.uuid = array.uuid;
@@ -2544,7 +2552,32 @@ class Perk extends Core {
             commands.push(new StoreCommand(this.core).fromObject(cmd));
         });
         this.commands = commands;
+        this.params = new Array();
+        array.params.forEach(param => {
+            this.params.push(new PerkParam(this.core).fromObject(param));
+        });
         return this;
+    }
+    addParam(placeholder, name, description, type, mandatory, defaultv) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (mandatory == null)
+                mandatory = false;
+            if (defaultv == null)
+                defaultv = "null";
+            return new Call(this.core)
+                .commit({
+                perk: this.uuid,
+                placeholder: placeholder,
+                name: name,
+                description: description,
+                type: type,
+                mandatory: mandatory,
+                defaultv: defaultv,
+            }, "store/perk/param/add/")
+                .then((jsonresponse) => {
+                return new PerkParam(this.core).fromObject(jsonresponse);
+            });
+        });
     }
     addCmd(cmd, needsOnline, executeOn) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2621,6 +2654,36 @@ class PerkContextualized extends Core {
     fromObject(array) {
         this.perk = new Perk(this.core).fromObject(array.perk);
         this.quantity = array.quantity;
+        return this;
+    }
+}
+class PerkParam extends Core {
+    constructor(core, uuid, placeholder, name, description, network, type, defaultv, mandatory, requirements) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.placeholder = placeholder;
+        this.name = name;
+        this.description;
+        this.network = network;
+        this.type = type;
+        this.default = defaultv;
+        this.mandatory = mandatory;
+        this.requirements = requirements;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.placeholder = object.placeholder;
+        this.name = object.name;
+        this.description = object.description;
+        this.network = new Network(this.core, new Instance(this.core, object.network.uuid, object.network.name, "NTW"));
+        this.type = object.type;
+        this.default = object.default;
+        this.mandatory = object.mandatory;
+        this.requirements = new Array();
+        object.requirements.forEach(requirement => {
+            this.requirements.push(new ParamRequirement(requirement.type, requirement.value));
+        });
         return this;
     }
 }

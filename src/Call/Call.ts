@@ -37,7 +37,8 @@ class Call extends Core {
       var visibleArgs: any = args;
       if (args.key != null) visibleArgs.key = "***";
       if (args.hash != null) visibleArgs.hash = "***";
-      console.log(visibleArgs);
+      console.log(this.baseURL +
+        Call.formatEndpoint(endpoint), visibleArgs);
     }
 
     return new Promise((resolve, reject) => {

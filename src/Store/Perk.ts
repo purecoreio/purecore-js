@@ -7,6 +7,7 @@ class Perk extends Core {
   type: string;
   category: PerkCategory;
   commands: Array<StoreCommand>;
+  params: Array<PerkParam>;
 
   constructor(
     core: Core,
@@ -16,7 +17,8 @@ class Perk extends Core {
     description?: string,
     type?: string,
     category?: PerkCategory,
-    commands?: Array<StoreCommand>
+    commands?: Array<StoreCommand>,
+    params?: Array<PerkParam>
   ) {
     super(core.getTool());
     this.core = core;
@@ -27,6 +29,7 @@ class Perk extends Core {
     this.type = type;
     this.category = category;
     this.commands = commands;
+    this.params = params;
   }
 
   fromObject(array): Perk {
@@ -46,8 +49,34 @@ class Perk extends Core {
     });
 
     this.commands = commands;
+    this.params = new Array<PerkParam>()
+    array.params.forEach(param => {
+      this.params.push(new PerkParam(this.core).fromObject(param));
+    });
 
     return this;
+  }
+
+  public async addParam(placeholder: string, name: string, description: string, type: string, mandatory?: boolean, defaultv?: string): Promise<PerkParam> {
+    if (mandatory == null) mandatory = false;
+    if (defaultv == null) defaultv = "null";
+    
+    return new Call(this.core)
+      .commit(
+        {
+          perk: this.uuid,
+          placeholder: placeholder,
+          name: name,
+          description: description,
+          type: type,
+          mandatory: mandatory,
+          defaultv: defaultv,
+        },
+        "store/perk/param/add/"
+      )
+      .then((jsonresponse) => {
+        return new PerkParam(this.core).fromObject(jsonresponse);
+      });
   }
 
   public async addCmd(
