@@ -138,6 +138,10 @@ class Core {
 
 try {
   module.exports = Core;
+  const fetch = require('node-fetch');
+  if (!global.fetch) {
+    global.fetch = fetch;
+  }
 } catch (error) {
   console.log(
     "[corejs] starting plain vanilla instance, as nodejs exports were not available"

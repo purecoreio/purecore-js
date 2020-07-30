@@ -136,6 +136,10 @@ class Core {
 }
 try {
     module.exports = Core;
+    const fetch = require('node-fetch');
+    if (!global.fetch) {
+        global.fetch = fetch;
+    }
 }
 catch (error) {
     console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available");
@@ -2699,6 +2703,7 @@ class PerkParam extends Core {
     * @param type the type of requirement: regex, size (img only), imgtype https://www.iana.org/assignments/media-types/media-types.xhtml#image)
     * @param value string when regex, array [width,height] for size, array ['image/png','image/jpg','class/type'...] for imgtype
     * if a requirement of that type is already present, it will overwrite its properties
+    * for regex values, javascript ignores \ when followed by /, so use \\/ (double backslash)
     */
     addRequirement(type, value) {
         return __awaiter(this, void 0, void 0, function* () {

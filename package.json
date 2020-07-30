@@ -1,13 +1,14 @@
 {
   "name": "purecore",
-  "version": "1.16.7",
+  "version": "1.16.8",
   "description": "purecore js client",
   "main": "./compiled/core.js",
   "directories": {
     "test": "tests"
   },
   "dependencies": {
-    "@types/node": "^12.12.28"
+    "@types/node": "^12.12.28",
+    "node-fetch": "^2.6.0"
   },
   "devDependencies": {},
   "scripts": {
