@@ -20,7 +20,7 @@ class Perk extends Core {
     commands?: Array<StoreCommand>,
     params?: Array<PerkParam>
   ) {
-    super(core.getTool());
+    super(core.getTool(),core.dev);
     this.core = core;
     this.uuid = uuid;
     this.network = network;
@@ -50,17 +50,22 @@ class Perk extends Core {
 
     this.commands = commands;
     this.params = new Array<PerkParam>()
-    array.params.forEach(param => {
-      this.params.push(new PerkParam(this.core).fromObject(param));
-    });
-
+    if (array.params == null) {
+      this.params = null;
+    } else {
+      array.params.forEach(param => {
+        this.params.push(new PerkParam(this.core).fromObject(param));
+      });
+    }
     return this;
   }
 
   public async addParam(placeholder: string, name: string, description: string, type: string, mandatory?: boolean, defaultv?: string): Promise<PerkParam> {
     if (mandatory == null) mandatory = false;
     if (defaultv == null) defaultv = "null";
-    
+    var strMandatory:string = null;
+    mandatory ? (strMandatory='true') : (strMandatory='false')
+
     return new Call(this.core)
       .commit(
         {
@@ -69,8 +74,8 @@ class Perk extends Core {
           name: name,
           description: description,
           type: type,
-          mandatory: mandatory,
-          defaultv: defaultv,
+          mandatory: strMandatory,
+          default: defaultv,
         },
         "store/perk/param/add/"
       )
