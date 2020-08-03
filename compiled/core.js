@@ -136,6 +136,10 @@ class Core {
 }
 try {
     module.exports = Core;
+    const fetch = require('node-fetch');
+    if (!global.fetch) {
+        global.fetch = fetch;
+    }
 }
 catch (error) {
     console.log("[corejs] starting plain vanilla instance, as nodejs exports were not available");
@@ -2570,7 +2574,7 @@ class ParamRequirement {
 }
 class Perk extends Core {
     constructor(core, uuid, network, name, description, type, category, commands, params) {
-        super(core.getTool());
+        super(core.getTool(), core.dev);
         this.core = core;
         this.uuid = uuid;
         this.network = network;
@@ -2594,9 +2598,14 @@ class Perk extends Core {
         });
         this.commands = commands;
         this.params = new Array();
-        array.params.forEach(param => {
-            this.params.push(new PerkParam(this.core).fromObject(param));
-        });
+        if (array.params == null) {
+            this.params = null;
+        }
+        else {
+            array.params.forEach(param => {
+                this.params.push(new PerkParam(this.core).fromObject(param));
+            });
+        }
         return this;
     }
     addParam(placeholder, name, description, type, mandatory, defaultv) {
@@ -2605,6 +2614,8 @@ class Perk extends Core {
                 mandatory = false;
             if (defaultv == null)
                 defaultv = "null";
+            var strMandatory = null;
+            mandatory ? (strMandatory = 'true') : (strMandatory = 'false');
             return new Call(this.core)
                 .commit({
                 perk: this.uuid,
@@ -2612,8 +2623,8 @@ class Perk extends Core {
                 name: name,
                 description: description,
                 type: type,
-                mandatory: mandatory,
-                defaultv: defaultv,
+                mandatory: strMandatory,
+                default: defaultv,
             }, "store/perk/param/add/")
                 .then((jsonresponse) => {
                 return new PerkParam(this.core).fromObject(jsonresponse);
@@ -2699,11 +2710,12 @@ class PerkContextualized extends Core {
     }
 }
 class PerkParam extends Core {
-    constructor(core, uuid, placeholder, name, description, network, type, defaultv, mandatory, requirements) {
+    constructor(core, uuid, placeholder, perk, name, description, network, type, defaultv, mandatory, requirements) {
         super(core.getTool(), core.dev);
         this.core = core;
         this.uuid = uuid;
         this.placeholder = placeholder;
+        this.perk = perk;
         this.name = name;
         this.description;
         this.network = network;
@@ -2715,6 +2727,7 @@ class PerkParam extends Core {
     fromObject(object) {
         this.uuid = object.uuid;
         this.placeholder = object.placeholder;
+        this.perk = new Perk(this.core).fromObject(object.perk);
         this.name = object.name;
         this.description = object.description;
         this.network = new Network(this.core, new Instance(this.core, object.network.uuid, object.network.name, "NTW"));
@@ -2726,6 +2739,60 @@ class PerkParam extends Core {
             this.requirements.push(new ParamRequirement(requirement.type, requirement.value));
         });
         return this;
+    }
+    /**
+    * @param type the type of requirement: regex, size (img only), imgtype https://www.iana.org/assignments/media-types/media-types.xhtml#image)
+    * @param value string when regex, array [width,height] for size, array ['image/png','image/jpg','class/type'...] for imgtype
+    * if a requirement of that type is already present, it will overwrite its properties
+    * for regex values, javascript ignores \ when followed by /, so use \\/ (double backslash)
+    */
+    addRequirement(type, value) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var finalv = value;
+            if (typeof value != 'string')
+                finalv = JSON.stringify(value);
+            return new Call(this.core)
+                .commit({
+                param: this.uuid,
+                type: type,
+                value: finalv,
+            }, "store/perk/param/requirement/add/")
+                .then(() => {
+                return new ParamRequirement(type, value);
+            });
+        });
+    }
+    /**
+    * @param type the type of requirement to remove: regex, size, imgtype
+    * throws error if there are no requirements of that type
+    */
+    removeRequirement(type) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Call(this.core)
+                .commit({
+                param: this.uuid,
+                type: type,
+            }, "store/perk/param/requirement/remove/")
+                .then(() => {
+                return true;
+            });
+        });
+    }
+    /**
+    * @param value string or url to test
+    * throws error if the tests are not passed
+    */
+    test(value) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Call(this.core)
+                .commit({
+                param: this.uuid,
+                str: value,
+            }, "store/perk/param/requirement/test/")
+                .then(() => {
+                return true;
+            });
+        });
     }
 }
 class Store extends Network {
