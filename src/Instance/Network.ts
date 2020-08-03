@@ -22,6 +22,23 @@ class Network extends Core {
     return this.uuid;
   }
 
+  /**
+   * @param group hour, day, month, year
+   */
+  public async getVoteHeatmap(group: string): Promise<AnalyticGroupBase> {
+    let main = this;
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid,
+        },
+        "instance/network/voting/analytics/group"
+      )
+      .then((jsonresponse) => {
+        return new AnalyticGroupBase().fromObject(jsonresponse);
+      });
+  }
+
   public async getDevKey(): Promise<Key> {
     let main = this;
     return new Call(this.core)

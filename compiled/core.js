@@ -190,6 +190,32 @@ class AnalyticField {
         return this.value;
     }
 }
+class AnalyticGroup {
+    constructor(key, value) {
+        this.key = key;
+        this.value = value;
+    }
+    fromObject(object) {
+        this.key = object.key;
+        this.value = object.value;
+        return this;
+    }
+}
+class AnalyticGroupBase {
+    constructor(groupSize, values) {
+        this.groupSize = groupSize;
+        this.values = values;
+    }
+    fromObject(object) {
+        this.groupSize = object.groupSize;
+        var values = new Array();
+        object.values.forEach(value => {
+            this.values.push(new AnalyticGroup().fromObject(value));
+        });
+        this.values = values;
+        return this;
+    }
+}
 class GrowthAnalytic {
     constructor(uuid = null, instance = null, newPlayers = 0, activePlayers = 0, inactivePlayers = 0, newPlayersRelative = 0, activePlayersRelative = 0, inactivePlayersRelative = 0, timestamp = 0) {
         this.uuid = uuid;
@@ -1327,6 +1353,21 @@ class Network extends Core {
     }
     getId() {
         return this.uuid;
+    }
+    /**
+     * @param group hour, day, month, year
+     */
+    getVoteHeatmap(group) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                network: this.uuid,
+            }, "instance/network/voting/analytics/group")
+                .then((jsonresponse) => {
+                return new AnalyticGroupBase().fromObject(jsonresponse);
+            });
+        });
     }
     getDevKey() {
         return __awaiter(this, void 0, void 0, function* () {
