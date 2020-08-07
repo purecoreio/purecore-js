@@ -31,6 +31,7 @@ class Network extends Core {
       .commit(
         {
           network: this.uuid,
+          group: group
         },
         "instance/network/voting/analytics/group"
       )

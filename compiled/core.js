@@ -214,10 +214,34 @@ class AnalyticGroupBase {
         this.groupSize = object.groupSize;
         var values = new Array();
         object.values.forEach(value => {
-            this.values.push(new AnalyticGroup().fromObject(value));
+            values.push(new AnalyticGroup().fromObject(value));
         });
         this.values = values;
         return this;
+    }
+    toApexHeatmap() {
+        let series = [];
+        let current = [];
+        this.values.forEach(value => {
+            current.push({
+                x: value.key,
+                y: value.value
+            });
+            if (current.length >= this.groupSize) {
+                series.push({
+                    name: (series.length + 1).toString(),
+                    data: current
+                });
+                current = [];
+            }
+            else if (series.length * this.groupSize + current.length == this.values.length) {
+                series.push({
+                    name: (series.length + 1).toString(),
+                    data: current
+                });
+            }
+        });
+        return series;
     }
 }
 class GrowthAnalytic {
@@ -1367,6 +1391,7 @@ class Network extends Core {
             return new Call(this.core)
                 .commit({
                 network: this.uuid,
+                group: group
             }, "instance/network/voting/analytics/group")
                 .then((jsonresponse) => {
                 return new AnalyticGroupBase().fromObject(jsonresponse);
