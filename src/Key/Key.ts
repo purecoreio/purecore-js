@@ -54,16 +54,29 @@ class Key extends Core {
 
   public async update(): Promise<Key> {
     let main = this;
-    return new Call(this.core)
-      .commit(
-        {
-          keyid: this.uuid,
-        },
-        "key/from/id/"
-      )
-      .then((jsonresponse) => {
-        return new Key(main.core).fromObject(jsonresponse);
-      });
+    if (this.uuid != null) {
+      return new Call(this.core)
+        .commit(
+          {
+            keyid: this.uuid,
+          },
+          "key/from/id/"
+        )
+        .then((jsonresponse) => {
+          return new Key(main.core).fromObject(jsonresponse);
+        });
+    } else {
+      return new Call(this.core)
+        .commit(
+          {
+            keyid: this.uuid,
+          },
+          "key/from/hash/"
+        )
+        .then((jsonresponse) => {
+          return new Key(main.core).fromObject(jsonresponse);
+        });
+    }
   }
 
   public async setRestrict(restrict: boolean): Promise<Key> {

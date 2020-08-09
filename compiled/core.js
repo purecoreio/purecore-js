@@ -699,7 +699,7 @@ class Call extends Core {
                         resolve(response);
                     }
                 })
-                    .catch((error) => reject(error.message));
+                    .catch((error) => reject(error));
             });
         });
     }
@@ -1748,13 +1748,24 @@ class Key extends Core {
     update() {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
-            return new Call(this.core)
-                .commit({
-                keyid: this.uuid,
-            }, "key/from/id/")
-                .then((jsonresponse) => {
-                return new Key(main.core).fromObject(jsonresponse);
-            });
+            if (this.uuid != null) {
+                return new Call(this.core)
+                    .commit({
+                    keyid: this.uuid,
+                }, "key/from/id/")
+                    .then((jsonresponse) => {
+                    return new Key(main.core).fromObject(jsonresponse);
+                });
+            }
+            else {
+                return new Call(this.core)
+                    .commit({
+                    keyid: this.uuid,
+                }, "key/from/hash/")
+                    .then((jsonresponse) => {
+                    return new Key(main.core).fromObject(jsonresponse);
+                });
+            }
         });
     }
     setRestrict(restrict) {
@@ -3409,7 +3420,7 @@ class Player extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             var core = this.core;
             return yield new Call(core)
-                .commit({ instance: instance.getId() }, "connection/close/all/")
+                .commit({ instance: instance.getId(), uuid: this.uuid }, "connection/close/all/")
                 .then(function (jsonresponse) {
                 var connectionsClosed = new Array();
                 jsonresponse.forEach((connectionJson) => {

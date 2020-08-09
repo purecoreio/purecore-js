@@ -51,7 +51,7 @@ class Call extends Core {
             resolve(response);
           }
         })
-        .catch((error) => reject(error.message));
+        .catch((error) => reject(error));
     });
   }
 

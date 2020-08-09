@@ -26,7 +26,7 @@ class Player extends Core {
     var core = this.core;
 
     return await new Call(core)
-      .commit({ instance: instance.getId() }, "connection/close/all/")
+      .commit({ instance: instance.getId(), uuid: this.uuid }, "connection/close/all/")
       .then(function (jsonresponse) {
         var connectionsClosed = new Array<Connection>();
         jsonresponse.forEach((connectionJson) => {
