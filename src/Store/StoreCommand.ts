@@ -31,9 +31,9 @@ class StoreCommand extends Core {
       "NTW"
     ).asNetwork();
     if (typeof array.cmd == "string") {
-      this.cmd = new Command(array.cmd, null, this.network);
+      this.cmd = new Command(this.core, array.cmd, null, this.network);
     } else {
-      this.cmd = new Command(
+      this.cmd = new Command(this.core,
         array.cmd.cmdId,
         array.cmd.cmdString,
         this.network

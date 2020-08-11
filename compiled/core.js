@@ -452,6 +452,10 @@ class StripeSubscription {
 }
 class CacheCollection {
     constructor(instanceCaches, uuidAssociation, socketAssociation) {
+        // events
+        this.onCommandEvent = new LiteEvent();
+        this.onCommandsLoadingEvent = new LiteEvent();
+        this.onCommandsLoadedEvent = new LiteEvent();
         if (instanceCaches != null) {
             this.instanceCaches = instanceCaches;
         }
@@ -470,12 +474,28 @@ class CacheCollection {
         else {
             this.socketAssociation = {};
         }
+        this.executions = new Array();
+        this.loadingExecutions = new Array();
+        this.loadedExecutions = new Array();
+        this.executors = {};
     }
+    get onCommand() { return this.onCommandEvent.expose(); }
+    get onCommandsLoading() { return this.onCommandsLoadingEvent.expose(); }
+    get onCommandsLoaded() { return this.onCommandsLoadedEvent.expose(); }
     // CONNECTION AND DISCONNECT
     disconnect(socketId) {
         if (this.getCacheBySocket(socketId) != null) {
             this.removeCache(this.getCacheBySocket(socketId).createdOn.getTime());
         }
+    }
+    getExecutors(instance) {
+        var executors = new Array();
+        if (instance.uuid in executors) {
+            executors[instance.uuid].forEach(socketId => {
+                executors.push(socketId);
+            });
+        }
+        return executors;
     }
     connect(socketId, keyStr) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -511,6 +531,15 @@ class CacheCollection {
             }
         }
         socketIdsToRemove.forEach((socketId) => {
+            // remove possible executor
+            if (cache.instance.uuid in this.executors) {
+                if (this.executors[cache.instance.uuid].length > 1) {
+                    this.executors[cache.instance.uuid].splice(this.executors[cache.instance.uuid].indexOf(socketId), 1);
+                }
+                else {
+                    delete this.executors[cache.instance.uuid];
+                }
+            }
             delete this.socketAssociation[socketId];
         });
         // remove assoc (instance ids)
@@ -523,8 +552,50 @@ class CacheCollection {
         else {
             this.uuidAssociation[cache.instance.uuid] = newAssoc;
         }
+        // remove cache
+        this.instanceCaches.splice(this.instanceCaches.indexOf(cache), 1);
     }
     // DATA QUERY
+    setExecutor(socketId) {
+        let cache = this.getCacheBySocket(socketId);
+        if (cache != null) {
+            if (cache.instance.uuid in this.executors) {
+                this.executors[cache.instance.uuid].push(socketId);
+            }
+            else {
+                this.executors[cache.instance.uuid] = [socketId];
+                this.loadExecutions(cache.instance, "offline", 1);
+            }
+        }
+    }
+    loadExecutions(instance, type, page) {
+        // if the executions have not been loaded or are being loaded already...
+        let firstRun = (type == "offline" && page == 0 && this.loadingExecutions.indexOf(instance) === -1 && this.loadedExecutions.indexOf(instance) === -1);
+        if (firstRun)
+            this.onCommandsLoadingEvent.trigger();
+        if (firstRun || type != "offline") {
+            if (firstRun)
+                this.loadingExecutions.push(instance);
+            instance.getPendingExecutions(type, page).then((executions) => {
+                executions.forEach(execution => {
+                    if (!this.executions.includes(execution)) {
+                        this.executions.push(execution);
+                    }
+                });
+                if (executions.length <= 20) {
+                    this.loadExecutions(instance, type, page + 1);
+                }
+                else if (type == "offline") {
+                    this.loadExecutions(instance, "online", 0);
+                }
+                else {
+                    this.loadingExecutions.splice(this.loadingExecutions.indexOf(instance), 1);
+                    this.loadedExecutions.push(instance);
+                    this.onCommandsLoadedEvent.trigger();
+                }
+            });
+        }
+    }
     getCacheByEpoch(epoch) {
         var value = null;
         this.instanceCaches.forEach((instanceCache) => {
@@ -546,6 +617,40 @@ class CacheCollection {
             }
         });
         return cacheList;
+    }
+    // DATA SENDING
+    sendCommandBatch(executions) {
+        let organizedDestinations = {};
+        executions.forEach(execution => {
+            execution.instances.forEach(instance => {
+                if (!execution.executedOn.includes(instance) && this.getCachesByInstance(instance).length > 0) {
+                    // if it hasn't been executed yet and instance is connected to the socket server...
+                    if (!(instance.uuid in organizedDestinations)) {
+                        organizedDestinations[instance.uuid] = new Array();
+                    }
+                    organizedDestinations[instance.uuid].push(execution);
+                }
+            });
+        });
+        for (var key in organizedDestinations) {
+            // skip loop if the property is from prototype
+            if (!organizedDestinations.hasOwnProperty(key))
+                continue;
+            var instanceExecutions = organizedDestinations[key];
+            if (key in this.executors) {
+                // get every available executor for that instance
+                this.executors[key].forEach(executor => {
+                    // send oncommand event for every available executor for that instance
+                    this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions));
+                });
+            }
+        }
+    }
+}
+class CommandEvent {
+    constructor(socketId, commands) {
+        this.socketId = socketId;
+        this.commands = commands;
     }
 }
 class InstanceCache extends Core {
@@ -654,6 +759,23 @@ class InstanceCache extends Core {
         });
     }
 }
+class LiteEvent {
+    constructor() {
+        this.handlers = [];
+    }
+    on(handler) {
+        this.handlers.push(handler);
+    }
+    off(handler) {
+        this.handlers = this.handlers.filter(h => h !== handler);
+    }
+    trigger(data) {
+        this.handlers.slice(0).forEach(h => h(data));
+    }
+    expose() {
+        return this;
+    }
+}
 class Call extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
@@ -709,11 +831,89 @@ class Call extends Core {
             (endpoint.endsWith("/") ? "" : "/"));
     }
 }
-class Command {
-    constructor(uuid, cmd, network) {
+class Command extends Core {
+    constructor(core, uuid, cmd, network) {
+        super(core.getTool, core.dev);
+        this.core = core;
         this.uuid = uuid;
         this.cmd = cmd;
         this.network = network;
+    }
+    fromObject(object) {
+        this.uuid = object.cmdId;
+        this.cmd = object.cmdString;
+        this.network = new Network(this.core).fromObject(object.network);
+        return this;
+    }
+}
+class CommandContext extends Core {
+    constructor(core, player, legacyUsername, legacyUuid, originType, originName, originId, causedBy, quantity) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.player = player;
+        this.legacyUsername = legacyUsername;
+        this.legacyUuid = legacyUuid;
+        this.originType = originType;
+        this.originName = originName;
+        this.originId = originId;
+        this.causedBy = causedBy;
+        this.quantity = quantity;
+    }
+    fromObject(object) {
+        this.player = new Player(this.core).fromObject(object.player);
+        this.legacyUsername = object.legacyUsername;
+        this.legacyUuid = object.legacyUuid;
+        this.originType = object.originType;
+        this.originName = object.originName;
+        this.originId = object.originId;
+        this.causedBy = object.causedBy;
+        this.quantity = object.quantity;
+        return this;
+    }
+}
+class Execution extends Core {
+    constructor(core, uuid, network, command, commandContext, instances, needsOnline, executedOn, executed) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.network = network;
+        this.command = command;
+        this.commandContext = commandContext;
+        this.instances = instances;
+        this.needsOnline = needsOnline;
+        this.executedOn = executedOn;
+        this.executed = executed;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.network = new Network(this.core).fromObject(object.network);
+        this.command = new Command(this.core).fromObject(object.command);
+        this.commandContext = new CommandContext(this.core).fromObject(object.commandCOntext);
+        this.instances = new Array();
+        if (Array.isArray(object.instances)) {
+            object.instances.forEach(element => {
+                if (typeof "element" === "string") {
+                    this.instances.push(new Instance(this.core, element, null, null));
+                }
+                else {
+                    this.instances.push(new Instance(this.core).fromObject(element));
+                }
+            });
+        }
+        this.needsOnline = object.needsOnline;
+        this.executedOn = new Array();
+        if (Array.isArray(object.executedOn)) {
+            object.executedOn.forEach(element => {
+                if (typeof "element" === "string") {
+                    this.executedOn.push(new Instance(this.core, element, null, null));
+                }
+                else {
+                    this.executedOn.push(new Instance(this.core).fromObject(element));
+                }
+            });
+        }
+        this.executed = object.executed;
+        return this;
     }
 }
 class ActivityMatch {
@@ -1253,6 +1453,12 @@ class Instance extends Core {
         this.name = name;
         this.type = type;
     }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.name = object.name;
+        this.type = object.type;
+        return this;
+    }
     closeOpenConnections() {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
@@ -1341,6 +1547,27 @@ class Instance extends Core {
     asNetwork() {
         return new Network(this.core, this);
     }
+    getPendingExecutions(type, page) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (page == null)
+                page = 0;
+            if (type == null)
+                type = "any";
+            return new Call(this.core)
+                .commit({
+                instance: this.uuid,
+                page: page.toString(),
+                type: type
+            }, "instance/info/")
+                .then((jsonresponse) => {
+                let executions = new Array();
+                jsonresponse.forEach(jsonObject => {
+                    executions.push(new Execution(this.core).fromObject(jsonObject));
+                });
+                return executions;
+            });
+        });
+    }
     update() {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
@@ -1370,8 +1597,15 @@ class Network extends Core {
     constructor(core, instance) {
         super(core.getTool());
         this.core = core;
-        this.uuid = instance.getId();
-        this.name = instance.getName();
+        if (instance != null) {
+            this.uuid = instance.getId();
+            this.name = instance.getName();
+        }
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.name = object.name;
+        return this;
     }
     getStore() {
         return new Store(this);
@@ -2218,7 +2452,7 @@ class OffenceAction extends Core {
     fromObject(array) {
         this.uuid = array.uuid;
         this.network = new Network(this.core, new Instance(this.core, array.network.uuid, array.network.name, "NTW"));
-        this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+        this.cmd = new Command(this.core, array.cmd.cmdId, array.cmd.cmdString, this.network);
         this.requiredPoints = parseInt(array.requiredPoints);
         this.pointsType = array.pointsType;
         this.punishmentType = array.punishmentType;
@@ -3077,10 +3311,10 @@ class StoreCommand extends Core {
     fromObject(array) {
         this.network = new Instance(this.core, array.network.uuid, array.network.name, "NTW").asNetwork();
         if (typeof array.cmd == "string") {
-            this.cmd = new Command(array.cmd, null, this.network);
+            this.cmd = new Command(this.core, array.cmd, null, this.network);
         }
         else {
-            this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+            this.cmd = new Command(this.core, array.cmd.cmdId, array.cmd.cmdString, this.network);
         }
         this.needsOnline = array.needs_online;
         this.listId = array.listid;
@@ -3415,6 +3649,13 @@ class Player extends Core {
         this.username = username;
         this.uuid = uuid;
         this.verified = verified;
+    }
+    fromObject(object) {
+        this.id = object.coreid;
+        this.username = object.username;
+        this.uuid = object.uuid;
+        this.verified = object.verified;
+        return this;
     }
     closeConnections(instance) {
         return __awaiter(this, void 0, void 0, function* () {

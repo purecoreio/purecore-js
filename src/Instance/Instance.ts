@@ -4,12 +4,19 @@ class Instance extends Core {
   name: string;
   type: string;
 
-  constructor(core: Core, uuid: string, name: string, type: string) {
+  constructor(core: Core, uuid?: string, name?: string, type?: string) {
     super(core.getTool());
     this.core = core;
     this.uuid = uuid;
     this.name = name;
     this.type = type;
+  }
+
+  public fromObject(object): Instance {
+    this.uuid = object.uuid;
+    this.name = object.name;
+    this.type = object.type;
+    return this;
   }
 
   public async closeOpenConnections(): Promise<Array<Connection>> {
@@ -119,6 +126,27 @@ class Instance extends Core {
 
   public asNetwork(): Network {
     return new Network(this.core, this);
+  }
+
+  public async getPendingExecutions(type?: string, page?: number) {
+    if (page == null) page = 0;
+    if (type == null) type = "any";
+    return new Call(this.core)
+      .commit(
+        {
+          instance: this.uuid,
+          page: page.toString(),
+          type: type
+        },
+        "instance/info/"
+      )
+      .then((jsonresponse) => {
+        let executions = new Array<Execution>();
+        jsonresponse.forEach(jsonObject => {
+          executions.push(new Execution(this.core).fromObject(jsonObject));
+        });
+        return executions;
+      });
   }
 
   public async update(): Promise<Instance> {

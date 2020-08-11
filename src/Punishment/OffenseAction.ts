@@ -38,7 +38,7 @@ class OffenceAction extends Core {
       this.core,
       new Instance(this.core, array.network.uuid, array.network.name, "NTW")
     );
-    this.cmd = new Command(array.cmd.cmdId, array.cmd.cmdString, this.network);
+    this.cmd = new Command(this.core, array.cmd.cmdId, array.cmd.cmdString, this.network);
     this.requiredPoints = parseInt(array.requiredPoints);
     this.pointsType = array.pointsType;
     this.punishmentType = array.punishmentType;

@@ -3,11 +3,19 @@ class Network extends Core {
   uuid: string;
   name: string;
 
-  constructor(core: Core, instance: Instance) {
+  constructor(core: Core, instance?: Instance) {
     super(core.getTool());
     this.core = core;
-    this.uuid = instance.getId();
-    this.name = instance.getName();
+    if (instance != null) {
+      this.uuid = instance.getId();
+      this.name = instance.getName();
+    }
+  }
+
+  public fromObject(object: any): Network {
+    this.uuid = object.uuid;
+    this.name = object.name;
+    return this;
   }
 
   getStore(): Store {

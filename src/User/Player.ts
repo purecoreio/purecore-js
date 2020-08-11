@@ -7,7 +7,7 @@ class Player extends Core {
 
   constructor(
     core: Core,
-    id: string,
+    id?: string,
     username?: string,
     uuid?: string,
     verified?
@@ -18,6 +18,14 @@ class Player extends Core {
     this.username = username;
     this.uuid = uuid;
     this.verified = verified;
+  }
+
+  public fromObject(object: any): Player {
+    this.id = object.coreid;
+    this.username = object.username;
+    this.uuid = object.uuid;
+    this.verified = object.verified;
+    return this;
   }
 
   public async closeConnections(
