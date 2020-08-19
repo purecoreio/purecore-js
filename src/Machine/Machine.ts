@@ -94,7 +94,7 @@ class Machine extends Core {
     }
 
     this.templates = new Array<HostingTemplate>();
-    array.tempaltes.forEach(template => {
+    array.templates.forEach(template => {
       this.templates.push(new HostingTemplate(this.core).fromObject(template))
     });
 
