@@ -1494,6 +1494,18 @@ class HostingTemplate extends Core {
         this.price = object.price;
         return this;
     }
+    addTo(machine) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call(this.core)
+                .commit({
+                machine: machine.uuid,
+                template: this.uuid
+            }, "hosting/template/add/")
+                .then(function (jsonresponse) {
+                return new Machine(this.core).fromObject(jsonresponse);
+            });
+        });
+    }
 }
 class Instance extends Core {
     constructor(core, uuid, name, type) {

@@ -26,4 +26,15 @@ class HostingTemplate extends Core {
         return this;
     }
 
+    public async addTo(machine: Machine): Promise<Machine> {
+        return await new Call(this.core)
+            .commit({
+                machine: machine.uuid,
+                template: this.uuid
+            }, "hosting/template/add/")
+            .then(function (jsonresponse) {
+                return new Machine(this.core).fromObject(jsonresponse);
+            });
+    }
+
 }

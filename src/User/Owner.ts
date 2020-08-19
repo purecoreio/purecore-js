@@ -146,6 +146,40 @@ class Owner extends Core {
       });
   }
 
+  public async createTemplate(
+    supportedImages: [],
+    memory: number,
+    size: number,
+    cores: number,
+    price?: number
+  ): Promise<HostingTemplate> {
+    var core = this.core;
+
+    var args = {};
+    if (price == null) {
+      args = {
+        supportedImages: supportedImages,
+        memory: String(memory),
+        size: String(size),
+        cores: String(cores),
+        price: String(price)
+      };
+    } else {
+      args = {
+        supportedImages: supportedImages,
+        memory: String(memory),
+        size: String(size),
+        cores: String(cores),
+      };
+    }
+
+    return await new Call(this.core)
+      .commit(args, "hosting/template/create/")
+      .then(function (jsonresponse) {
+        return new HostingTemplate(core).fromObject(jsonresponse);
+      });
+  }
+
   public async createNetwork(
     name: string,
     game: string,
