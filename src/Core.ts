@@ -55,7 +55,7 @@ class Core {
   public async getMachine(hash: string): Promise<Machine> {
     return await new Call(this)
       .commit({ hash: hash }, "machine")
-      .then((data) => { return new Machine().fromObject(data) });
+      .then((data) => { return new Machine(this, hash).fromObject(data) });
   }
 
 

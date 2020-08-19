@@ -1,4 +1,17 @@
-class Machine {
+class Machine extends Core {
+
+  public core: Core;
+
+  public templates: Array<HostingTemplate>;
+  public cpuOverlap: boolean;
+  public public: boolean;
+
+  public country: string;
+  public state: string;
+  public city: string;
+  public lat: number;
+  public long: number;
+
   public uuid: string;
   public hash: string;
   public owner: Owner;
@@ -13,8 +26,17 @@ class Machine {
   public adapters: Array<NetworkAdapter>;
 
   public constructor(
-    uuid?: string,
+    core: Core,
     hash?: string,
+    templates?: Array<HostingTemplate>,
+    cpuOverlap?: boolean,
+    publicm?: boolean,
+    country?: string,
+    state?: string,
+    city?: string,
+    lat?: number,
+    long?: number,
+    uuid?: string,
     owner?: Owner,
     ipv4?: string,
     ipv6?: string,
@@ -26,8 +48,18 @@ class Machine {
     drives?: Array<Drive>,
     adapters?: Array<NetworkAdapter>
   ) {
-    this.uuid = uuid;
+    super(core.getTool(), core.dev);
+    this.core = core;
+    this.templates = templates;
+    this.cpuOverlap = cpuOverlap;
+    this.public = publicm;
+    this.country = country;
+    this.state = state;
+    this.city = city;
+    this.lat = lat;
+    this.long = long;
     this.hash = hash;
+    this.uuid = uuid;
     this.owner = owner;
     this.ipv4 = ipv4;
     this.ipv6 = ipv6;
@@ -61,9 +93,19 @@ class Machine {
       this.uuid = array.uuid;
     }
 
-    if (array.hash != null && array.hash != undefined) {
-      this.hash = array.hash;
-    }
+    this.templates = new Array<HostingTemplate>();
+    array.tempaltes.forEach(template => {
+      this.templates.push(new HostingTemplate(this.core).fromObject(template))
+    });
+
+    this.cpuOverlap = array.cpuOverlap;
+    this.public = array.public;
+
+    this.country = array.country;
+    this.state = array.state;
+    this.city = array.city;
+    this.lat = array.lat;
+    this.long = array.long;
 
     if (array.owner != null && array.owner != undefined) {
       this.owner = new Owner(

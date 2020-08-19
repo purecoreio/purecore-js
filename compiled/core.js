@@ -59,7 +59,7 @@ class Core {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this)
                 .commit({ hash: hash }, "machine")
-                .then((data) => { return new Machine().fromObject(data); });
+                .then((data) => { return new Machine(this, hash).fromObject(data); });
         });
     }
     fromToken(googleToken) {
@@ -1479,6 +1479,22 @@ class ForumSection extends Core {
         });
     }
 }
+class HostingTemplate extends Core {
+    constructor(core) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+    }
+    fromObject(object) {
+        this.owner = new Owner(this.core, object.owner.id, object.owner.name, object.owner.surname, object.owner.email);
+        this.uuid = object.uuid;
+        this.supportedImages = object.supportedImages;
+        this.memory = object.memory;
+        this.size = object.size;
+        this.cores = object.cores;
+        this.price = object.price;
+        return this;
+    }
+}
 class Instance extends Core {
     constructor(core, uuid, name, type) {
         super(core.getTool());
@@ -2233,10 +2249,20 @@ class DriveUsage {
         this.used = used;
     }
 }
-class Machine {
-    constructor(uuid, hash, owner, ipv4, ipv6, port, bios, motherboard, cpu, ram, drives, adapters) {
-        this.uuid = uuid;
+class Machine extends Core {
+    constructor(core, hash, templates, cpuOverlap, publicm, country, state, city, lat, long, uuid, owner, ipv4, ipv6, port, bios, motherboard, cpu, ram, drives, adapters) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.templates = templates;
+        this.cpuOverlap = cpuOverlap;
+        this.public = publicm;
+        this.country = country;
+        this.state = state;
+        this.city = city;
+        this.lat = lat;
+        this.long = long;
         this.hash = hash;
+        this.uuid = uuid;
         this.owner = owner;
         this.ipv4 = ipv4;
         this.ipv6 = ipv6;
@@ -2270,9 +2296,17 @@ class Machine {
         if (array.uuid != null && array.uuid != undefined) {
             this.uuid = array.uuid;
         }
-        if (array.hash != null && array.hash != undefined) {
-            this.hash = array.hash;
-        }
+        this.templates = new Array();
+        array.tempaltes.forEach(template => {
+            this.templates.push(new HostingTemplate(this.core).fromObject(template));
+        });
+        this.cpuOverlap = array.cpuOverlap;
+        this.public = array.public;
+        this.country = array.country;
+        this.state = array.state;
+        this.city = array.city;
+        this.lat = array.lat;
+        this.long = array.long;
         if (array.owner != null && array.owner != undefined) {
             this.owner = new Owner(new Core(), array.id, array.name, array.surname, array.email);
         }
@@ -2661,7 +2695,7 @@ class Session extends Core {
                 .then(function (jsonresponse) {
                 var machines = new Array();
                 jsonresponse.forEach((machineJSON) => {
-                    machines.push(new Machine().fromObject(machineJSON));
+                    machines.push(new Machine(this.core).fromObject(machineJSON));
                 });
                 return machines;
             });

@@ -172,7 +172,7 @@ class Session extends Core {
       .then(function (jsonresponse) {
         var machines = new Array<Machine>();
         jsonresponse.forEach((machineJSON) => {
-          machines.push(new Machine().fromObject(machineJSON));
+          machines.push(new Machine(this.core).fromObject(machineJSON));
         });
         return machines;
       });
