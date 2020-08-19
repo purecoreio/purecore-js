@@ -3702,6 +3702,34 @@ class Owner extends Core {
             });
         });
     }
+    createTemplate(supportedImages, memory, size, cores, price) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var core = this.core;
+            var args = {};
+            if (price == null) {
+                args = {
+                    supportedImages: JSON.stringify(supportedImages),
+                    memory: String(memory),
+                    size: String(size),
+                    cores: String(cores),
+                    price: String(price)
+                };
+            }
+            else {
+                args = {
+                    supportedImages: JSON.stringify(supportedImages),
+                    memory: String(memory),
+                    size: String(size),
+                    cores: String(cores),
+                };
+            }
+            return yield new Call(this.core)
+                .commit(args, "hosting/template/create/")
+                .then(function (jsonresponse) {
+                return new HostingTemplate(core).fromObject(jsonresponse);
+            });
+        });
+    }
     createNetwork(name, game, cname, ip, port) {
         return __awaiter(this, void 0, void 0, function* () {
             var core = this.core;

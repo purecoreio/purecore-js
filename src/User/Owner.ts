@@ -158,7 +158,7 @@ class Owner extends Core {
     var args = {};
     if (price == null) {
       args = {
-        supportedImages: supportedImages,
+        supportedImages: JSON.stringify(supportedImages),
         memory: String(memory),
         size: String(size),
         cores: String(cores),
@@ -166,7 +166,7 @@ class Owner extends Core {
       };
     } else {
       args = {
-        supportedImages: supportedImages,
+        supportedImages: JSON.stringify(supportedImages),
         memory: String(memory),
         size: String(size),
         cores: String(cores),
