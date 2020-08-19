@@ -2,6 +2,8 @@ class CacheCollection {
 
   // props
 
+  public dev: boolean;
+
   public instanceCaches: Array<InstanceCache>;
 
   public socketAssociation: object;
@@ -25,10 +27,16 @@ class CacheCollection {
   public get onCommandsLoaded() { return this.onCommandsLoadedEvent.expose(); }
 
   constructor(
+    dev?: boolean,
     instanceCaches?: Array<InstanceCache>,
     uuidAssociation?: object,
     socketAssociation?: object
   ) {
+    if (dev == null) {
+      this.dev = false;
+    } else {
+      this.dev = dev;
+    }
     if (instanceCaches != null) {
       this.instanceCaches = instanceCaches;
     } else {
@@ -73,7 +81,7 @@ class CacheCollection {
 
   public async connect(socketId, keyStr) {
     let main = this;
-    var credentials = new Core(keyStr);
+    var credentials = new Core(keyStr, this.dev);
     return await credentials
       .getLegacyKey()
       .update()
@@ -150,32 +158,52 @@ class CacheCollection {
         this.executors[cache.instance.uuid].push(socketId);
       } else {
         this.executors[cache.instance.uuid] = [socketId]
-        this.loadExecutions(cache.instance, "offline", 1);
+        this.sendCommandBatch(this.executions, socketId);
+        this.loadExecutions(cache.instance, "offline", 0);
       }
     }
   }
 
-  public loadExecutions(instance: Instance, type: string, page: number) {
+  public loadExecutions(instance: Instance, type: string, page: number, exclude?: Array<Instance>) {
 
     // if the executions have not been loaded or are being loaded already...
 
+    if (exclude == null) exclude = new Array<Instance>();
+
     let firstRun = (type == "offline" && page == 0 && this.loadingExecutions.indexOf(instance) === -1 && this.loadedExecutions.indexOf(instance) === -1);
+    let continuation = ((type == "offline" && page > 0) || type != "offline")
     if (firstRun) this.onCommandsLoadingEvent.trigger();
 
-    if (firstRun || type != "offline") {
+    if (firstRun || continuation) {
 
-      if (firstRun) this.loadingExecutions.push(instance);
+      if (firstRun) {
 
-      instance.getPendingExecutions(type, page).then((executions) => {
+        // ignore already loaded or loading instances, as they will be buffered or they have already been buffered
+
+        this.loadingExecutions.forEach(instance => {
+          if (!exclude.includes(instance)) exclude.push(instance)
+        });
+        this.loadedExecutions.forEach(instance => {
+          if (!exclude.includes(instance)) exclude.push(instance)
+        });
+
+        // add to loading list to prevent new instance loads to parallel buffer the same data
+
+        this.loadingExecutions.push(instance)
+
+      }
+
+      instance.getPendingExecutions(type, page, exclude).then((executions) => {
         executions.forEach(execution => {
           if (!this.executions.includes(execution)) {
             this.executions.push(execution);
           }
         });
-        if (executions.length <= 20) {
-          this.loadExecutions(instance, type, page + 1);
+        this.sendCommandBatch(executions);
+        if (executions.length >= 20) {
+          this.loadExecutions(instance, type, page + 1, exclude);
         } else if (type == "offline") {
-          this.loadExecutions(instance, "online", 0);
+          this.loadExecutions(instance, "online", 0, exclude);
         } else {
           this.loadingExecutions.splice(this.loadingExecutions.indexOf(instance), 1);
           this.loadedExecutions.push(instance);
@@ -202,29 +230,37 @@ class CacheCollection {
 
   public getCachesByInstance(instance: Instance): Array<InstanceCache> {
     var cacheList = new Array<InstanceCache>();
-    this.uuidAssociation[instance.uuid].forEach((epoch) => {
-      var cache = this.getCacheByEpoch(epoch);
-      if (cache != null) {
-        cacheList.push(cache);
-      }
-    });
+    if (instance.uuid in this.uuidAssociation) {
+      this.uuidAssociation[instance.uuid].forEach((epoch) => {
+        var cache = this.getCacheByEpoch(epoch);
+        if (cache != null) {
+          cacheList.push(cache);
+        }
+      });
+    }
     return cacheList;
   }
 
   // DATA SENDING
 
-  public sendCommandBatch(executions: Array<Execution>) {
+  public sendCommandBatch(executions: Array<Execution>, exclusiveTo?) {
     let organizedDestinations = {};
     executions.forEach(execution => {
-      execution.instances.forEach(instance => {
-        if (!execution.executedOn.includes(instance) && this.getCachesByInstance(instance).length > 0) {
-          // if it hasn't been executed yet and instance is connected to the socket server...
-          if (!(instance.uuid in organizedDestinations)) {
-            organizedDestinations[instance.uuid] = new Array<Execution>();
+
+      let executedOnList = [];
+      execution.executedOn.forEach(executedOn => {
+        executedOnList.push(executedOn.uuid);
+      });
+
+      execution.instances.forEach(expectedInstance => {
+        if (!executedOnList.includes(expectedInstance.uuid) && this.getCachesByInstance(expectedInstance).length > 0) {
+          if (!(expectedInstance.uuid in organizedDestinations)) {
+            organizedDestinations[expectedInstance.uuid] = new Array<Execution>();
           }
-          organizedDestinations[instance.uuid].push(execution);
+          organizedDestinations[expectedInstance.uuid].push(execution);
         }
       });
+
     });
 
     for (var key in organizedDestinations) {
@@ -235,8 +271,12 @@ class CacheCollection {
       if (key in this.executors) {
         // get every available executor for that instance
         this.executors[key].forEach(executor => {
+          if (exclusiveTo != null && executor == exclusiveTo) {
+            this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions))
+          } else if (exclusiveTo == null) {
+            this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions))
+          }
           // send oncommand event for every available executor for that instance
-          this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions))
         });
       }
     }

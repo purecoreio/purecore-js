@@ -26,10 +26,11 @@ class Execution extends Core {
     }
 
     public fromObject(object: any): Execution {
+
         this.uuid = object.uuid;
         this.network = new Network(this.core).fromObject(object.network);
         this.command = new Command(this.core).fromObject(object.command);
-        this.commandContext = new CommandContext(this.core).fromObject(object.commandCOntext);
+        this.commandContext = new CommandContext(this.core).fromObject(object.commandContext);
 
         this.instances = new Array<Instance>();
         if (Array.isArray(object.instances)) {

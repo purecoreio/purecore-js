@@ -128,17 +128,36 @@ class Instance extends Core {
     return new Network(this.core, this);
   }
 
-  public async getPendingExecutions(type?: string, page?: number) {
+  public async getPendingExecutions(type?: string, page?: number, exclude?: Array<Instance>) {
     if (page == null) page = 0;
     if (type == null) type = "any";
+    if (exclude == null) exclude = new Array<Instance>();
+
+    let ids = new Array<String>();
+    exclude.forEach(excludedInstance => {
+      ids.push(excludedInstance.uuid);
+    });
+
+    var args = {};
+    if (ids.length > 0) {
+      args = {
+        instance: this.uuid,
+        page: page.toString(),
+        type: type,
+        excluded: JSON.stringify(ids)
+      };
+    } else {
+      args = {
+        instance: this.uuid,
+        page: page.toString(),
+        type: type,
+      };
+    }
+
     return new Call(this.core)
       .commit(
-        {
-          instance: this.uuid,
-          page: page.toString(),
-          type: type
-        },
-        "instance/info/"
+        args,
+        "cmds/get/pending/"
       )
       .then((jsonresponse) => {
         let executions = new Array<Execution>();

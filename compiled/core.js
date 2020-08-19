@@ -31,7 +31,7 @@ class Core {
         // if not start with fromdiscord or fromtoken
     }
     getCacheCollection() {
-        return new CacheCollection();
+        return new CacheCollection(this.dev);
     }
     requestGlobalHash() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -451,11 +451,17 @@ class StripeSubscription {
     }
 }
 class CacheCollection {
-    constructor(instanceCaches, uuidAssociation, socketAssociation) {
+    constructor(dev, instanceCaches, uuidAssociation, socketAssociation) {
         // events
         this.onCommandEvent = new LiteEvent();
         this.onCommandsLoadingEvent = new LiteEvent();
         this.onCommandsLoadedEvent = new LiteEvent();
+        if (dev == null) {
+            this.dev = false;
+        }
+        else {
+            this.dev = dev;
+        }
         if (instanceCaches != null) {
             this.instanceCaches = instanceCaches;
         }
@@ -500,7 +506,7 @@ class CacheCollection {
     connect(socketId, keyStr) {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
-            var credentials = new Core(keyStr);
+            var credentials = new Core(keyStr, this.dev);
             return yield credentials
                 .getLegacyKey()
                 .update()
@@ -564,29 +570,45 @@ class CacheCollection {
             }
             else {
                 this.executors[cache.instance.uuid] = [socketId];
-                this.loadExecutions(cache.instance, "offline", 1);
+                this.sendCommandBatch(this.executions, socketId);
+                this.loadExecutions(cache.instance, "offline", 0);
             }
         }
     }
-    loadExecutions(instance, type, page) {
+    loadExecutions(instance, type, page, exclude) {
         // if the executions have not been loaded or are being loaded already...
+        if (exclude == null)
+            exclude = new Array();
         let firstRun = (type == "offline" && page == 0 && this.loadingExecutions.indexOf(instance) === -1 && this.loadedExecutions.indexOf(instance) === -1);
+        let continuation = ((type == "offline" && page > 0) || type != "offline");
         if (firstRun)
             this.onCommandsLoadingEvent.trigger();
-        if (firstRun || type != "offline") {
-            if (firstRun)
+        if (firstRun || continuation) {
+            if (firstRun) {
+                // ignore already loaded or loading instances, as they will be buffered or they have already been buffered
+                this.loadingExecutions.forEach(instance => {
+                    if (!exclude.includes(instance))
+                        exclude.push(instance);
+                });
+                this.loadedExecutions.forEach(instance => {
+                    if (!exclude.includes(instance))
+                        exclude.push(instance);
+                });
+                // add to loading list to prevent new instance loads to parallel buffer the same data
                 this.loadingExecutions.push(instance);
-            instance.getPendingExecutions(type, page).then((executions) => {
+            }
+            instance.getPendingExecutions(type, page, exclude).then((executions) => {
                 executions.forEach(execution => {
                     if (!this.executions.includes(execution)) {
                         this.executions.push(execution);
                     }
                 });
-                if (executions.length <= 20) {
-                    this.loadExecutions(instance, type, page + 1);
+                this.sendCommandBatch(executions);
+                if (executions.length >= 20) {
+                    this.loadExecutions(instance, type, page + 1, exclude);
                 }
                 else if (type == "offline") {
-                    this.loadExecutions(instance, "online", 0);
+                    this.loadExecutions(instance, "online", 0, exclude);
                 }
                 else {
                     this.loadingExecutions.splice(this.loadingExecutions.indexOf(instance), 1);
@@ -610,25 +632,30 @@ class CacheCollection {
     }
     getCachesByInstance(instance) {
         var cacheList = new Array();
-        this.uuidAssociation[instance.uuid].forEach((epoch) => {
-            var cache = this.getCacheByEpoch(epoch);
-            if (cache != null) {
-                cacheList.push(cache);
-            }
-        });
+        if (instance.uuid in this.uuidAssociation) {
+            this.uuidAssociation[instance.uuid].forEach((epoch) => {
+                var cache = this.getCacheByEpoch(epoch);
+                if (cache != null) {
+                    cacheList.push(cache);
+                }
+            });
+        }
         return cacheList;
     }
     // DATA SENDING
-    sendCommandBatch(executions) {
+    sendCommandBatch(executions, exclusiveTo) {
         let organizedDestinations = {};
         executions.forEach(execution => {
-            execution.instances.forEach(instance => {
-                if (!execution.executedOn.includes(instance) && this.getCachesByInstance(instance).length > 0) {
-                    // if it hasn't been executed yet and instance is connected to the socket server...
-                    if (!(instance.uuid in organizedDestinations)) {
-                        organizedDestinations[instance.uuid] = new Array();
+            let executedOnList = [];
+            execution.executedOn.forEach(executedOn => {
+                executedOnList.push(executedOn.uuid);
+            });
+            execution.instances.forEach(expectedInstance => {
+                if (!executedOnList.includes(expectedInstance.uuid) && this.getCachesByInstance(expectedInstance).length > 0) {
+                    if (!(expectedInstance.uuid in organizedDestinations)) {
+                        organizedDestinations[expectedInstance.uuid] = new Array();
                     }
-                    organizedDestinations[instance.uuid].push(execution);
+                    organizedDestinations[expectedInstance.uuid].push(execution);
                 }
             });
         });
@@ -640,8 +667,13 @@ class CacheCollection {
             if (key in this.executors) {
                 // get every available executor for that instance
                 this.executors[key].forEach(executor => {
+                    if (exclusiveTo != null && executor == exclusiveTo) {
+                        this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions));
+                    }
+                    else if (exclusiveTo == null) {
+                        this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions));
+                    }
                     // send oncommand event for every available executor for that instance
-                    this.onCommandEvent.trigger(new CommandEvent(executor, instanceExecutions));
                 });
             }
         }
@@ -860,7 +892,9 @@ class CommandContext extends Core {
         this.quantity = quantity;
     }
     fromObject(object) {
-        this.player = new Player(this.core).fromObject(object.player);
+        this.player = null;
+        if (object.player != null)
+            this.player = new Player(this.core).fromObject(object.player);
         this.legacyUsername = object.legacyUsername;
         this.legacyUuid = object.legacyUuid;
         this.originType = object.originType;
@@ -888,7 +922,7 @@ class Execution extends Core {
         this.uuid = object.uuid;
         this.network = new Network(this.core).fromObject(object.network);
         this.command = new Command(this.core).fromObject(object.command);
-        this.commandContext = new CommandContext(this.core).fromObject(object.commandCOntext);
+        this.commandContext = new CommandContext(this.core).fromObject(object.commandContext);
         this.instances = new Array();
         if (Array.isArray(object.instances)) {
             object.instances.forEach(element => {
@@ -1547,18 +1581,36 @@ class Instance extends Core {
     asNetwork() {
         return new Network(this.core, this);
     }
-    getPendingExecutions(type, page) {
+    getPendingExecutions(type, page, exclude) {
         return __awaiter(this, void 0, void 0, function* () {
             if (page == null)
                 page = 0;
             if (type == null)
                 type = "any";
+            if (exclude == null)
+                exclude = new Array();
+            let ids = new Array();
+            exclude.forEach(excludedInstance => {
+                ids.push(excludedInstance.uuid);
+            });
+            var args = {};
+            if (ids.length > 0) {
+                args = {
+                    instance: this.uuid,
+                    page: page.toString(),
+                    type: type,
+                    excluded: JSON.stringify(ids)
+                };
+            }
+            else {
+                args = {
+                    instance: this.uuid,
+                    page: page.toString(),
+                    type: type,
+                };
+            }
             return new Call(this.core)
-                .commit({
-                instance: this.uuid,
-                page: page.toString(),
-                type: type
-            }, "instance/info/")
+                .commit(args, "cmds/get/pending/")
                 .then((jsonresponse) => {
                 let executions = new Array();
                 jsonresponse.forEach(jsonObject => {

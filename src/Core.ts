@@ -27,7 +27,7 @@ class Core {
   }
 
   public getCacheCollection(): CacheCollection {
-    return new CacheCollection();
+    return new CacheCollection(this.dev);
   }
 
   public async requestGlobalHash(): Promise<Array<ConnectionHashGlobal>> {

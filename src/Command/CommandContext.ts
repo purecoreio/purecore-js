@@ -26,7 +26,10 @@ class CommandContext extends Core {
     }
 
     public fromObject(object: any): CommandContext {
-        this.player = new Player(this.core).fromObject(object.player);
+
+        this.player = null;
+        if (object.player != null) this.player = new Player(this.core).fromObject(object.player);
+
         this.legacyUsername = object.legacyUsername;
         this.legacyUuid = object.legacyUuid;
         this.originType = object.originType;
@@ -34,6 +37,7 @@ class CommandContext extends Core {
         this.originId = object.originId;
         this.causedBy = object.causedBy;
         this.quantity = object.quantity;
+        
         return this;
     }
 
