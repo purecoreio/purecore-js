@@ -97,6 +97,16 @@ class Owner extends Core {
       });
   }
 
+  public async updateBillingAddress(address: BillingAddress): Promise<BillingAddress> {
+    return await new Call(this.core)
+      .commit({
+        billing: JSON.stringify(address)
+      }, "account/billing/update/")
+      .then(function (jsonresponse) {
+        return new BillingAddress().fromObject(jsonresponse);
+      });
+  }
+
   public async addPaymentMethod(pm): Promise<Object> {
     var pmid = null;
     if (typeof pm == "string") {

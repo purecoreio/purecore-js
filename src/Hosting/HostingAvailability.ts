@@ -14,7 +14,7 @@ class HostingAvailability extends Core {
     }
 
     public fromObject(object: any): HostingAvailability {
-        this.template = new HostingTemplate(this.core).fromObject(object);
+        this.template = new HostingTemplate(this.core).fromObject(object.template);
         this.machine = new Machine(this.core).fromObject(object.machine);
         this.count = object.count;
         return this;

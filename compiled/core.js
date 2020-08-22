@@ -1537,7 +1537,7 @@ class HostingAvailability extends Core {
         this.count = count;
     }
     fromObject(object) {
-        this.template = new HostingTemplate(this.core).fromObject(object);
+        this.template = new HostingTemplate(this.core).fromObject(object.template);
         this.machine = new Machine(this.core).fromObject(object.machine);
         this.count = object.count;
         return this;
@@ -1582,8 +1582,17 @@ class HostingManager extends Core {
             });
         });
     }
-    getTemplate() {
-        return new HostingTemplate(this.core);
+    getTemplate(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return yield new Call(this.core)
+                .commit({
+                template: id
+            }, "hosting/template/get/")
+                .then(function (jsonresponse) {
+                return new HostingTemplate(main.core).fromObject(jsonresponse);
+            });
+        });
     }
     getMachineFromId(id) {
         return new Machine(this.core, null, null, null, null, null, null, null, null, null, id);
@@ -3783,6 +3792,17 @@ class Owner extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call(this.core)
                 .commit({}, "account/billing/get/")
+                .then(function (jsonresponse) {
+                return new BillingAddress().fromObject(jsonresponse);
+            });
+        });
+    }
+    updateBillingAddress(address) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call(this.core)
+                .commit({
+                billing: JSON.stringify(address)
+            }, "account/billing/update/")
                 .then(function (jsonresponse) {
                 return new BillingAddress().fromObject(jsonresponse);
             });

@@ -35,8 +35,15 @@ class HostingManager extends Core {
             });
     }
 
-    public getTemplate(): HostingTemplate {
-        return new HostingTemplate(this.core);
+    public async getTemplate(id: string): Promise<HostingTemplate> {
+        let main = this;
+        return await new Call(this.core)
+            .commit({
+                template: id
+            }, "hosting/template/get/")
+            .then(function (jsonresponse) {
+                return new HostingTemplate(main.core).fromObject(jsonresponse);
+            });
     }
 
     public getMachineFromId(id: string): Machine {
