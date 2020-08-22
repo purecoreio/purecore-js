@@ -108,6 +108,9 @@ class Core {
             return this.key;
         }
     }
+    getHostingManager() {
+        return new HostingManager(this);
+    }
     getElements() {
         return new Elements(this);
     }
@@ -440,6 +443,19 @@ class PayPalSubscription {
     }
     getID() {
         return this.id;
+    }
+}
+class BillingPreview {
+    constructor(now, days, monthly) {
+        this.now = now;
+        this.days = days;
+        this.monthly = monthly;
+    }
+    fromObject(object) {
+        this.now = object.now;
+        this.days = object.days;
+        this.monthly = object.monthly;
+        return this;
     }
 }
 class StripeSubscription {
@@ -820,7 +836,7 @@ class Call extends Core {
                 args = {};
             if (request == null)
                 request = { method: "POST" };
-            if (this.core.getCoreSession() != null) {
+            if (this.core.getCoreSession() != null && args.hash == null) {
                 args.hash = this.core.getCoreSession().getHash();
             }
             else if (this.core.getKey() != null) {
@@ -1479,10 +1495,111 @@ class ForumSection extends Core {
         });
     }
 }
+class Host extends Core {
+    constructor(core, uuid, instance, machine, owner, createdOn, disabledOn, template, port, additionalPorts, image) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.instance = instance;
+        this.machine = machine;
+        this.owner = owner;
+        this.createdOn = createdOn;
+        this.disabledOn = disabledOn;
+        this.template = template;
+        this.port = port;
+        this.additionalPorts = additionalPorts;
+        this.image = image;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.instance = new Instance(this.core).fromObject(object.instance);
+        this.machine = new Machine(this.core).fromObject(object.machine);
+        this.owner = new Owner(this.core, object.owner.id, object.owner.name, object.owner.surname, object.owner.email);
+        this.createdOn = object.createdOn;
+        this.disabledOn = object.disabledOn;
+        this.template = new HostingTemplate(this.core).fromObject(object.template);
+        this.port = object.port;
+        let additionalPorts = new Array();
+        object.additionalPorts.forEach(port => {
+            additionalPorts.push(port);
+        });
+        this.additionalPorts = additionalPorts;
+        this.image = object.image;
+        return this;
+    }
+}
+class HostingAvailability extends Core {
+    constructor(core, template, machine, count) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.template = template;
+        this.machine = machine;
+        this.count = count;
+    }
+    fromObject(object) {
+        this.template = new HostingTemplate(this.core).fromObject(object);
+        this.machine = new Machine(this.core).fromObject(object.machine);
+        this.count = object.count;
+        return this;
+    }
+    use(instance, image) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.template.use(instance, image, this.machine);
+        });
+    }
+}
+class HostingManager extends Core {
+    constructor(core) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+    }
+    getRecommended(countries) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return yield new Call(this.core)
+                .commit({
+                countries: Array.isArray(countries) ? JSON.stringify(countries) : JSON.stringify([])
+            }, "hosting/recommended/")
+                .then(function (jsonresponse) {
+                let availabilityList = new Array();
+                jsonresponse.forEach(element => {
+                    availabilityList.push(new HostingAvailability(main.core).fromObject(element));
+                });
+                return availabilityList;
+            });
+        });
+    }
+    preview(template) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (typeof template == "string")
+                template = new HostingTemplate(this.core).fromId(template, false);
+            return yield new Call(this.core)
+                .commit({
+                template: template.uuid
+            }, "hosting/template/use/preview/")
+                .then(function (jsonresponse) {
+                return new BillingPreview().fromObject(jsonresponse);
+            });
+        });
+    }
+    getTemplate() {
+        return new HostingTemplate(this.core);
+    }
+    getMachineFromId(id) {
+        return new Machine(this.core, null, null, null, null, null, null, null, null, null, id);
+    }
+}
 class HostingTemplate extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
         this.core = core;
+    }
+    fromId(id, query) {
+        if (query) {
+            //todo
+        }
+        this.uuid = id;
+        return this;
     }
     fromObject(object) {
         this.owner = new Owner(this.core, object.owner.id, object.owner.name, object.owner.surname, object.owner.email);
@@ -1496,13 +1613,28 @@ class HostingTemplate extends Core {
     }
     addTo(machine) {
         return __awaiter(this, void 0, void 0, function* () {
+            let core = this.core;
             return yield new Call(this.core)
                 .commit({
                 machine: machine.uuid,
                 template: this.uuid
             }, "hosting/template/add/")
                 .then(function (jsonresponse) {
-                return new Machine(this.core).fromObject(jsonresponse);
+                return new Machine(core).fromObject(jsonresponse);
+            });
+        });
+    }
+    use(instance, image, machine) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call(this.core)
+                .commit({
+                machine: machine.uuid,
+                template: this.uuid,
+                instance: instance.uuid,
+                image: image
+            }, "hosting/template/use/")
+                .then(function (jsonresponse) {
+                return new BillingPreview().fromObject(jsonresponse);
             });
         });
     }

@@ -107,6 +107,10 @@ class Core {
     }
   }
 
+  public getHostingManager(): HostingManager {
+    return new HostingManager(this);
+  }
+
   public getElements() {
     return new Elements(this);
   }
