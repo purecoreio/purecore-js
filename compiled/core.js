@@ -1582,6 +1582,9 @@ class HostingManager extends Core {
             });
         });
     }
+    getHost() {
+        return new Host(this.core);
+    }
     getTemplate(id) {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
@@ -2438,6 +2441,20 @@ class Machine extends Core {
         this.ram = ram;
         this.drives = drives;
         this.adapters = adapters;
+    }
+    getHosts() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let core = new Core(null, this.owner.core.dev);
+            return yield new Call(core)
+                .commit({ hash: this.hash }, "machine/host/list/")
+                .then(function (hostlistjson) {
+                let hosts = new Array();
+                hostlistjson.forEach(hostjson => {
+                    hosts.push(new Host(core).fromObject(hostjson));
+                });
+                return hosts;
+            });
+        });
     }
     setIPV6(ip) {
         return __awaiter(this, void 0, void 0, function* () {

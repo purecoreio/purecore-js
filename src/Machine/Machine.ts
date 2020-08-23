@@ -72,6 +72,19 @@ class Machine extends Core {
     this.adapters = adapters;
   }
 
+  public async getHosts(): Promise<Array<Host>> {
+    let core = new Core(null, this.owner.core.dev);
+    return await new Call(core)
+      .commit({ hash: this.hash }, "machine/host/list/")
+      .then(function (hostlistjson) {
+        let hosts = new Array<Host>();
+        hostlistjson.forEach(hostjson => {
+          hosts.push(new Host(core).fromObject(hostjson));
+        });
+        return hosts;
+      });
+  }
+
   public async setIPV6(ip: string): Promise<String> {
     return await new Call(new Core(null, this.owner.core.dev))
       .commit({ ipv6: ip, hash: this.hash }, "machine/update/")
