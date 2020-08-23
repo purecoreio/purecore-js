@@ -168,6 +168,21 @@ class Instance extends Core {
       });
   }
 
+  public async getHost(): Promise<Host> {
+    let main = this;
+    return new Call(this.core)
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/get/host/"
+      )
+      .then((jsonresponse) => {
+        return new Host(main.core).fromObject(jsonresponse);
+      });
+
+  }
+
   public async update(): Promise<Instance> {
     let main = this;
 

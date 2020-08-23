@@ -1,6 +1,6 @@
 {
   "name": "purecore",
-  "version": "1.16.25",
+  "version": "1.16.26",
   "description": "purecore js client",
   "main": "./compiled/core.js",
   "directories": {

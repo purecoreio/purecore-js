@@ -1789,6 +1789,18 @@ class Instance extends Core {
             });
         });
     }
+    getHost() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                instance: this.uuid,
+            }, "instance/get/host/")
+                .then((jsonresponse) => {
+                return new Host(main.core).fromObject(jsonresponse);
+            });
+        });
+    }
     update() {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
