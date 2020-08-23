@@ -2618,6 +2618,29 @@ class RAMUsage {
         this.used = used;
     }
 }
+class AccountNotification extends Core {
+    constructor(core, uuid, seen, title, message, action, account, creation) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.seen = seen;
+        this.title = title;
+        this.message = message;
+        this.action = action;
+        this.account = account;
+        this.creation = creation;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.seen = object.seen;
+        this.title = object.title;
+        this.message = object.message;
+        this.action = object.action;
+        this.account = new Account(this.core).fromObject(object.account);
+        this.creation = new Date(object.creation * 1000);
+        return this;
+    }
+}
 class Appeal extends Core {
     constructor(core, uuid, punishment, content, staffResponse, staffMember, accepted) {
         super(core.getTool());
@@ -3722,6 +3745,31 @@ class Warning {
         this.text = text;
     }
 }
+class Account extends Core {
+    constructor(core, uuid) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        return this;
+    }
+    getPendingNotifications() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return yield new Call(this.core)
+                .commit({}, "account/notification/pending/list/")
+                .then(function (jsonresponse) {
+                let notifications = new Array();
+                jsonresponse.forEach(jsonelement => {
+                    notifications.push(new AccountNotification(main.core).fromObject(jsonelement));
+                });
+                return notifications;
+            });
+        });
+    }
+}
 class Owner extends Core {
     constructor(core, id, name, surname, email) {
         super(core.getTool());
@@ -3775,6 +3823,9 @@ class Owner extends Core {
                 return new StripeSubscription(jsonresponse.id);
             });
         });
+    }
+    asAccount() {
+        return new Account(this.core, this.id);
     }
     paypalSubscribe(plan, billingAddress) {
         return __awaiter(this, void 0, void 0, function* () {

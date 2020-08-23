@@ -72,6 +72,10 @@ class Owner extends Core {
       });
   }
 
+  public asAccount(): Account {
+    return new Account(this.core, this.id);
+  }
+
   public async paypalSubscribe(
     plan: string,
     billingAddress: BillingAddress
