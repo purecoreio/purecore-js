@@ -1598,6 +1598,9 @@ class HostingManager extends Core {
     getHost() {
         return new Host(this.core);
     }
+    getHostAuth() {
+        return new Host(this.core);
+    }
     getTemplate(id) {
         return __awaiter(this, void 0, void 0, function* () {
             let main = this;
