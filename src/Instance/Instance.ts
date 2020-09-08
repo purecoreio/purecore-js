@@ -183,6 +183,21 @@ class Instance extends Core {
 
   }
 
+  public async getHostAuth(): Promise<HostAuth> {
+    let main = this;
+    return new Call(this.core)
+      .commit(
+        {
+          instance: this.uuid,
+        },
+        "instance/get/host/auth/"
+      )
+      .then((jsonresponse) => {
+        return new HostAuth(main.core).fromObject(jsonresponse);
+      });
+
+  }
+
   public async update(): Promise<Instance> {
     let main = this;
 

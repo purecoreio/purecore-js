@@ -1528,6 +1528,19 @@ class Host extends Core {
         return this;
     }
 }
+class HostAuth extends Core {
+    constructor(core, hash, host) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.hash = hash;
+        this.host = host;
+    }
+    fromObject(object) {
+        this.hash = object.hash;
+        this.host = new Host(this.core).fromObject(object.host);
+        return this;
+    }
+}
 class HostingAvailability extends Core {
     constructor(core, template, machine, count) {
         super(core.getTool(), core.dev);
@@ -1801,6 +1814,18 @@ class Instance extends Core {
             }, "instance/get/host/")
                 .then((jsonresponse) => {
                 return new Host(main.core).fromObject(jsonresponse);
+            });
+        });
+    }
+    getHostAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                instance: this.uuid,
+            }, "instance/get/host/auth/")
+                .then((jsonresponse) => {
+                return new HostAuth(main.core).fromObject(jsonresponse);
             });
         });
     }
@@ -2451,6 +2476,20 @@ class Machine extends Core {
                 let hosts = new Array();
                 hostlistjson.forEach(hostjson => {
                     hosts.push(new Host(core).fromObject(hostjson));
+                });
+                return hosts;
+            });
+        });
+    }
+    getHostAuths() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let core = new Core(null, this.owner.core.dev);
+            return yield new Call(core)
+                .commit({ hash: this.hash }, "machine/host/auth/list")
+                .then(function (hostlistjson) {
+                let hosts = new Array();
+                hostlistjson.forEach(hostjson => {
+                    hosts.push(new HostAuth(core).fromObject(hostjson));
                 });
                 return hosts;
             });
