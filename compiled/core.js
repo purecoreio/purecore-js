@@ -1599,7 +1599,7 @@ class HostingManager extends Core {
         return new Host(this.core);
     }
     getHostAuth() {
-        return new Host(this.core);
+        return new HostAuth(this.core);
     }
     getTemplate(id) {
         return __awaiter(this, void 0, void 0, function* () {
