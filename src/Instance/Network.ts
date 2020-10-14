@@ -18,6 +18,64 @@ class Network extends Core {
     return this;
   }
 
+  public async createServerGroup(name: String): Promise<ServerGroup> {
+
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          name: name,
+          network: this.uuid
+        },
+        "instance/server/group/create/"
+      )
+      .then((jsonresponse) => {
+        return new ServerGroup(main.core).fromObject(jsonresponse.group);
+      });
+  }
+
+  public async getGroups(): Promise<Array<ServerGroup>> {
+
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid
+        },
+        "instance/server/group/list/"
+      )
+      .then((jsonresponse) => {
+        let serverGroups = new Array<ServerGroup>();
+        jsonresponse.forEach(group => {
+          serverGroups.push(new ServerGroup(main.core).fromObject(group))
+        });
+        return serverGroups;
+      });
+  }
+
+  public async getGroupLists(): Promise<Array<ServerGroupList>> {
+
+    let main = this;
+
+    return new Call(this.core)
+      .commit(
+        {
+          network: this.uuid
+        },
+        "instance/server/group/list/servers/"
+      )
+      .then((jsonresponse) => {
+        let serverGroups = new Array<ServerGroupList>();
+        jsonresponse.forEach(group => {
+          serverGroups.push(new ServerGroupList(main.core).fromObject(group))
+        });
+        return serverGroups;
+      });
+  }
+
+
   getStore(): Store {
     return new Store(this);
   }

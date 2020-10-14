@@ -124,6 +124,10 @@ class Instance extends Core {
     return this.uuid;
   }
 
+  public asServer(): Server {
+    return new Server(this.core, this.uuid, null, this.name, null);
+  }
+
   public asNetwork(): Network {
     return new Network(this.core, this);
   }

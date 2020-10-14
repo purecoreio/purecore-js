@@ -1766,6 +1766,9 @@ class Instance extends Core {
     getId() {
         return this.uuid;
     }
+    asServer() {
+        return new Server(this.core, this.uuid, null, this.name, null);
+    }
     asNetwork() {
         return new Network(this.core, this);
     }
@@ -1870,6 +1873,51 @@ class Network extends Core {
         this.uuid = object.uuid;
         this.name = object.name;
         return this;
+    }
+    createServerGroup(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                name: name,
+                network: this.uuid
+            }, "instance/server/group/create/")
+                .then((jsonresponse) => {
+                return new ServerGroup(main.core).fromObject(jsonresponse.group);
+            });
+        });
+    }
+    getGroups() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                network: this.uuid
+            }, "instance/server/group/list/")
+                .then((jsonresponse) => {
+                let serverGroups = new Array();
+                jsonresponse.forEach(group => {
+                    serverGroups.push(new ServerGroup(main.core).fromObject(group));
+                });
+                return serverGroups;
+            });
+        });
+    }
+    getGroupLists() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                network: this.uuid
+            }, "instance/server/group/list/servers/")
+                .then((jsonresponse) => {
+                let serverGroups = new Array();
+                jsonresponse.forEach(group => {
+                    serverGroups.push(new ServerGroupList(main.core).fromObject(group));
+                });
+                return serverGroups;
+            });
+        });
     }
     getStore() {
         return new Store(this);
@@ -2189,6 +2237,83 @@ class Network extends Core {
                 return response;
             });
         });
+    }
+}
+class Server extends Core {
+    constructor(core, uuid, network, name, group) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.network = network;
+        this.name = name;
+        this.group = group;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.network = new Network(this.core).fromObject(object.network);
+        this.name = object.name;
+        if (object.group == null) {
+            this.group = null;
+        }
+        else {
+            this.group = new ServerGroup(this.core).fromObject(object.group);
+        }
+        return this;
+    }
+    addToGroup(group) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            let groupid = null;
+            if (group instanceof ServerGroup) {
+                groupid = String(group.uuid);
+            }
+            else {
+                groupid = String(group);
+            }
+            return new Call(this.core)
+                .commit({
+                server: this.uuid,
+                group: groupid
+            }, "instance/server/add/to/group/")
+                .then((jsonresponse) => {
+                main.group = new ServerGroup(main.core).fromObject(jsonresponse.group);
+                return new Server(main.core).fromObject(jsonresponse);
+            });
+        });
+    }
+}
+class ServerGroup extends Core {
+    constructor(core, uuid, network, name) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.network = network;
+        this.name = name;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.network = new Network(this.core).fromObject(object.network);
+        this.name = object.name;
+        return this;
+    }
+}
+class ServerGroupList extends Core {
+    constructor(core, uuid, network, name, servers) {
+        super(core.getTool(), core.dev);
+        this.core = core;
+        this.uuid = uuid;
+        this.network = network;
+        this.name = name;
+        this.servers = servers;
+    }
+    fromObject(object) {
+        this.uuid = object.uuid;
+        this.network = new Network(this.core).fromObject(object.network);
+        this.name = object.name;
+        this.servers = new Array();
+        object.servers.forEach(serverObj => {
+            this.servers.push(new Server(this.core).fromObject(serverObj));
+        });
+        return this;
     }
 }
 class GeoRestriction {
