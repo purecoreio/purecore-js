@@ -26,4 +26,8 @@ class ServerGroupList extends Core {
         return this;
     }
 
+    public asServerGroup(): ServerGroup {
+        return new ServerGroup(this.core, this.uuid, this.network, this.name);
+    }
+
 }

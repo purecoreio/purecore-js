@@ -2294,6 +2294,9 @@ class Server extends Core {
             });
         });
     }
+    asInstance() {
+        return new Instance(this.core, this.uuid, this.name, "SVR");
+    }
 }
 class ServerGroup extends Core {
     constructor(core, uuid, network, name) {
@@ -2313,7 +2316,7 @@ class ServerGroup extends Core {
         return __awaiter(this, void 0, void 0, function* () {
             return new Call(this.core)
                 .commit({
-                server: this.uuid,
+                group: this.uuid,
             }, "instance/server/group/delete/")
                 .then(() => {
                 return true;
@@ -2339,6 +2342,9 @@ class ServerGroupList extends Core {
             this.servers.push(new Server(this.core).fromObject(serverObj));
         });
         return this;
+    }
+    asServerGroup() {
+        return new ServerGroup(this.core, this.uuid, this.network, this.name);
     }
 }
 class GeoRestriction {

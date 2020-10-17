@@ -25,7 +25,7 @@ class ServerGroup extends Core {
         return new Call(this.core)
             .commit(
                 {
-                    server: this.uuid,
+                    group: this.uuid,
                 },
                 "instance/server/group/delete/"
             )

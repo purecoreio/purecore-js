@@ -1,9 +1,9 @@
 class Server extends Core {
 
     public core: Core;
-    public uuid: String;
+    public uuid: string;
     public network: Network;
-    public name: String;
+    public name: string;
     public group: ServerGroup;
 
     constructor(core: Core, uuid?: string, network?: Network, name?: string, group?: ServerGroup) {
@@ -66,6 +66,10 @@ class Server extends Core {
                 main.group = null;
                 return new Server(main.core).fromObject(jsonresponse);
             });
+    }
+
+    public asInstance():Instance{
+        return new Instance(this.core,this.uuid,this.name,"SVR");
     }
 
 
