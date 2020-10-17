@@ -1883,7 +1883,7 @@ class Network extends Core {
                 network: this.uuid
             }, "instance/server/group/create/")
                 .then((jsonresponse) => {
-                return new ServerGroup(main.core).fromObject(jsonresponse.group);
+                return new ServerGroup(main.core).fromObject(jsonresponse);
             });
         });
     }
@@ -2281,10 +2281,24 @@ class Server extends Core {
             });
         });
     }
+    ungroup() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let main = this;
+            return new Call(this.core)
+                .commit({
+                server: this.uuid,
+            }, "instance/server/ungroup/")
+                .then((jsonresponse) => {
+                main.group = null;
+                return new Server(main.core).fromObject(jsonresponse);
+            });
+        });
+    }
 }
 class ServerGroup extends Core {
     constructor(core, uuid, network, name) {
         super(core.getTool(), core.dev);
+        this.uuid = uuid;
         this.core = core;
         this.network = network;
         this.name = name;
@@ -2294,6 +2308,17 @@ class ServerGroup extends Core {
         this.network = new Network(this.core).fromObject(object.network);
         this.name = object.name;
         return this;
+    }
+    delete() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Call(this.core)
+                .commit({
+                server: this.uuid,
+            }, "instance/server/group/delete/")
+                .then(() => {
+                return true;
+            });
+        });
     }
 }
 class ServerGroupList extends Core {

@@ -31,7 +31,7 @@ class Network extends Core {
         "instance/server/group/create/"
       )
       .then((jsonresponse) => {
-        return new ServerGroup(main.core).fromObject(jsonresponse.group);
+        return new ServerGroup(main.core).fromObject(jsonresponse);
       });
   }
 

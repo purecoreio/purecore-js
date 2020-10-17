@@ -51,5 +51,22 @@ class Server extends Core {
             });
     }
 
+    public async ungroup(): Promise<Server> {
+
+        let main = this;
+
+        return new Call(this.core)
+            .commit(
+                {
+                    server: this.uuid,
+                },
+                "instance/server/ungroup/"
+            )
+            .then((jsonresponse) => {
+                main.group = null;
+                return new Server(main.core).fromObject(jsonresponse);
+            });
+    }
+
 
 }
