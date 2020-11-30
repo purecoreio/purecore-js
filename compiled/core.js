@@ -9,6 +9,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 class Core {
     constructor(tool, dev) {
+        this.onLoginEvent = new LiteEvent();
+        this.onPaymentSuccessEvent = new LiteEvent();
+        this.onPaymentFailureEvent = new LiteEvent();
         if (dev == null) {
             this.dev = false;
         }
@@ -28,7 +31,54 @@ class Core {
                 }
             }
         }
+        try {
+            if (window !== undefined) {
+                this.addWindowListeners();
+            }
+        }
+        catch (error) {
+            // ignore
+        }
         // if not start with fromdiscord or fromtoken
+    }
+    get onLogin() { return this.onLoginEvent.expose(); }
+    get onPaymentSuccess() { return this.onPaymentSuccessEvent.expose(); }
+    get onPaymentFailure() { return this.onPaymentFailureEvent.expose(); }
+    addWindowListeners() {
+        window.addEventListener("message", (event) => {
+            if (event.origin !== "https://api.purecore.io") {
+                /*if (this.dev) {
+                  console.log("[core data transfer] received data from another host", event)
+                }*/
+                return;
+            }
+            /*if (this.dev) {
+              console.log("[core data transfer] received data from purecore", event)
+            }*/
+            switch (event.data.message) {
+                case 'login':
+                    this.onLoginEvent.trigger(new LoginEvent(event.data.data));
+                    break;
+                case 'paymentSuccess':
+                    this.onPaymentSuccessEvent.trigger(new PaymentSuccessEvent());
+                    break;
+                case 'paymentFailure':
+                    this.onPaymentFailureEvent.trigger(new PaymentFailureEvent());
+                    break;
+            }
+        }, false);
+    }
+    login(method) {
+        try {
+            let h = 600;
+            let w = 400;
+            const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+            const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
+            return window.open('https://api.purecore.io/login/' + method, 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
+        }
+        catch (error) {
+            throw new Error("In order to create a login popup, you must be executing purecore from a Document Object Model");
+        }
     }
     getCacheCollection() {
         return new CacheCollection(this.dev);
@@ -807,23 +857,6 @@ class InstanceCache extends Core {
         });
     }
 }
-class LiteEvent {
-    constructor() {
-        this.handlers = [];
-    }
-    on(handler) {
-        this.handlers.push(handler);
-    }
-    off(handler) {
-        this.handlers = this.handlers.filter(h => h !== handler);
-    }
-    trigger(data) {
-        this.handlers.slice(0).forEach(h => h(data));
-    }
-    expose() {
-        return this;
-    }
-}
 class Call extends Core {
     constructor(core) {
         super(core.getTool(), core.dev);
@@ -1222,6 +1255,34 @@ class Elements extends Core {
     getCheckoutElement(products, successFunction) {
         return new CheckoutElement(this.core, products, successFunction);
     }
+}
+class LiteEvent {
+    constructor() {
+        this.handlers = [];
+    }
+    on(handler) {
+        this.handlers.push(handler);
+    }
+    off(handler) {
+        this.handlers = this.handlers.filter(h => h !== handler);
+    }
+    trigger(data) {
+        this.handlers.slice(0).forEach(h => h(data));
+    }
+    expose() {
+        return this;
+    }
+}
+class LoginEvent {
+    constructor(session) {
+        this.session = session;
+    }
+}
+class PaymentFailureEvent {
+    constructor() { }
+}
+class PaymentSuccessEvent {
+    constructor() { }
 }
 class ForumCategory extends Core {
     constructor(core, uuid, name, description, network, section) {

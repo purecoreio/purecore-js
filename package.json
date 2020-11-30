@@ -1,6 +1,6 @@
 {
   "name": "purecore",
-  "version": "1.16.36",
+  "version": "3.0.0",
   "description": "purecore js client",
   "main": "./compiled/core.js",
   "directories": {
@@ -12,7 +12,7 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && terser --compress --mangle --output ./compiled/core.min.js -- ./compiled/core.js "
   },
   "repository": {
     "type": "git",

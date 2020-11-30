@@ -1,7 +1,17 @@
 class Core {
-  key: string;
-  session: Session;
-  dev: boolean;
+
+  public key: string;
+  public session: Session;
+  public dev: boolean;
+
+  private readonly onLoginEvent = new LiteEvent<LoginEvent>();
+  public get onLogin() { return this.onLoginEvent.expose(); }
+
+  private readonly onPaymentSuccessEvent = new LiteEvent<PaymentSuccessEvent>();
+  public get onPaymentSuccess() { return this.onPaymentSuccessEvent.expose(); }
+
+  private readonly onPaymentFailureEvent = new LiteEvent<PaymentFailureEvent>();
+  public get onPaymentFailure() { return this.onPaymentFailureEvent.expose(); }
 
   constructor(tool?: any, dev?) {
     if (dev == null) {
@@ -22,8 +32,53 @@ class Core {
         }
       }
     }
+    try {
+      if (window !== undefined) {
+        this.addWindowListeners();
+      }
+    } catch (error) {
+      // ignore
+    }
 
     // if not start with fromdiscord or fromtoken
+  }
+
+  public addWindowListeners() {
+    window.addEventListener("message", (event) => {
+      if (event.origin !== "https://api.purecore.io") {
+        /*if (this.dev) {
+          console.log("[core data transfer] received data from another host", event)
+        }*/
+        return;
+      }
+      /*if (this.dev) {
+        console.log("[core data transfer] received data from purecore", event)
+      }*/
+      switch (event.data.message) {
+        case 'login':
+          this.onLoginEvent.trigger(new LoginEvent(event.data.data))
+          break;
+        case 'paymentSuccess':
+          this.onPaymentSuccessEvent.trigger(new PaymentSuccessEvent())
+          break;
+        case 'paymentFailure':
+          this.onPaymentFailureEvent.trigger(new PaymentFailureEvent())
+          break;
+      }
+    }, false);
+  }
+
+
+  public login(method): Window {
+    try {
+      let h = 600;
+      let w = 400;
+      const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+      const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
+      return window.open('https://api.purecore.io/login/' + method, 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
+    } catch (error) {
+      throw new Error("In order to create a login popup, you must be executing purecore from a Document Object Model");
+    }
   }
 
   public getCacheCollection(): CacheCollection {
