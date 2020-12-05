@@ -1,4 +1,5 @@
 node_modules/
+src.old/
 tests/
 .idea/
 .DS_Store

@@ -1,3 +1,0 @@
-enum Service {
-  MINECRAFT,
-}

@@ -1,208 +1,86 @@
 class Core {
 
-  public key: string;
-  public session: Session;
-  public dev: boolean;
+    public static dev: boolean;
+    public static keychain: Keychain;
 
-  private readonly onLoginEvent = new LiteEvent<LoginEvent>();
-  public get onLogin() { return this.onLoginEvent.expose(); }
+    public constructor(method?: any, dev?: boolean) {
 
-  private readonly onPaymentSuccessEvent = new LiteEvent<PaymentSuccessEvent>();
-  public get onPaymentSuccess() { return this.onPaymentSuccessEvent.expose(); }
-
-  private readonly onPaymentFailureEvent = new LiteEvent<PaymentFailureEvent>();
-  public get onPaymentFailure() { return this.onPaymentFailureEvent.expose(); }
-
-  constructor(tool?: any, dev?) {
-    if (dev == null) {
-      this.dev = false;
-    } else {
-      this.dev = dev;
-    }
-    if (tool != undefined) {
-      if (typeof tool == "string") {
-        this.key = tool;
-      } else if (typeof tool == "object") {
-        if (tool instanceof Session) {
-          this.session = tool;
+        // dev mode
+        if (dev == null || dev == false) {
+            let loc = location;
+            if (loc) {
+                // automatically set dev mode if running on localhost
+                Core.dev = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+            } else {
+                Core.dev = false;
+            }
         } else {
-          this.session = new Session(
-            new Core(this.session, this.dev)
-          ).fromObject(tool);
+            Core.dev = true;
         }
-      }
+
+        // checks if the ID instance has not been started
+        if (Core.keychain == null) {
+            Core.keychain = new Keychain();
+        }
+
+        // adds the authentication method to the ID manager if it is a valid authentication method
+        if (method != null) {
+            Core.keychain.addMethod(Keychain.getMethod(method));
+        }
     }
-    try {
-      if (window !== undefined) {
-        this.addWindowListeners();
-      }
-    } catch (error) {
-      // ignore
+
+    /**
+     * @description gets a generic instance from the api
+     */
+    public static async getInstance(id: string): Promise<Instance> {
+        return await new Call()
+            .addParam(Param.Instance, id)
+            .commit('instance/get/').then((res) => {
+                return Instance.fromObject(res);
+            })
     }
 
-    // if not start with fromdiscord or fromtoken
-  }
-
-  public addWindowListeners() {
-    window.addEventListener("message", (event) => {
-      if (event.origin !== "https://api.purecore.io") {
-        /*if (this.dev) {
-          console.log("[core data transfer] received data from another host", event)
-        }*/
-        return;
-      }
-      /*if (this.dev) {
-        console.log("[core data transfer] received data from purecore", event)
-      }*/
-      switch (event.data.message) {
-        case 'login':
-          this.onLoginEvent.trigger(new LoginEvent(event.data.data))
-          break;
-        case 'paymentSuccess':
-          this.onPaymentSuccessEvent.trigger(new PaymentSuccessEvent())
-          break;
-        case 'paymentFailure':
-          this.onPaymentFailureEvent.trigger(new PaymentFailureEvent())
-          break;
-      }
-    }, false);
-  }
-
-
-  public login(method): Window {
-    try {
-      let h = 600;
-      let w = 400;
-      const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
-      const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
-      return window.open('https://api.purecore.io/login/' + method, 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
-    } catch (error) {
-      throw new Error("In order to create a login popup, you must be executing purecore from a Document Object Model");
+    /**
+     * @description gets a network instance from the api
+     */
+    public static async getNetwork(id: string): Promise<Network> {
+        return await new Call()
+            .addParam(Param.Instance, id)
+            .commit('network/get/').then((res) => {
+                return Network.fromObject(res);
+            })
     }
-  }
 
-  public getCacheCollection(): CacheCollection {
-    return new CacheCollection(this.dev);
-  }
-
-  public async requestGlobalHash(): Promise<Array<ConnectionHashGlobal>> {
-    let core = this;
-    return await new Call(this)
-      .commit({}, "session/hash/list/")
-      .then((json) => {
-        var response = new Array<ConnectionHashGlobal>();
-        json.forEach((hashData) => {
-          var hash = new ConnectionHashGlobal(core);
-          response.push(hash.fromObject(hashData));
-        });
-        return response;
-      });
-  }
-
-  public getPlayersFromIds(ids): Array<Player> {
-    var playerList = new Array<Player>();
-    ids.forEach((id) => {
-      playerList.push(new Player(this, id));
-    });
-    return playerList;
-  }
-
-  public async getMachine(hash: string): Promise<Machine> {
-    return await new Call(this)
-      .commit({ hash: hash }, "machine")
-      .then((data) => { return new Machine(this, hash).fromObject(data) });
-  }
-
-
-  public async fromToken(googleToken: string): Promise<Session> {
-    return await new Call(this)
-      .commit({ token: googleToken }, "session/from/google")
-      .then(json => {
-        const session: Session = new Session(this).fromObject(json);
-        this.session = session;
-        return session;
-      });
-  }
-
-  public asBillingAddress(array): BillingAddress {
-    return new BillingAddress().fromObject(array);
-  }
-
-  public getWorkbench(): Workbench {
-    return new Workbench();
-  }
-
-  public async pushFCM(token: string): Promise<boolean> {
-    return await new Call(this)
-      .commit({ token: token }, "account/push/fcm")
-      .then(() => true);
-  }
-
-  public getTool() {
-    if (this.key != null && this.key != undefined) {
-      return this.key;
-    } else {
-      return this.session;
+    /**
+     * @description gets the highest priority authentication method
+     */
+    public static getAuth(): AuthMethod {
+        let m = null;
+        let mths = Core.keychain.getMethods();
+        for (let i = 0; i < mths.length; i++) {
+            const element = mths[i];
+            if (m == null) {
+                m = element;
+            } else {
+                if (element instanceof CoreSession && m instanceof Key) {
+                    m = element;
+                    break;
+                }
+            }
+        }
+        return m;
     }
-  }
 
-  public getCoreSession() {
-    return this.session;
-  }
-
-  public getLegacyKey(): Key {
-    return new Key(this, "UNK", null, this.key, null);
-  }
-
-  public getKey() {
-    if (this.key == undefined) {
-      return null;
-    } else {
-      return this.key;
+    /**
+     * @description returns null if there is no assigned player to the global core instance
+     */
+    public getPlayer(): Player | null {
+        let ses = Core.keychain.getSession();
+        if (ses != null) {
+            return Core.keychain.getSession().getPlayer();
+        } else {
+            return null;
+        }
     }
-  }
 
-  public getHostingManager(): HostingManager {
-    return new HostingManager(this);
-  }
-
-  public getElements() {
-    return new Elements(this);
-  }
-
-  public getInstance(instanceId, name?, type?): Instance {
-    return new Instance(this, instanceId, name, type);
-  }
-
-  public getCore(): Core {
-    return this;
-  }
-
-  public async fromDiscord(guildId: string, botToken: string, devkey: boolean): Promise<Core> {
-    let params: any = {
-      guildid: guildId,
-      token: botToken
-    };
-
-    if (devkey) params.devkey = true;
-
-    return await new Call(this)
-      .commit(params, "key/from/discord")
-      .then(json => {
-        this.key = json.hash;
-        return this;
-      });
-  }
-}
-
-try {
-  module.exports = Core;
-  const fetch = require('node-fetch');
-  if (!global.fetch) {
-    global.fetch = fetch;
-  }
-} catch (error) {
-  console.log(
-    "[corejs] starting plain vanilla instance, as nodejs exports were not available"
-  );
 }

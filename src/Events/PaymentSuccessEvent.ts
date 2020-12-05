@@ -1,5 +1,0 @@
-class PaymentSuccessEvent {
-
-    public constructor() { }
-
-}

@@ -1,75 +1,51 @@
-class Server extends Core {
+class Server {
 
-    public core: Core;
-    public uuid: string;
-    public network: Network;
-    public name: string;
-    public group: ServerGroup;
+    private network: Network;
+    private id: string;
+    private name: string;
+    private group: ServerGroup;
 
-    constructor(core: Core, uuid?: string, network?: Network, name?: string, group?: ServerGroup) {
-        super(core.getTool(), core.dev);
-        this.core = core;
-        this.uuid = uuid;
+    public constructor(network?: Network, id?: string, name?: string, group?: ServerGroup) {
         this.network = network;
+        this.id = id;
         this.name = name;
         this.group = group;
     }
 
-    public fromObject(object: any): Server {
-        this.uuid = object.uuid;
-        this.network = new Network(this.core).fromObject(object.network);
-        this.name = object.name;
-        if (object.group == null) {
-            this.group = null;
-        } else {
-            this.group = new ServerGroup(this.core).fromObject(object.group);
+    public static fromObject(object?: any): Server {
+        let ser = new Server();
+        ser.id = String(object.id);
+        ser.name = String(object.name);
+        ser.group = null;
+        if ('group' in object && object.group != null) {
+            ser.group = ServerGroup.fromObject(object.group);
         }
-        return this;
+        return ser;
     }
 
-    public async addToGroup(group: ServerGroup | String): Promise<Server> {
-
-        let main = this;
-        let groupid = null;
-        if (group instanceof ServerGroup) {
-            groupid = String(group.uuid);
-        } else {
-            groupid = String(group);
-        }
-
-        return new Call(this.core)
-            .commit(
-                {
-                    server: this.uuid,
-                    group: groupid
-                },
-                "instance/server/add/to/group/"
-            )
-            .then((jsonresponse) => {
-                main.group = new ServerGroup(main.core).fromObject(jsonresponse.group);
-                return new Server(main.core).fromObject(jsonresponse);
-            });
+    public getGroup(): ServerGroup {
+        return this.group;
     }
 
-    public async ungroup(): Promise<Server> {
-
-        let main = this;
-
-        return new Call(this.core)
-            .commit(
-                {
-                    server: this.uuid,
-                },
-                "instance/server/ungroup/"
-            )
-            .then((jsonresponse) => {
-                main.group = null;
-                return new Server(main.core).fromObject(jsonresponse);
-            });
+    public async setGroup(group: ServerGroup): Promise<Server> {
+        return await new Call()
+            .addParam(Param.Instance, this.id)
+            .addParam(Param.ServerGroup, group.getId())
+            .commit('instance/group/set').then((res) => {
+                let server = Server.fromObject(res);
+                this.group = server.getGroup();
+                return server;
+            })
     }
 
-    public asInstance():Instance{
-        return new Instance(this.core,this.uuid,this.name,"SVR");
+    public async ungroup(grup: ServerGroup): Promise<Server> {
+        return await new Call()
+            .addParam(Param.Instance, this.id)
+            .commit('instance/group/unset').then((res) => {
+                let server = Server.fromObject(res);
+                this.group = server.getGroup();
+                return server;
+            })
     }
 
 
