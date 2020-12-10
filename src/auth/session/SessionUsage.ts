@@ -8,6 +8,12 @@ class SessionUsage {
         this.uses = uses;
     }
 
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.creation = Util.epoch(this.creation);
+        return obj;
+    }
+
     public static fromObject(object: any): SessionUsage {
         let us = new SessionUsage();
         us.creation = Util.date(object.creation);

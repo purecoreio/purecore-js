@@ -6,6 +6,10 @@ class Keychain {
      * @description tells the difference from different authentication methods based on the object structure
      */
 
+    constructor() {
+        this.authMethods = new Array<AuthMethod>();
+    }
+
     public addMethod(object: AuthMethod): void {
         this.authMethods.push(object);
     }
@@ -22,6 +26,17 @@ class Keychain {
 
     getMethods(): Array<AuthMethod> {
         return this.authMethods;
+    }
+
+    public removeSessions() {
+        let newAuthMethods = new Array<AuthMethod>();
+        for (let i = 0; i < this.authMethods.length; i++) {
+            const element = this.authMethods[i];
+            if (!(element instanceof CoreSession)) {
+                newAuthMethods.push(element);
+            }
+        }
+        this.authMethods = newAuthMethods;
     }
 
     public static getMethod(object: any): AuthMethod {

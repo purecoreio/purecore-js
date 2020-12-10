@@ -10,6 +10,11 @@ class SessionLocation {
         this.country = country;
     }
 
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
+
     public static fromObject(object: any): SessionLocation {
         let loc = new SessionLocation();
         loc.city = String(object.city);

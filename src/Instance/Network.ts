@@ -12,6 +12,11 @@ class Network {
         this.platform = platform;
     }
 
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
+
     public static fromObject(object: any): Network {
         let net = new Network();
         net.name = String(object.name);

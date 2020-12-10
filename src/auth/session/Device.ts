@@ -12,6 +12,11 @@ class SessionDevice {
         this.model = model;
     }
 
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
+
     public static fromObject(object: any): SessionDevice {
         let dev = new SessionDevice();
         dev.os = String(object.os);

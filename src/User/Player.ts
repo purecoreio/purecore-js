@@ -23,6 +23,31 @@ class Player {
         this.birthdate = birthdate;
     }
 
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.lastUpdated = Util.epoch(this.getLastUpdated())
+        obj.lastLogin = Util.epoch(this.getLastLogin())
+        obj.birthdate = Util.epoch(this.getBirthdate())
+        obj.creation = Util.epoch(this.getCreation())
+        return obj;
+    }
+
+    public getLastUpdated(): Date {
+        return this.lastUpdated;
+    }
+
+    public getLastLogin(): Date {
+        return this.lastLogin;
+    }
+
+    public getBirthdate(): Date {
+        return this.birthdate;
+    }
+
+    public getCreation(): Date {
+        return this.creation;
+    }
+
     public static fromObject(object: any): Player {
 
         let ply = new Player();
@@ -34,7 +59,7 @@ class Player {
             ply.creation = Util.date(object.creation)
         }
         if ('username' in object) {
-            ply.username = String(object.username);
+            ply.username = object.username == null ? null : String(object.username);
         }
         if ('lastLogin' in object) {
             ply.lastLogin = Util.date(object.lastLogin);
@@ -43,7 +68,7 @@ class Player {
             ply.lastUpdated = Util.date(object.lastUpdated);
         }
         if ('bio' in object) {
-            ply.bio = String(object.bio);
+            ply.bio = (object.bio == null ? null : String(object.bio));
         }
         if ('birthdate' in object) {
             ply.birthdate = Util.date(object.birthdate);
@@ -53,8 +78,7 @@ class Player {
     }
 
     public asOwner(): Owner {
-        return new Owner()
-        //return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
+        return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
     }
 
 

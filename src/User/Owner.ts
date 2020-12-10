@@ -1,16 +1,21 @@
-class Owner {
+/// <reference path="Player.ts"/>
+class Owner extends Player {
 
-    /*
     public constructor(id?: string, creation?: Date, username?: string, lastLogin?: Date, lastUpdated?: Date, bio?: string, birthdate?: Date) {
         super(id, creation, username, lastLogin, lastUpdated, bio, birthdate);
-    }*/
+    }
 
-    public async getNetworks(name: string, cname: string, game: Game, platform: Platform): Promise<Array<Network>> {
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.lastUpdated = Util.epoch(this.getLastUpdated())
+        obj.lastLogin = Util.epoch(this.getLastLogin())
+        obj.birthdate = Util.epoch(this.getBirthdate())
+        obj.creation = Util.epoch(this.getCreation())
+        return obj;
+    }
+
+    public async getNetworks(): Promise<Array<Network>> {
         return await new Call()
-            .addParam(Param.Name, name)
-            .addParam(Param.Cname, cname)
-            .addParam(Param.Game, game)
-            .addParam(Param.Platform, platform)
             .commit('network/list/').then((res) => {
                 if (Array.isArray(res)) {
                     let networkList = new Array<Network>();
@@ -25,6 +30,8 @@ class Owner {
     }
 
     public async createNetwork(name: string, cname: string, game: Game, platform: Platform): Promise<Network> {
+        game = Util.gameVal(game);
+        platform = Util.platformVal(platform);
         return await new Call()
             .addParam(Param.Name, name)
             .addParam(Param.Cname, cname)

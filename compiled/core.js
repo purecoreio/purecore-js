@@ -21,7 +21,7 @@ class Core {
             }
         }
         else {
-            Core.dev = true;
+            Core.dev = dev;
         }
         // checks if the ID instance has not been started
         if (Core.keychain == null) {
@@ -31,6 +31,18 @@ class Core {
         if (method != null) {
             Core.keychain.addMethod(Keychain.getMethod(method));
         }
+    }
+    /**
+     * @description pass a callback to call when logging in
+     */
+    getLoginManager() {
+        return new LoginHelper();
+    }
+    /**
+     * @description gets the current keychain instance
+     */
+    static getKeychain() {
+        return Core.keychain;
     }
     /**
      * @description gets a generic instance from the api
@@ -76,6 +88,10 @@ class Core {
         }
         return m;
     }
+    static addAuth(method) {
+        Core.keychain.addMethod(method);
+        return;
+    }
     /**
      * @description returns null if there is no assigned player to the global core instance
      */
@@ -89,10 +105,18 @@ class Core {
         }
     }
 }
+try {
+    module.exports = Core;
+}
+catch (error) {
+}
 class Keychain {
     /**
      * @description tells the difference from different authentication methods based on the object structure
      */
+    constructor() {
+        this.authMethods = new Array();
+    }
     addMethod(object) {
         this.authMethods.push(object);
     }
@@ -108,6 +132,16 @@ class Keychain {
     getMethods() {
         return this.authMethods;
     }
+    removeSessions() {
+        let newAuthMethods = new Array();
+        for (let i = 0; i < this.authMethods.length; i++) {
+            const element = this.authMethods[i];
+            if (!(element instanceof CoreSession)) {
+                newAuthMethods.push(element);
+            }
+        }
+        this.authMethods = newAuthMethods;
+    }
     static getMethod(object) {
         if (typeof object == 'string') {
             return new Key(object);
@@ -117,6 +151,136 @@ class Keychain {
             // TODO: Implement host code, payment hash
             return CoreSession.fromObject(object);
         }
+    }
+}
+class LoginHelper {
+    constructor(autoLogin = true) {
+        this.autoLogin = autoLogin;
+        this.loggedIn = false;
+        if (this.autoLogin) {
+            try {
+                this.loadSession();
+                this.loggedIn = true;
+            }
+            catch (error) {
+                // ignore
+            }
+        }
+        if (Core.getAuth() instanceof CoreSession) {
+            this.loggedIn = true;
+        }
+    }
+    isLoggedIn() {
+        return this.loggedIn;
+    }
+    loadSession() {
+        let ses = CoreSession.load();
+        Core.addAuth(ses);
+        return ses;
+    }
+    logout() {
+        // removes stored sessions
+        if (localStorage.getItem(btoa("purecore-" + window.location.hostname + "l")) != null) {
+            localStorage.removeItem(btoa("purecore-" + window.location.hostname + "l"));
+        }
+        if (localStorage.getItem(btoa("purecore-" + window.location.hostname + "d")) != null) {
+            localStorage.removeItem(btoa("purecore-" + window.location.hostname + "d"));
+        }
+        if (localStorage.getItem(btoa("purecore-" + window.location.hostname + "h")) != null) {
+            localStorage.removeItem(btoa("purecore-" + window.location.hostname + "h"));
+        }
+        // removes current sessions
+        Core.getKeychain().removeSessions();
+        // updates login status
+        this.loggedIn = false;
+    }
+    login(method) {
+        return new Promise((resolve, reject) => {
+            method = Util.platformVal(method);
+            if (window != null) {
+                try {
+                    if (LoginHelper.activeWindow != null)
+                        LoginHelper.activeWindow.close();
+                    // generates popup
+                    let h = 600;
+                    let w = 400;
+                    const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+                    const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
+                    let popup = window.open(this.getURL(method), 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
+                    LoginHelper.activeWindow = popup;
+                    let listenerActive = true;
+                    let res = null;
+                    // waits for result
+                    window.addEventListener("message", (event) => {
+                        if (event.origin !== "https://api.purecore.io") {
+                            return;
+                        }
+                        switch (event.data.message) {
+                            case 'login':
+                                if (listenerActive) {
+                                    res = Keychain.getMethod(event.data.data);
+                                    Core.addAuth(res);
+                                    // close window (result already got)
+                                    if (!popup.closed) {
+                                        popup.close();
+                                        LoginHelper.activeWindow = null;
+                                    }
+                                    // do not listen for further events (task completed)
+                                    listenerActive = false;
+                                }
+                                if (this.autoLogin) {
+                                    if (res instanceof CoreSession) {
+                                        res.save();
+                                        this.loggedIn = true;
+                                    }
+                                }
+                                resolve(res);
+                                break;
+                        }
+                    }, false);
+                    // check if the window gets closed before a result was retrieved
+                    let interval = setInterval(() => {
+                        if (LoginHelper.activeWindow != null && LoginHelper.activeWindow.closed) {
+                            LoginHelper.activeWindow = null;
+                        }
+                        if (popup.closed && res == null) {
+                            // stop listening for events
+                            listenerActive = false;
+                            // stop the window state checker
+                            clearInterval(interval);
+                            // throw error
+                            reject(new Error("The popup was closed before any session was retrieved"));
+                        }
+                    }, 50);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            }
+            else {
+                reject(new Error("In order to create a login popup, you must be executing purecore from a Document Object Model"));
+            }
+        });
+    }
+    getURL(platform) {
+        let ext = "";
+        switch (platform) {
+            case Platform.Stadia:
+                ext += "google";
+                break;
+            case Platform.Steam:
+                ext += "steam";
+                break;
+            case Platform.Xbox:
+                ext += "microsoft";
+                break;
+            case Platform.Discord:
+                ext += "discord";
+                break;
+            default:
+                throw new Error("Unsupported login method");
+        }
+        return `https://api.purecore.io/login/${ext}/`;
     }
 }
 class Key {
@@ -214,6 +378,70 @@ class CoreSession {
     getParam() {
         return Param.Hash;
     }
+    asObject() {
+        let obj = {
+            owner: this.owner.asObject(),
+            location: this.location.asObject(),
+            device: this.device.asObject(),
+            usage: this.usage.asObject(),
+            id: this.id,
+            hash: this.hash,
+            network: (this.network == null ? null : this.network.asObject())
+        };
+        return obj;
+    }
+    save() {
+        if (localStorage) {
+            let gibberishLength = Math.floor(Math.random() * 128);
+            let finalStr = btoa(Util.generateGibberish(256 + gibberishLength) + this.hash + Util.generateGibberish(256 + gibberishLength));
+            let encodedLength = Util.shortLengthToLong(gibberishLength);
+            /* please, keep in mind this encryption is just trash. it is only used
+            in order to mask values when people are streaming or debugging live    */
+            let sessionNonSensitive = this.asObject();
+            delete sessionNonSensitive.hash;
+            localStorage.setItem(btoa("purecore-" + window.location.hostname + "h"), finalStr);
+            localStorage.setItem(btoa("purecore-" + window.location.hostname + "d"), btoa(JSON.stringify(sessionNonSensitive)));
+            localStorage.setItem(btoa("purecore-" + window.location.hostname + "l"), encodedLength);
+        }
+        else {
+            throw new Error("Local storage unavailable");
+        }
+    }
+    static load() {
+        let hash = localStorage.getItem(btoa("purecore-" + window.location.hostname + "h"));
+        let nonSensitive = localStorage.getItem(btoa("purecore-" + window.location.hostname + "d"));
+        let len = localStorage.getItem(btoa("purecore-" + window.location.hostname + "l"));
+        if (hash != null) {
+            if (len != null) {
+                if (nonSensitive != null) {
+                    let decodedLen = Util.longLengthToShort(len);
+                    let decodedHash = atob(hash);
+                    let finalHash = decodedHash.substr(256 + decodedLen, decodedHash.length - ((256 + decodedLen) * 2));
+                    let decodedNonSensitive = JSON.parse(atob(nonSensitive));
+                    decodedNonSensitive.hash = finalHash; // now sensitive
+                    return CoreSession.fromObject(Keychain.getMethod(decodedNonSensitive)); // removes entity, reconverts it
+                }
+                else {
+                    localStorage.removeItem(btoa("purecore-" + window.location.hostname + "h"));
+                    localStorage.removeItem(btoa("purecore-" + window.location.hostname + "l"));
+                    throw new Error("Missing non-sensitive data");
+                }
+            }
+            else {
+                localStorage.removeItem(btoa("purecore-" + window.location.hostname + "h"));
+                throw new Error("No hash length found");
+            }
+        }
+        else {
+            if (len != null) {
+                localStorage.removeItem(btoa("purecore-" + window.location.hostname + "l"));
+            }
+            if (nonSensitive != null) {
+                localStorage.removeItem(btoa("purecore-" + window.location.hostname + "d"));
+            }
+            throw new Error("No hash found");
+        }
+    }
     static fromObject(object) {
         let ses = new CoreSession();
         if ('owner' in object) {
@@ -255,6 +483,10 @@ class SessionDevice {
         this.brand = brand;
         this.model = model;
     }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
     static fromObject(object) {
         let dev = new SessionDevice();
         dev.os = String(object.os);
@@ -270,6 +502,10 @@ class SessionLocation {
         this.state = state;
         this.country = country;
     }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
     static fromObject(object) {
         let loc = new SessionLocation();
         loc.city = String(object.city);
@@ -282,6 +518,11 @@ class SessionUsage {
     constructor(creation, uses) {
         this.creation = creation;
         this.uses = uses;
+    }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.creation = Util.epoch(this.creation);
+        return obj;
     }
     static fromObject(object) {
         let us = new SessionUsage();
@@ -477,6 +718,10 @@ class Network {
         this.game = game;
         this.platform = platform;
     }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        return obj;
+    }
     static fromObject(object) {
         let net = new Network();
         net.name = String(object.name);
@@ -529,12 +774,13 @@ class Network {
 }
 var Platform;
 (function (Platform) {
+    Platform[Platform["Unknown"] = -1] = "Unknown";
     Platform[Platform["Mojang"] = 0] = "Mojang";
     Platform[Platform["Xbox"] = 1] = "Xbox";
     Platform[Platform["Steam"] = 2] = "Steam";
     Platform[Platform["Stadia"] = 3] = "Stadia";
     Platform[Platform["EpicGames"] = 4] = "EpicGames";
-    Platform[Platform["Unknown"] = 5] = "Unknown";
+    Platform[Platform["Discord"] = 5] = "Discord";
 })(Platform || (Platform = {}));
 class Server {
     constructor(network, id, name, group) {
@@ -633,18 +879,85 @@ class ServerGroup {
         });
     }
 }
-class Owner {
-    /*
-    public constructor(id?: string, creation?: Date, username?: string, lastLogin?: Date, lastUpdated?: Date, bio?: string, birthdate?: Date) {
+class Player {
+    /*private msa;
+    private dca;
+    private ga;
+    private sa;*/
+    constructor(id, creation, username, lastLogin, lastUpdated, bio, birthdate) {
+        this.id = id;
+        this.creation = creation;
+        this.username = username;
+        this.lastLogin = lastLogin;
+        this.lastUpdated = lastUpdated;
+        this.bio = bio;
+        this.birthdate = birthdate;
+    }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.lastUpdated = Util.epoch(this.getLastUpdated());
+        obj.lastLogin = Util.epoch(this.getLastLogin());
+        obj.birthdate = Util.epoch(this.getBirthdate());
+        obj.creation = Util.epoch(this.getCreation());
+        return obj;
+    }
+    getLastUpdated() {
+        return this.lastUpdated;
+    }
+    getLastLogin() {
+        return this.lastLogin;
+    }
+    getBirthdate() {
+        return this.birthdate;
+    }
+    getCreation() {
+        return this.creation;
+    }
+    static fromObject(object) {
+        let ply = new Player();
+        if ('id' in object) {
+            ply.id = String(object.id);
+        }
+        if ('creation' in object) {
+            ply.creation = Util.date(object.creation);
+        }
+        if ('username' in object) {
+            ply.username = object.username == null ? null : String(object.username);
+        }
+        if ('lastLogin' in object) {
+            ply.lastLogin = Util.date(object.lastLogin);
+        }
+        if ('lastUpdated' in object) {
+            ply.lastUpdated = Util.date(object.lastUpdated);
+        }
+        if ('bio' in object) {
+            ply.bio = (object.bio == null ? null : String(object.bio));
+        }
+        if ('birthdate' in object) {
+            ply.birthdate = Util.date(object.birthdate);
+        }
+        return ply;
+    }
+    asOwner() {
+        return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate);
+    }
+}
+/// <reference path="Player.ts"/>
+class Owner extends Player {
+    constructor(id, creation, username, lastLogin, lastUpdated, bio, birthdate) {
         super(id, creation, username, lastLogin, lastUpdated, bio, birthdate);
-    }*/
-    getNetworks(name, cname, game, platform) {
+    }
+    asObject() {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.lastUpdated = Util.epoch(this.getLastUpdated());
+        obj.lastLogin = Util.epoch(this.getLastLogin());
+        obj.birthdate = Util.epoch(this.getBirthdate());
+        obj.creation = Util.epoch(this.getCreation());
+        return obj;
+    }
+    getNetworks() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
-                .addParam(Param.Name, name)
-                .addParam(Param.Cname, cname)
-                .addParam(Param.Game, game)
-                .addParam(Param.Platform, platform)
                 .commit('network/list/').then((res) => {
                 if (Array.isArray(res)) {
                     let networkList = new Array();
@@ -661,6 +974,8 @@ class Owner {
     }
     createNetwork(name, cname, game, platform) {
         return __awaiter(this, void 0, void 0, function* () {
+            game = Util.gameVal(game);
+            platform = Util.platformVal(platform);
             return yield new Call()
                 .addParam(Param.Name, name)
                 .addParam(Param.Cname, cname)
@@ -672,54 +987,115 @@ class Owner {
         });
     }
 }
-class Player {
-    /*private msa;
-    private dca;
-    private ga;
-    private sa;*/
-    constructor(id, creation, username, lastLogin, lastUpdated, bio, birthdate) {
-        this.id = id;
-        this.creation = creation;
-        this.username = username;
-        this.lastLogin = lastLogin;
-        this.lastUpdated = lastUpdated;
-        this.bio = bio;
-        this.birthdate = birthdate;
-    }
-    static fromObject(object) {
-        let ply = new Player();
-        if ('id' in object) {
-            ply.id = String(object.id);
-        }
-        if ('creation' in object) {
-            ply.creation = Util.date(object.creation);
-        }
-        if ('username' in object) {
-            ply.username = String(object.username);
-        }
-        if ('lastLogin' in object) {
-            ply.lastLogin = Util.date(object.lastLogin);
-        }
-        if ('lastUpdated' in object) {
-            ply.lastUpdated = Util.date(object.lastUpdated);
-        }
-        if ('bio' in object) {
-            ply.bio = String(object.bio);
-        }
-        if ('birthdate' in object) {
-            ply.birthdate = Util.date(object.birthdate);
-        }
-        return ply;
-    }
-    asOwner() {
-        return new Owner();
-        //return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
-    }
-}
 class Util {
+    static dec2hex(dec) {
+        return dec.toString(16).padStart(2, "0");
+    }
+    static generateGibberish(len) {
+        var arr = new Uint8Array((len || 40) / 2);
+        window.crypto.getRandomValues(arr);
+        return Array.from(arr, Util.dec2hex).join('');
+    }
+    static shortLengthToLong(length) {
+        let output = "";
+        let multiplyFactor = Math.floor(Math.random() * 16);
+        if (multiplyFactor % 2 <= 0) {
+            multiplyFactor += 1;
+        }
+        let componentNumber = 16 + multiplyFactor;
+        output = Number(length * multiplyFactor).toString(2);
+        let finalLengthStr = "";
+        for (let i = 0; i < componentNumber; i++) {
+            if (i == componentNumber - 1) {
+                finalLengthStr += String(i) + output;
+            }
+            else {
+                finalLengthStr += String(i) + output + "!@#";
+            }
+        }
+        return btoa(finalLengthStr);
+    }
+    static longLengthToShort(length) {
+        let bin = atob(length);
+        let components = bin.split("!@#");
+        let n = parseInt(components[0].substring(1, components[0].length - 1), 2) / (components.length - 16);
+        return Math.floor(n * 2);
+    }
+    static epoch(date) {
+        return (date == null ? null : date.getTime() / 1000);
+    }
     static date(UTCSeconds) {
-        let date = new Date(0);
-        date.setUTCSeconds(UTCSeconds);
-        return date;
+        if (UTCSeconds != null && UTCSeconds != 0) {
+            let date = new Date(0);
+            date.setUTCSeconds(UTCSeconds);
+            return date;
+        }
+        else {
+            return null;
+        }
+    }
+    static gameVal(game) {
+        if (typeof game == 'string') {
+            if (!isNaN(Number(game))) {
+                game = Number(game);
+            }
+            else {
+                game = String(game).toLowerCase();
+                switch (true) {
+                    case ['mc', 'minecraft'].includes(game):
+                        game = Game.Minecraft;
+                        break;
+                    case ['mc bedrock', 'bedrock', 'minecraft bedrock', 'minecraft_bedrock', 'minecraftbedrock'].includes(game):
+                        game = Game.MinecraftBedrock;
+                        console.log(game);
+                        break;
+                    case ['se', 'spaceengineers', 'space engineers'].includes(game):
+                        game = Game.SpaceEngineers;
+                        break;
+                    default:
+                        game = Game.Unknown;
+                        break;
+                }
+            }
+        }
+        if (game > Game.SpaceEngineers, game < Game.Unknown)
+            game = Game.Unknown;
+        return game;
+    }
+    static platformVal(platform) {
+        if (typeof platform == 'string') {
+            if (!isNaN(Number(platform))) {
+                platform = Number(platform);
+            }
+            else {
+                platform = String(platform).toLowerCase();
+                switch (true) {
+                    case ['mojang'].includes(platform):
+                        platform = Platform.Mojang;
+                        break;
+                    case ['xbox', 'microsoft'].includes(platform):
+                        platform = Platform.Xbox;
+                        break;
+                    case ['google', 'stadia'].includes(platform):
+                        platform = Platform.Stadia;
+                        break;
+                    case ['steam', 'valve'].includes(platform):
+                        platform = Platform.Steam;
+                        break;
+                    case ['discord', 'discord-o!'].includes(platform):
+                        platform = Platform.Discord;
+                        break;
+                    case ['epic', 'epicgames'].includes(platform):
+                        platform = Platform.EpicGames;
+                        break;
+                    default:
+                        platform = Platform.Unknown;
+                        break;
+                }
+            }
+        }
+        if (platform > Platform.Discord, platform < Platform.Unknown)
+            platform = Platform.Unknown;
+        return platform;
     }
 }

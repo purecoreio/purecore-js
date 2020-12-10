@@ -1,7 +1,7 @@
 class Core {
 
     public static dev: boolean;
-    public static keychain: Keychain;
+    private static keychain: Keychain;
 
     public constructor(method?: any, dev?: boolean) {
 
@@ -15,7 +15,7 @@ class Core {
                 Core.dev = false;
             }
         } else {
-            Core.dev = true;
+            Core.dev = dev;
         }
 
         // checks if the ID instance has not been started
@@ -27,6 +27,20 @@ class Core {
         if (method != null) {
             Core.keychain.addMethod(Keychain.getMethod(method));
         }
+    }
+
+    /**
+     * @description pass a callback to call when logging in
+     */
+    public getLoginManager(): LoginHelper {
+        return new LoginHelper();
+    }
+
+    /**
+     * @description gets the current keychain instance
+     */
+    public static getKeychain(): Keychain {
+        return Core.keychain;
     }
 
     /**
@@ -54,7 +68,7 @@ class Core {
     /**
      * @description gets the highest priority authentication method
      */
-    public static getAuth(): AuthMethod {
+    static getAuth(): AuthMethod {
         let m = null;
         let mths = Core.keychain.getMethods();
         for (let i = 0; i < mths.length; i++) {
@@ -71,6 +85,11 @@ class Core {
         return m;
     }
 
+    public static addAuth(method: AuthMethod): void {
+        Core.keychain.addMethod(method);
+        return;
+    }
+
     /**
      * @description returns null if there is no assigned player to the global core instance
      */
@@ -82,5 +101,11 @@ class Core {
             return null;
         }
     }
+
+}
+
+try {
+    module.exports = Core;
+} catch (error) {
 
 }
