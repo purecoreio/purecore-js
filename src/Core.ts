@@ -1,9 +1,15 @@
 class Core {
 
     public static dev: boolean;
+    public static context: Context;
     private static keychain: Keychain;
 
     public constructor(method?: any, dev?: boolean) {
+
+        // context
+        if (Core.context == null) {
+            Core.context = new Context();
+        }
 
         // dev mode
         if (dev == null || dev == false) {
@@ -37,6 +43,13 @@ class Core {
     }
 
     /**
+     * @description gets the current context. useful when making network-related calls with a session object
+     */
+    public static getContext(): Context {
+        return Core.context;
+    }
+
+    /**
      * @description gets the current keychain instance
      */
     public static getKeychain(): Keychain {
@@ -59,7 +72,7 @@ class Core {
      */
     public static async getNetwork(id: string): Promise<Network> {
         return await new Call()
-            .addParam(Param.Instance, id)
+            .addParam(Param.Network, id)
             .commit('network/get/').then((res) => {
                 return Network.fromObject(res);
             })

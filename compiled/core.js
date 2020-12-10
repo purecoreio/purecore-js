@@ -9,6 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 class Core {
     constructor(method, dev) {
+        // context
+        if (Core.context == null) {
+            Core.context = new Context();
+        }
         // dev mode
         if (dev == null || dev == false) {
             let loc = location;
@@ -39,6 +43,12 @@ class Core {
         return new LoginHelper();
     }
     /**
+     * @description gets the current context. useful when making network-related calls with a session object
+     */
+    static getContext() {
+        return Core.context;
+    }
+    /**
      * @description gets the current keychain instance
      */
     static getKeychain() {
@@ -62,7 +72,7 @@ class Core {
     static getNetwork(id) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
-                .addParam(Param.Instance, id)
+                .addParam(Param.Network, id)
                 .commit('network/get/').then((res) => {
                 return Network.fromObject(res);
             });
@@ -985,6 +995,22 @@ class Owner extends Player {
                 return Network.fromObject(res);
             });
         });
+    }
+}
+class Context {
+    getNetwork() {
+        return this.network;
+    }
+    setNetwork(network) {
+        if (typeof network == 'string') {
+            let main = this;
+            Core.getNetwork(network).then((network) => {
+                main.network = network;
+            });
+        }
+        else {
+            this.network = network;
+        }
     }
 }
 class Util {
