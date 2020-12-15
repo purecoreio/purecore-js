@@ -1,7 +1,7 @@
 class ServerGroupList {
 
-    private id: String;
-    private name: String;
+    private id: string;
+    private name: string;
     private network: Network;
     private servers: Array<Server>;
 
@@ -14,8 +14,8 @@ class ServerGroupList {
 
     public static fromObject(object: any): ServerGroupList {
         let sg = new ServerGroupList();
-        sg.id = String(object.id);
-        sg.name = String(object.name);
+        sg.id = (object.id == null ? null : String(object.id));
+        sg.name = (object.name == null ? null : String(object.name));
         sg.network = null;
         if ('network' in object && object.network != null) {
             sg.network = Network.fromObject(object.network);
@@ -27,6 +27,22 @@ class ServerGroupList {
             }
         }
         return sg;
+    }
+
+    public getId(): string {
+        return this.id;
+    }
+
+    public getName(): string {
+        return this.name;
+    }
+
+    public getServers(): Array<Server> {
+        return this.servers;
+    }
+
+    public asServerGroup(): ServerGroup {
+        return new ServerGroup(this.id, this.network, this.name);
     }
 
 

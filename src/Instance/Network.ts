@@ -48,6 +48,15 @@ class Network {
             })
     }
 
+    public async createServer(name: String): Promise<Server> {
+        return await new Call()
+            .addParam(Param.Network, this.id)
+            .addParam(Param.Name, name)
+            .commit('instance/create').then((res) => {
+                return Server.fromObject(res);
+            })
+    }
+
     public async createServerGroup(name: String): Promise<ServerGroup> {
         return await new Call()
             .addParam(Param.Network, this.id)
@@ -57,12 +66,18 @@ class Network {
             })
     }
 
-    public async delete(): Promise<void> {
-        return await new Call()
-            .addParam(Param.Instance, this.id)
-            .commit('instance/delete').then(() => {
-                return;
-            })
+    public async delete(confirmation: boolean): Promise<void> {
+        if (confirmation) {
+            return await new Call()
+                .addParam(Param.Instance, this.id)
+                .commit('instance/delete').then(() => {
+                    return;
+                })
+        } else {
+            return new Promise((resolve, reject) => {
+                reject(new Error("missing confirmation"))
+            });
+        }
     }
 
 }

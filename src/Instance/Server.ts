@@ -23,13 +23,17 @@ class Server {
         return ser;
     }
 
+    public asInstance(): Instance {
+        return new Instance(this.id, this.name, CoreInstanceType.Server);
+    }
+
     public getGroup(): ServerGroup {
         return this.group;
     }
 
     public async setGroup(group: ServerGroup): Promise<Server> {
         return await new Call()
-            .addParam(Param.Instance, this.id)
+            .addParam(Param.Server, this.id)
             .addParam(Param.ServerGroup, group.getId())
             .commit('instance/group/set').then((res) => {
                 let server = Server.fromObject(res);
@@ -38,9 +42,9 @@ class Server {
             })
     }
 
-    public async ungroup(grup: ServerGroup): Promise<Server> {
+    public async ungroup(): Promise<Server> {
         return await new Call()
-            .addParam(Param.Instance, this.id)
+            .addParam(Param.Server, this.id)
             .commit('instance/group/unset').then((res) => {
                 let server = Server.fromObject(res);
                 this.group = server.getGroup();

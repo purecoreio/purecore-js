@@ -32,6 +32,24 @@ class Player {
         return obj;
     }
 
+    public async getBillingAddress(): Promise<Address> {
+        return await new Call()
+            .commit('player/billing/address/get/').then((res) => {
+                return Address.fromObject(res);
+            })
+    }
+
+    public async setBillingAddress(address: any): Promise<Address> {
+        if (!(address instanceof Address)) {
+            address = Address.fromObject(address);
+        }
+        return await new Call()
+            .addParam(Param.Address, address.asQuery())
+            .commit('player/billing/address/set/').then((res) => {
+                return Address.fromObject(res);
+            })
+    }
+
     public getLastUpdated(): Date {
         return this.lastUpdated;
     }

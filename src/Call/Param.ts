@@ -1,4 +1,5 @@
 enum Param {
+    Address = 'ad',
     Key = 'k',
     Hash = 'h',
     Session = 'ses',

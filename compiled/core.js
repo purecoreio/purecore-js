@@ -45,7 +45,7 @@ class Core {
     /**
      * @description gets the current context. useful when making network-related calls with a session object
      */
-    static getContext() {
+    getContext() {
         return Core.context;
     }
     /**
@@ -57,7 +57,7 @@ class Core {
     /**
      * @description gets a generic instance from the api
      */
-    static getInstance(id) {
+    getInstance(id) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
                 .addParam(Param.Instance, id)
@@ -69,7 +69,7 @@ class Core {
     /**
      * @description gets a network instance from the api
      */
-    static getNetwork(id) {
+    getNetwork(id) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
                 .addParam(Param.Network, id)
@@ -77,6 +77,9 @@ class Core {
                 return Network.fromObject(res);
             });
         });
+    }
+    static getCopy() {
+        return new Core();
     }
     /**
      * @description gets the highest priority authentication method
@@ -609,6 +612,7 @@ class CallParam {
 }
 var Param;
 (function (Param) {
+    Param["Address"] = "ad";
     Param["Key"] = "k";
     Param["Hash"] = "h";
     Param["Session"] = "ses";
@@ -762,6 +766,16 @@ class Network {
             });
         });
     }
+    createServer(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Network, this.id)
+                .addParam(Param.Name, name)
+                .commit('instance/create').then((res) => {
+                return Server.fromObject(res);
+            });
+        });
+    }
     createServerGroup(name) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
@@ -772,13 +786,20 @@ class Network {
             });
         });
     }
-    delete() {
+    delete(confirmation) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield new Call()
-                .addParam(Param.Instance, this.id)
-                .commit('instance/delete').then(() => {
-                return;
-            });
+            if (confirmation) {
+                return yield new Call()
+                    .addParam(Param.Instance, this.id)
+                    .commit('instance/delete').then(() => {
+                    return;
+                });
+            }
+            else {
+                return new Promise((resolve, reject) => {
+                    reject(new Error("missing confirmation"));
+                });
+            }
         });
     }
 }
@@ -809,13 +830,16 @@ class Server {
         }
         return ser;
     }
+    asInstance() {
+        return new Instance(this.id, this.name, CoreInstanceType.Server);
+    }
     getGroup() {
         return this.group;
     }
     setGroup(group) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
-                .addParam(Param.Instance, this.id)
+                .addParam(Param.Server, this.id)
                 .addParam(Param.ServerGroup, group.getId())
                 .commit('instance/group/set').then((res) => {
                 let server = Server.fromObject(res);
@@ -824,10 +848,10 @@ class Server {
             });
         });
     }
-    ungroup(grup) {
+    ungroup() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
-                .addParam(Param.Instance, this.id)
+                .addParam(Param.Server, this.id)
                 .commit('instance/group/unset').then((res) => {
                 let server = Server.fromObject(res);
                 this.group = server.getGroup();
@@ -845,8 +869,8 @@ class ServerGroupList {
     }
     static fromObject(object) {
         let sg = new ServerGroupList();
-        sg.id = String(object.id);
-        sg.name = String(object.name);
+        sg.id = (object.id == null ? null : String(object.id));
+        sg.name = (object.name == null ? null : String(object.name));
         sg.network = null;
         if ('network' in object && object.network != null) {
             sg.network = Network.fromObject(object.network);
@@ -859,6 +883,18 @@ class ServerGroupList {
         }
         return sg;
     }
+    getId() {
+        return this.id;
+    }
+    getName() {
+        return this.name;
+    }
+    getServers() {
+        return this.servers;
+    }
+    asServerGroup() {
+        return new ServerGroup(this.id, this.network, this.name);
+    }
 }
 class ServerGroup {
     constructor(id, network, name) {
@@ -869,24 +905,79 @@ class ServerGroup {
     getId() {
         return this.id;
     }
+    getName() {
+        return this.name;
+    }
     static fromObject(object) {
         let sg = new ServerGroup();
-        sg.id = String(object.id);
+        sg.id = (object.id == null ? null : String(object.id));
         sg.network = null;
         if ('network' in object && object.network != null) {
             sg.network = Network.fromObject(object.network);
         }
-        sg.name = String(object.name);
+        sg.name = (object.name == null ? null : String(object.name));
         return sg;
     }
     delete() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
-                .addParam(Param.Instance, this.id)
+                .addParam(Param.ServerGroup, this.id)
                 .commit('instance/group/delete').then(() => {
                 return;
             });
         });
+    }
+}
+class Address {
+    constructor(name, email, country, state, city, postalCode, line1, line2) {
+        this.name = name;
+        this.email = email;
+        this.country = country;
+        this.state = state;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.line1 = line1;
+        this.line2 = line2;
+    }
+    static fromObject(object) {
+        let address = new Address();
+        address.name = (object.name == null ? null : String(object.name));
+        address.email = (object.email == null ? null : String(object.email));
+        address.country = (object.country == null ? null : String(object.country));
+        address.state = (object.state == null ? null : String(object.state));
+        address.city = (object.city == null ? null : String(object.city));
+        address.postalCode = (object.postalcode == null ? null : String(object.postalcode));
+        address.line1 = (object.line1 == null ? null : String(object.line1));
+        address.line2 = (object.name == null ? null : String(object.line2));
+        return object;
+    }
+    asObject() {
+        let obj = {};
+        if (this.name != null) {
+            obj["name"] = this.name;
+        }
+        if (this.email != null) {
+            obj["email"] = this.email;
+        }
+        if (this.state != null) {
+            obj["state"] = this.state;
+        }
+        if (this.city != null) {
+            obj["city"] = this.city;
+        }
+        if (this.postalCode != null) {
+            obj["postalcode"] = this.postalCode;
+        }
+        if (this.line1 != null) {
+            obj["line1"] = this.line1;
+        }
+        if (this.line2 != null) {
+            obj["line2"] = this.line2;
+        }
+        return obj;
+    }
+    asQuery() {
+        return JSON.stringify(this.asObject());
     }
 }
 class Player {
@@ -910,6 +1001,26 @@ class Player {
         obj.birthdate = Util.epoch(this.getBirthdate());
         obj.creation = Util.epoch(this.getCreation());
         return obj;
+    }
+    getBillingAddress() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/address/get/').then((res) => {
+                return Address.fromObject(res);
+            });
+        });
+    }
+    setBillingAddress(address) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!(address instanceof Address)) {
+                address = Address.fromObject(address);
+            }
+            return yield new Call()
+                .addParam(Param.Address, address.asQuery())
+                .commit('player/billing/address/set/').then((res) => {
+                return Address.fromObject(res);
+            });
+        });
     }
     getLastUpdated() {
         return this.lastUpdated;
@@ -1004,7 +1115,8 @@ class Context {
     setNetwork(network) {
         if (typeof network == 'string') {
             let main = this;
-            Core.getNetwork(network).then((network) => {
+            main.network = new Network(String(network), null, null, null);
+            Core.getCopy().getNetwork(network).then((network) => {
                 main.network = network;
             });
         }

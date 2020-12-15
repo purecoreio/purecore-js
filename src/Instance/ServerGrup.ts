@@ -14,20 +14,24 @@ class ServerGroup {
         return this.id;
     }
 
+    public getName(): string {
+        return this.name;
+    }
+
     public static fromObject(object: any): ServerGroup {
         let sg = new ServerGroup();
-        sg.id = String(object.id);
+        sg.id = (object.id == null ? null : String(object.id));
         sg.network = null;
         if ('network' in object && object.network != null) {
             sg.network = Network.fromObject(object.network);
         }
-        sg.name = String(object.name);
+        sg.name = (object.name == null ? null : String(object.name));
         return sg;
     }
 
     public async delete(): Promise<void> {
         return await new Call()
-            .addParam(Param.Instance, this.id)
+            .addParam(Param.ServerGroup, this.id)
             .commit('instance/group/delete').then(() => {
                 return;
             })

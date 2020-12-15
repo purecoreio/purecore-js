@@ -45,7 +45,7 @@ class Core {
     /**
      * @description gets the current context. useful when making network-related calls with a session object
      */
-    public static getContext(): Context {
+    public getContext(): Context {
         return Core.context;
     }
 
@@ -59,7 +59,7 @@ class Core {
     /**
      * @description gets a generic instance from the api
      */
-    public static async getInstance(id: string): Promise<Instance> {
+    public async getInstance(id: string): Promise<Instance> {
         return await new Call()
             .addParam(Param.Instance, id)
             .commit('instance/get/').then((res) => {
@@ -70,12 +70,16 @@ class Core {
     /**
      * @description gets a network instance from the api
      */
-    public static async getNetwork(id: string): Promise<Network> {
+    public async getNetwork(id: string): Promise<Network> {
         return await new Call()
             .addParam(Param.Network, id)
             .commit('network/get/').then((res) => {
                 return Network.fromObject(res);
             })
+    }
+
+    public static getCopy(): Core {
+        return new Core()
     }
 
     /**
