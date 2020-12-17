@@ -949,7 +949,7 @@ class Address {
         address.postalCode = (object.postalcode == null ? null : String(object.postalcode));
         address.line1 = (object.line1 == null ? null : String(object.line1));
         address.line2 = (object.name == null ? null : String(object.line2));
-        return object;
+        return address;
     }
     asObject() {
         let obj = {};
@@ -958,6 +958,9 @@ class Address {
         }
         if (this.email != null) {
             obj["email"] = this.email;
+        }
+        if (this.country != null) {
+            obj["country"] = this.country;
         }
         if (this.state != null) {
             obj["state"] = this.state;

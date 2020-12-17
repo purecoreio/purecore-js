@@ -8,11 +8,6 @@ class Player {
     private bio: string;
     private birthdate: Date;
 
-    /*private msa;
-    private dca;
-    private ga;
-    private sa;*/
-
     public constructor(id?: string, creation?: Date, username?: string, lastLogin?: Date, lastUpdated?: Date, bio?: string, birthdate?: Date) {
         this.id = id;
         this.creation = creation;
@@ -30,24 +25,6 @@ class Player {
         obj.birthdate = Util.epoch(this.getBirthdate())
         obj.creation = Util.epoch(this.getCreation())
         return obj;
-    }
-
-    public async getBillingAddress(): Promise<Address> {
-        return await new Call()
-            .commit('player/billing/address/get/').then((res) => {
-                return Address.fromObject(res);
-            })
-    }
-
-    public async setBillingAddress(address: any): Promise<Address> {
-        if (!(address instanceof Address)) {
-            address = Address.fromObject(address);
-        }
-        return await new Call()
-            .addParam(Param.Address, address.asQuery())
-            .commit('player/billing/address/set/').then((res) => {
-                return Address.fromObject(res);
-            })
     }
 
     public getLastUpdated(): Date {
@@ -97,6 +74,10 @@ class Player {
 
     public asOwner(): Owner {
         return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
+    }
+
+    public getBilling(): PlayerBilling {
+        return new PlayerBilling(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
     }
 
 

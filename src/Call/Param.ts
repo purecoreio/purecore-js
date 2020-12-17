@@ -1,4 +1,5 @@
 enum Param {
+    PaymentMethod = 'pm',
     Address = 'ad',
     Key = 'k',
     Hash = 'h',
