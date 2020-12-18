@@ -5,6 +5,13 @@ class PlayerBilling extends Player {
         super(id, creation, username, lastLogin, lastUpdated, bio, birthdate);
     }
 
+    public async getSubscriptionStatus(): Promise<SubscriptionStatus> {
+        return await new Call()
+            .commit('player/billing/subscription/status/').then((res) => {
+                return SubscriptionStatus.fromObject(res);
+            })
+    }
+
     public async getPaymentMethods(): Promise<Array<Method>> {
         return await new Call()
             .commit('player/billing/method/list/').then((res) => {

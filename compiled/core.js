@@ -544,6 +544,97 @@ class SessionUsage {
         return us;
     }
 }
+class Address {
+    constructor(name, email, country, state, city, postalCode, line1, line2) {
+        this.name = name;
+        this.email = email;
+        this.country = country;
+        this.state = state;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.line1 = line1;
+        this.line2 = line2;
+    }
+    static fromObject(object) {
+        let address = new Address();
+        address.name = (object.name == null ? null : String(object.name));
+        address.email = (object.email == null ? null : String(object.email));
+        address.country = (object.country == null ? null : String(object.country));
+        address.state = (object.state == null ? null : String(object.state));
+        address.city = (object.city == null ? null : String(object.city));
+        address.postalCode = (object.postalcode == null ? null : String(object.postalcode));
+        address.line1 = (object.line1 == null ? null : String(object.line1));
+        address.line2 = (object.name == null ? null : String(object.line2));
+        return address;
+    }
+    asObject() {
+        let obj = {};
+        if (this.name != null) {
+            obj["name"] = this.name;
+        }
+        if (this.email != null) {
+            obj["email"] = this.email;
+        }
+        if (this.country != null) {
+            obj["country"] = this.country;
+        }
+        if (this.state != null) {
+            obj["state"] = this.state;
+        }
+        if (this.city != null) {
+            obj["city"] = this.city;
+        }
+        if (this.postalCode != null) {
+            obj["postalcode"] = this.postalCode;
+        }
+        if (this.line1 != null) {
+            obj["line1"] = this.line1;
+        }
+        if (this.line2 != null) {
+            obj["line2"] = this.line2;
+        }
+        return obj;
+    }
+    asQuery() {
+        return JSON.stringify(this.asObject());
+    }
+}
+class Method {
+    static fromObject(object) {
+        let method = new Method();
+        method.creation = Util.date(object.creation);
+        method.type = object.type == null ? null : String(object.type);
+        method.brand = object.brand == null ? null : String(object.brand);
+        method.wallet = object.wallet == null ? null : String(object.wallet);
+        method.id = object.id == null ? null : String(object.id);
+        method.visibleId = object.type == null ? null : String(object.visibleId);
+        method.default = object.default === true ? true : false;
+        return method;
+    }
+    getId() {
+        return this.id;
+    }
+    getVisibleId() {
+        return this.visibleId;
+    }
+    isDefault() {
+        return this.default;
+    }
+}
+class SubscriptionStatus {
+    static fromObject(object) {
+        let ss = new SubscriptionStatus();
+        ss.subbed = Boolean(object.subbed);
+        ss.usedTrial = Util.date(object.usedTrial);
+        return ss;
+    }
+    isSubbed() {
+        return this.subbed;
+    }
+    didUseTrial() {
+        return this.usedTrial != null;
+    }
+}
 class Call {
     constructor() {
         this.baseURL = "https://api.purecore.io/rest/3";
@@ -612,6 +703,7 @@ class CallParam {
 }
 var Param;
 (function (Param) {
+    Param["PaymentMethod"] = "pm";
     Param["Address"] = "ad";
     Param["Key"] = "k";
     Param["Hash"] = "h";
@@ -928,66 +1020,7 @@ class ServerGroup {
         });
     }
 }
-class Address {
-    constructor(name, email, country, state, city, postalCode, line1, line2) {
-        this.name = name;
-        this.email = email;
-        this.country = country;
-        this.state = state;
-        this.city = city;
-        this.postalCode = postalCode;
-        this.line1 = line1;
-        this.line2 = line2;
-    }
-    static fromObject(object) {
-        let address = new Address();
-        address.name = (object.name == null ? null : String(object.name));
-        address.email = (object.email == null ? null : String(object.email));
-        address.country = (object.country == null ? null : String(object.country));
-        address.state = (object.state == null ? null : String(object.state));
-        address.city = (object.city == null ? null : String(object.city));
-        address.postalCode = (object.postalcode == null ? null : String(object.postalcode));
-        address.line1 = (object.line1 == null ? null : String(object.line1));
-        address.line2 = (object.name == null ? null : String(object.line2));
-        return address;
-    }
-    asObject() {
-        let obj = {};
-        if (this.name != null) {
-            obj["name"] = this.name;
-        }
-        if (this.email != null) {
-            obj["email"] = this.email;
-        }
-        if (this.country != null) {
-            obj["country"] = this.country;
-        }
-        if (this.state != null) {
-            obj["state"] = this.state;
-        }
-        if (this.city != null) {
-            obj["city"] = this.city;
-        }
-        if (this.postalCode != null) {
-            obj["postalcode"] = this.postalCode;
-        }
-        if (this.line1 != null) {
-            obj["line1"] = this.line1;
-        }
-        if (this.line2 != null) {
-            obj["line2"] = this.line2;
-        }
-        return obj;
-    }
-    asQuery() {
-        return JSON.stringify(this.asObject());
-    }
-}
 class Player {
-    /*private msa;
-    private dca;
-    private ga;
-    private sa;*/
     constructor(id, creation, username, lastLogin, lastUpdated, bio, birthdate) {
         this.id = id;
         this.creation = creation;
@@ -1004,26 +1037,6 @@ class Player {
         obj.birthdate = Util.epoch(this.getBirthdate());
         obj.creation = Util.epoch(this.getCreation());
         return obj;
-    }
-    getBillingAddress() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield new Call()
-                .commit('player/billing/address/get/').then((res) => {
-                return Address.fromObject(res);
-            });
-        });
-    }
-    setBillingAddress(address) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!(address instanceof Address)) {
-                address = Address.fromObject(address);
-            }
-            return yield new Call()
-                .addParam(Param.Address, address.asQuery())
-                .commit('player/billing/address/set/').then((res) => {
-                return Address.fromObject(res);
-            });
-        });
     }
     getLastUpdated() {
         return this.lastUpdated;
@@ -1064,6 +1077,9 @@ class Player {
     }
     asOwner() {
         return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate);
+    }
+    getBilling() {
+        return new PlayerBilling(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate);
     }
 }
 /// <reference path="Player.ts"/>
@@ -1111,9 +1127,101 @@ class Owner extends Player {
         });
     }
 }
+/// <reference path="Player.ts"/>
+class PlayerBilling extends Player {
+    constructor(id, creation, username, lastLogin, lastUpdated, bio, birthdate) {
+        super(id, creation, username, lastLogin, lastUpdated, bio, birthdate);
+    }
+    getSubscriptionStatus() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/subscription/status/').then((res) => {
+                return SubscriptionStatus.fromObject(res);
+            });
+        });
+    }
+    getPaymentMethods() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/method/list/').then((res) => {
+                let methods = new Array();
+                for (let i = 0; i < res.length; i++) {
+                    const element = res[i];
+                    methods.push(Method.fromObject(element));
+                }
+                return methods;
+            });
+        });
+    }
+    addPaymentMethod(method, defaultMethod = false) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let id = null;
+            if (typeof method == 'string') {
+                id = method;
+            }
+            else {
+                id = method.getId();
+            }
+            let endpoint = "player/billing/method/add/";
+            if (defaultMethod) {
+                endpoint = "player/billing/method/add/default/";
+            }
+            return yield new Call()
+                .addParam(Param.PaymentMethod, id)
+                .commit(endpoint).then((res) => {
+                return Method.fromObject(res);
+            });
+        });
+    }
+    detachPaymentMethod(method) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let id = null;
+            if (typeof method == 'string') {
+                id = method;
+            }
+            else {
+                id = method.getId();
+            }
+            return yield new Call()
+                .addParam(Param.PaymentMethod, id)
+                .commit("player/billing/method/detach/").then(() => {
+                return;
+            });
+        });
+    }
+    getBillingAddress() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/address/get/').then((res) => {
+                return Address.fromObject(res);
+            });
+        });
+    }
+    setBillingAddress(address) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!(address instanceof Address)) {
+                address = Address.fromObject(address);
+            }
+            return yield new Call()
+                .addParam(Param.Address, address.asQuery())
+                .commit('player/billing/address/set/').then((res) => {
+                return Address.fromObject(res);
+            });
+        });
+    }
+}
 class Context {
     getNetwork() {
         return this.network;
+    }
+    getSubscriptionStatus() {
+        return this.subscriptionStatus;
+    }
+    updateSubscriptionStatus() {
+        let main = this;
+        Core.getCopy().getPlayer().getBilling().getSubscriptionStatus().then((status) => {
+            main.subscriptionStatus = status;
+        });
     }
     setNetwork(network) {
         if (typeof network == 'string') {
