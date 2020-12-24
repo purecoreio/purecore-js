@@ -17,6 +17,10 @@ class Context {
         })
     }
 
+    public setSubscriptionStatus(status: SubscriptionStatus): void {
+        this.subscriptionStatus = status;
+    }
+
     public setNetwork(network: string | Network): void {
         if (typeof network == 'string') {
             let main = this;

@@ -104,6 +104,11 @@ class Core {
 
     public static addAuth(method: AuthMethod): void {
         Core.keychain.addMethod(method);
+        try {
+            Core.context.updateSubscriptionStatus();
+        } catch (error) {
+            // ignore
+        }
         return;
     }
 

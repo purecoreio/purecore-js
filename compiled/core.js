@@ -103,6 +103,12 @@ class Core {
     }
     static addAuth(method) {
         Core.keychain.addMethod(method);
+        try {
+            Core.context.updateSubscriptionStatus();
+        }
+        catch (error) {
+            // ignore
+        }
         return;
     }
     /**
@@ -122,6 +128,67 @@ try {
     module.exports = Core;
 }
 catch (error) {
+}
+class Analytics {
+    static fromObject(object) {
+        let analytics = new Analytics();
+        analytics.list = new Array();
+        analytics.base = object.base;
+        for (let i = 0; i < object.list.length; i++) {
+            const element = object.list[i];
+            if ('totalPayments' in element) {
+                analytics.list.push(RevenueAnalytic.fromObject(element));
+            }
+        }
+        return analytics;
+    }
+    getTotal(fieldName) {
+        let total = 0;
+        for (let i = 0; i < this.list.length; i++) {
+            const element = this.list[i];
+            total += Number(element.asObject()[fieldName]);
+        }
+        return total;
+    }
+}
+class MultipleAnalytics {
+    static fromObject(object) {
+        let ma = new MultipleAnalytics();
+        ma.analytics = new Array();
+        for (let i = 0; i < object.analytics.length; i++) {
+            const element = object.analytics[i];
+            ma.analytics.push(Analytics.fromObject(element));
+        }
+        return ma;
+    }
+}
+class RevenueAnalytic {
+    static fromObject(object) {
+        let revenue = new RevenueAnalytic();
+        revenue.creation = Util.date(object.creation);
+        revenue.distinctCustomers = Number(object.distinctCustomers);
+        revenue.totalRequests = Number(object.totalRequests);
+        revenue.totalPayments = Number(object.totalPayments);
+        revenue.totalRequested = Number(object.totalRequested);
+        revenue.totalPaid = Number(object.totalPaid);
+        revenue.totalDiscounted = Number(object.totalDiscounted);
+        revenue.totalPotentialDiscount = Number(object.totalPotentialDiscount);
+        revenue.totalTaxes = Number(object.totalTaxes);
+        revenue.totalDisputed = Number(object.totalDisputed);
+        revenue.totalRefunded = Number(object.totalRefunded);
+        revenue.totalNet = Number(object.totalNet);
+        revenue.currency = String(object.currency);
+        return revenue;
+    }
+    asObject() {
+        return JSON.parse(JSON.stringify(this));
+    }
+    getCreation() {
+        return this.creation;
+    }
+    getBase() {
+        return this.currency;
+    }
 }
 class Keychain {
     /**
@@ -624,12 +691,16 @@ class Method {
 class SubscriptionStatus {
     static fromObject(object) {
         let ss = new SubscriptionStatus();
-        ss.subbed = Boolean(object.subbed);
+        ss.plus = Boolean(object.plus);
+        ss.plusReview = Boolean(object.plusReview);
+        ss.plusGateway = Number(object.plusGateway);
+        ss.hostingReview = Boolean(object.hostingReview);
+        ss.hostingGateway = Number(object.hostingGateway);
         ss.usedTrial = Util.date(object.usedTrial);
         return ss;
     }
     isSubbed() {
-        return this.subbed;
+        return this.plus;
     }
     didUseTrial() {
         return this.usedTrial != null;
@@ -703,6 +774,12 @@ class CallParam {
 }
 var Param;
 (function (Param) {
+    Param["Year"] = "ye";
+    Param["Month"] = "mo";
+    Param["Week"] = "we";
+    Param["Day"] = "da";
+    Param["Hour"] = "ho";
+    Param["Epoch"] = "ep";
     Param["PaymentMethod"] = "pm";
     Param["Address"] = "ad";
     Param["Key"] = "k";
@@ -838,6 +915,19 @@ class Network {
     }
     asInstance() {
         return new Instance(this.id, this.name, CoreInstanceType.Network);
+    }
+    getMonthRevenue(month = null, year = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let call = new Call();
+            call.addParam(Param.Network, this.id);
+            if (month != null && year != null) {
+                call.addParam(Param.Month, month);
+                call.addParam(Param.Year, year);
+            }
+            return call.commit('analytics/revenue/month').then((res) => {
+                return MultipleAnalytics.fromObject(res);
+            });
+        });
     }
     getServers() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -1136,6 +1226,26 @@ class PlayerBilling extends Player {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
                 .commit('player/billing/subscription/status/').then((res) => {
+                let stat = SubscriptionStatus.fromObject(res);
+                Core.context.setSubscriptionStatus(stat);
+                return stat;
+            });
+        });
+    }
+    subscribeWithStripe() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/subscription/plus/start/stripe/').then((res) => {
+                let stat = SubscriptionStatus.fromObject(res);
+                Core.context.setSubscriptionStatus(stat);
+                return stat;
+            });
+        });
+    }
+    cancelPlus() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .commit('player/billing/subscription/plus/cancel/').then((res) => {
                 return SubscriptionStatus.fromObject(res);
             });
         });
@@ -1222,6 +1332,9 @@ class Context {
         Core.getCopy().getPlayer().getBilling().getSubscriptionStatus().then((status) => {
             main.subscriptionStatus = status;
         });
+    }
+    setSubscriptionStatus(status) {
+        this.subscriptionStatus = status;
     }
     setNetwork(network) {
         if (typeof network == 'string') {

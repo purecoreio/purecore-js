@@ -30,6 +30,18 @@ class Network {
         return new Instance(this.id, this.name, CoreInstanceType.Network);
     }
 
+    public async getMonthRevenue(month: number = null, year: number = null): Promise<MultipleAnalytics> {
+        let call = new Call();
+        call.addParam(Param.Network, this.id)
+        if (month != null && year != null) {
+            call.addParam(Param.Month, month)
+            call.addParam(Param.Year, year)
+        }
+        return call.commit('analytics/revenue/month').then((res) => {
+            return MultipleAnalytics.fromObject(res);
+        })
+    }
+
     public async getServers(): Promise<Array<ServerGroupList>> {
         return await new Call()
             .addParam(Param.Network, this.id)

@@ -8,6 +8,24 @@ class PlayerBilling extends Player {
     public async getSubscriptionStatus(): Promise<SubscriptionStatus> {
         return await new Call()
             .commit('player/billing/subscription/status/').then((res) => {
+                let stat = SubscriptionStatus.fromObject(res);
+                Core.context.setSubscriptionStatus(stat);
+                return stat;
+            })
+    }
+
+    public async subscribeWithStripe(): Promise<SubscriptionStatus> {
+        return await new Call()
+            .commit('player/billing/subscription/plus/start/stripe/').then((res) => {
+                let stat = SubscriptionStatus.fromObject(res);
+                Core.context.setSubscriptionStatus(stat);
+                return stat;
+            })
+    }
+
+    public async cancelPlus(): Promise<SubscriptionStatus> {
+        return await new Call()
+            .commit('player/billing/subscription/plus/cancel/').then((res) => {
                 return SubscriptionStatus.fromObject(res);
             })
     }
