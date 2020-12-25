@@ -130,17 +130,50 @@ try {
 catch (error) {
 }
 class Analytics {
-    static fromObject(object) {
+    static fromObject(object, type) {
         let analytics = new Analytics();
         analytics.list = new Array();
         analytics.base = object.base;
+        analytics.beggining = Util.date(object.beggining);
+        analytics.period = Number(object.period);
         for (let i = 0; i < object.list.length; i++) {
             const element = object.list[i];
-            if ('totalPayments' in element) {
+            if (type == AnalyticType.Revenue) {
                 analytics.list.push(RevenueAnalytic.fromObject(element));
             }
+            else {
+                throw new Error("Unknown type");
+            }
         }
+        analytics.type = type;
         return analytics;
+    }
+    fill(until = null) {
+        if (until != null && !(until instanceof Date)) {
+            until = Util.date(until);
+        }
+        if (until == null)
+            until = new Date();
+        if (until instanceof Date) {
+            let unused = this.list;
+            let final = new Array();
+            for (let i = this.beggining.getTime() / 1000; i <= until.getTime() / 1000; i += this.period) {
+                if (unused.length > 0 && unused[0].getCreation().getTime() / 1000 == i) {
+                    final.push(unused[0]);
+                    unused.shift();
+                }
+                else {
+                    if (this.type == AnalyticType.Revenue) {
+                        final.push(new RevenueAnalytic().empty(Util.date(i)));
+                    }
+                }
+            }
+            this.list = final;
+            return this;
+        }
+        else {
+            throw new Error("Unknown until date");
+        }
     }
     getTotal(fieldName) {
         let total = 0;
@@ -152,16 +185,28 @@ class Analytics {
     }
 }
 class MultipleAnalytics {
-    static fromObject(object) {
+    static fromObject(object, type) {
         let ma = new MultipleAnalytics();
         ma.analytics = new Array();
         for (let i = 0; i < object.analytics.length; i++) {
             const element = object.analytics[i];
-            ma.analytics.push(Analytics.fromObject(element));
+            ma.analytics.push(Analytics.fromObject(element, type));
         }
         return ma;
     }
+    fill() {
+        let final = new Array();
+        for (let i = 0; i < this.analytics.length; i++) {
+            final.push(this.analytics[i].fill());
+        }
+        this.analytics = final;
+        return this;
+    }
 }
+var AnalyticType;
+(function (AnalyticType) {
+    AnalyticType[AnalyticType["Revenue"] = 0] = "Revenue";
+})(AnalyticType || (AnalyticType = {}));
 class RevenueAnalytic {
     static fromObject(object) {
         let revenue = new RevenueAnalytic();
@@ -179,6 +224,22 @@ class RevenueAnalytic {
         revenue.totalNet = Number(object.totalNet);
         revenue.currency = String(object.currency);
         return revenue;
+    }
+    empty(date) {
+        this.creation = date;
+        this.distinctCustomers = 0;
+        this.totalRequests = 0;
+        this.totalPayments = 0;
+        this.totalRequested = 0;
+        this.totalPaid = 0;
+        this.totalDiscounted = 0;
+        this.totalPotentialDiscount = 0;
+        this.totalTaxes = 0;
+        this.totalDisputed = 0;
+        this.totalRefunded = 0;
+        this.totalNet = 0;
+        this.currency = null;
+        return this;
     }
     asObject() {
         return JSON.parse(JSON.stringify(this));
@@ -775,10 +836,15 @@ class CallParam {
 var Param;
 (function (Param) {
     Param["Year"] = "ye";
+    Param["Years"] = "ye";
     Param["Month"] = "mo";
+    Param["Months"] = "mos";
     Param["Week"] = "we";
+    Param["Weeks"] = "wes";
     Param["Day"] = "da";
+    Param["Days"] = "das";
     Param["Hour"] = "ho";
+    Param["Hours"] = "ho";
     Param["Epoch"] = "ep";
     Param["PaymentMethod"] = "pm";
     Param["Address"] = "ad";
@@ -925,7 +991,7 @@ class Network {
                 call.addParam(Param.Year, year);
             }
             return call.commit('analytics/revenue/month').then((res) => {
-                return MultipleAnalytics.fromObject(res);
+                return MultipleAnalytics.fromObject(res, AnalyticType.Revenue);
             });
         });
     }

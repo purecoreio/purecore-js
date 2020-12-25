@@ -38,7 +38,7 @@ class Network {
             call.addParam(Param.Year, year)
         }
         return call.commit('analytics/revenue/month').then((res) => {
-            return MultipleAnalytics.fromObject(res);
+            return MultipleAnalytics.fromObject(res, AnalyticType.Revenue);
         })
     }
 

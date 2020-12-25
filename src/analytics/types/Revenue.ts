@@ -31,6 +31,24 @@ class RevenueAnalytic implements Analytic {
         revenue.currency = String(object.currency);
         return revenue;
     }
+    empty(date: Date): RevenueAnalytic {
+        this.creation = date;
+
+        this.distinctCustomers = 0;
+        this.totalRequests = 0;
+        this.totalPayments = 0;
+        this.totalRequested = 0;
+        this.totalPaid = 0;
+        this.totalDiscounted = 0;
+        this.totalPotentialDiscount = 0;
+        this.totalTaxes = 0;
+        this.totalDisputed = 0;
+        this.totalRefunded = 0;
+        this.totalNet = 0;
+        this.currency = null;
+
+        return this;
+    }
 
     asObject(): any {
         return JSON.parse(JSON.stringify(this));
