@@ -31,7 +31,7 @@ class Analytics {
         if (until == null) until = new Date();
         if (until instanceof Date) {
 
-            let unused = this.list;
+            let unused = this.list.reverse();
             let final = new Array<Analytic>();
 
             for (let i = this.beggining.getTime() / 1000; i <= until.getTime() / 1000; i += this.period) {

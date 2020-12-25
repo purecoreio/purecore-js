@@ -155,10 +155,13 @@ class Analytics {
         if (until == null)
             until = new Date();
         if (until instanceof Date) {
-            let unused = this.list;
+            let unused = this.list.reverse();
             let final = new Array();
             for (let i = this.beggining.getTime() / 1000; i <= until.getTime() / 1000; i += this.period) {
+                if (unused.length > 0)
+                    console.log(unused[0].getCreation().getTime() / 1000 + "-" + i);
                 if (unused.length > 0 && unused[0].getCreation().getTime() / 1000 == i) {
+                    console.log("match");
                     final.push(unused[0]);
                     unused.shift();
                 }
