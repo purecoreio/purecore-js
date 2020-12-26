@@ -12,10 +12,10 @@ class MultipleAnalytics {
         return ma;
     }
 
-    public fill(): MultipleAnalytics {
+    public fill(until: Date | number = null): MultipleAnalytics {
         let final = new Array<Analytics>();
         for (let i = 0; i < this.analytics.length; i++) {
-            final.push(this.analytics[i].fill())
+            final.push(this.analytics[i].fill(until))
         }
         this.analytics = final;
         return this;
