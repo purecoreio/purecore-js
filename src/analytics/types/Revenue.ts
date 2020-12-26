@@ -12,6 +12,7 @@ class RevenueAnalytic implements Analytic {
     public totalDisputed: number;
     public totalRefunded: number;
     public totalNet: number;
+    public totalGross: number;
     public currency: string;
 
     public static fromObject(object: any): RevenueAnalytic {
@@ -28,6 +29,7 @@ class RevenueAnalytic implements Analytic {
         revenue.totalDisputed = Number(object.totalDisputed);
         revenue.totalRefunded = Number(object.totalRefunded);
         revenue.totalNet = Number(object.totalNet);
+        revenue.totalGross = Number(object.totalGross);
         revenue.currency = String(object.currency);
         return revenue;
     }
@@ -45,6 +47,7 @@ class RevenueAnalytic implements Analytic {
         this.totalDisputed = 0;
         this.totalRefunded = 0;
         this.totalNet = 0;
+        this.totalGross = 0;
         this.currency = null;
 
         return this;

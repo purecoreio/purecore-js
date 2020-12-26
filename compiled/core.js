@@ -158,10 +158,7 @@ class Analytics {
             let unused = this.list.reverse();
             let final = new Array();
             for (let i = this.beggining.getTime() / 1000; i <= until.getTime() / 1000; i += this.period) {
-                if (unused.length > 0)
-                    console.log(unused[0].getCreation().getTime() / 1000 + "-" + i);
                 if (unused.length > 0 && unused[0].getCreation().getTime() / 1000 == i) {
-                    console.log("match");
                     final.push(unused[0]);
                     unused.shift();
                 }
@@ -225,6 +222,7 @@ class RevenueAnalytic {
         revenue.totalDisputed = Number(object.totalDisputed);
         revenue.totalRefunded = Number(object.totalRefunded);
         revenue.totalNet = Number(object.totalNet);
+        revenue.totalGross = Number(object.totalGross);
         revenue.currency = String(object.currency);
         return revenue;
     }
@@ -241,6 +239,7 @@ class RevenueAnalytic {
         this.totalDisputed = 0;
         this.totalRefunded = 0;
         this.totalNet = 0;
+        this.totalGross = 0;
         this.currency = null;
         return this;
     }
