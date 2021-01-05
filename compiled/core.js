@@ -934,12 +934,16 @@ var Param;
     Param["Payment"] = "p";
     Param["Discount"] = "d";
     Param["Discounts"] = "ds";
+    Param["Countable"] = "cnt";
+    Param["Price"] = "pr";
+    Param["Amount"] = "am";
     Param["StoreItem"] = "si";
     Param["StoreItems"] = "sis";
     Param["StoreParam"] = "sp";
     Param["StoreParamResponse"] = "spr";
     Param["StoreParamResponses"] = "sprs";
     Param["Perk"] = "pk";
+    Param["PerkCategory"] = "pc";
     Param["Perks"] = "pks";
     Param["StoreCategory"] = "sc";
     Param["Punishment"] = "pn";
@@ -1006,6 +1010,12 @@ class Network {
         this.name = name;
         this.game = game;
         this.platform = platform;
+    }
+    asStore() {
+        return new Store(this.id, this.name, this.game, this.platform);
+    }
+    getId() {
+        return this.id;
     }
     asObject() {
         let obj = JSON.parse(JSON.stringify(this));
@@ -1214,6 +1224,395 @@ class ServerGroup {
                 return;
             });
         });
+    }
+}
+class Store extends Network {
+    constructor(id, name, game, platform) {
+        super(id, name, game, platform);
+    }
+    getRepresentation() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Network, this.getId())
+                .commit('store/representation/').then((res) => {
+                return StoreRepresentation.fromObject(res);
+            });
+        });
+    }
+    getPerkRepresentation() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Network, this.getId())
+                .commit('store/representation/perks/').then((res) => {
+                return StorePerkRepresentation.fromObject(res);
+            });
+        });
+    }
+    createCategory(name, description = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let call = new Call()
+                .addParam(Param.Network, this.getId())
+                .addParam(Param.Name, name);
+            if (description != null) {
+                call.addParam(Param.Description, description);
+            }
+            return yield call.commit('store/item/category/create/').then((res) => {
+                return ItemCategory.fromObject(res);
+            });
+        });
+    }
+    createPerkCategory(name, description = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let call = new Call()
+                .addParam(Param.Network, this.getId())
+                .addParam(Param.Name, name);
+            if (description != null) {
+                call.addParam(Param.Description, description);
+            }
+            return yield call.commit('store/perk/category/create/').then((res) => {
+                return PerkCategory.fromObject(res);
+            });
+        });
+    }
+}
+class ExecutionTemplate {
+    constructor(id, string, requireOnline, instances, delay) {
+        this.id = id;
+        this.string = string;
+        this.requireOnline = requireOnline;
+        this.instances = instances;
+        this.delay = delay;
+    }
+    static fromObject(object) {
+        let instances = new Array();
+        for (let index = 0; index < object.instances.length; index++) {
+            const element = object.instances[index];
+            instances.push(Instance.fromObject(element));
+        }
+        return new ExecutionTemplate(object.id, object.string, object.requireOnline, instances, object.delay);
+    }
+}
+class StoreItem {
+    constructor(id, name, description, icon, banner, price, perks, enable, list, archived) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.icon = icon;
+        this.banner = banner;
+        this.price = price;
+        this.perks = perks;
+        this.enable = enable;
+        this.list = list;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        let perkRepresentations = new Array();
+        for (let i = 0; i < object.perks.length; i++) {
+            const element = object.perks[i];
+            perkRepresentations.push(PerkCategoryRepresentation.fromObject(element));
+        }
+        return new StoreItem(object.id, object.name, object.description, object.icon, object.banner, object.price, perkRepresentations, object.enable, object.list, object.archived);
+    }
+    addPerk(perk, quantity = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let perkId = perk;
+            if (perk instanceof Perk) {
+                perkId = perk.id;
+            }
+            let call = new Call()
+                .addParam(Param.StoreItem, this.id)
+                .addParam(Param.Perk, perkId);
+            if (quantity != null) {
+                call.addParam(Param.Quantity, quantity);
+            }
+            return yield call.commit('store/item/perk/add/').then((res) => {
+                return PerkContext.fromObject(res);
+            });
+        });
+    }
+    removePerk(perk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let perkId = perk;
+            if (perk instanceof Perk || perk instanceof PerkContext) {
+                perkId = perk.id;
+            }
+            return new Call()
+                .addParam(Param.StoreItem, this.id)
+                .addParam(Param.Perk, perkId)
+                .commit('store/item/perk/remove/').then(() => {
+                return;
+            });
+        });
+    }
+}
+class ItemCategory {
+    constructor(id, name, description, icon, banner, preferredRepresentation, list, enabled, upgradable, archived) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.icon = icon;
+        this.banner = banner;
+        this.preferredRepresentation = preferredRepresentation;
+        this.list = list;
+        this.enabled = enabled;
+        this.upgradable = upgradable;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        let representation = null;
+        switch (object.preferredRepresentation) {
+            case 0:
+                representation = PreferredRepresentation.List;
+                break;
+            case 1:
+                representation = PreferredRepresentation.Box;
+                break;
+            case 2:
+                representation = PreferredRepresentation.Table;
+                break;
+            case 3:
+                representation = PreferredRepresentation.Carousel;
+                break;
+            default:
+                representation = PreferredRepresentation.Unknown;
+                break;
+        }
+        return new ItemCategory(object.id, object.name, object.description, object.icon, object.banner, representation, object.list, object.enabled, object.upgradable, object.archived);
+    }
+    createItem(name, price, description = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let call = new Call()
+                .addParam(Param.StoreCategory, this.id)
+                .addParam(Param.Name, name)
+                .addParam(Param.Price, price);
+            if (description != null) {
+                call.addParam(Param.Description, description);
+            }
+            return yield call.commit('store/item/create/').then((res) => {
+                return StoreItem.fromObject(res);
+            });
+        });
+    }
+}
+var PreferredRepresentation;
+(function (PreferredRepresentation) {
+    PreferredRepresentation[PreferredRepresentation["Unknown"] = -1] = "Unknown";
+    PreferredRepresentation[PreferredRepresentation["List"] = 0] = "List";
+    PreferredRepresentation[PreferredRepresentation["Box"] = 1] = "Box";
+    PreferredRepresentation[PreferredRepresentation["Table"] = 2] = "Table";
+    PreferredRepresentation[PreferredRepresentation["Carousel"] = 3] = "Carousel";
+})(PreferredRepresentation || (PreferredRepresentation = {}));
+class ItemCategoryRepresentation {
+    constructor(itemCategory, items) {
+        this.itemCategory = itemCategory;
+        this.items = items;
+    }
+    static fromObject(object) {
+        const itemCategory = ItemCategory.fromObject(object.itemCategory);
+        let items = new Array();
+        for (let i = 0; i < object.items.length; i++) {
+            const element = object.items[i];
+            items.push(StoreItem.fromObject(element));
+        }
+        return new ItemCategoryRepresentation(itemCategory, items);
+    }
+}
+class Perk {
+    constructor(id, name, description, countable, params, commands, archived) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.countable == countable;
+        this.params = params;
+        this.commands = commands;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        let params = new Array();
+        let commands = new Array();
+        for (let index = 0; index < object.params.length; index++) {
+            const element = object.params[index];
+            params.push(PerkParam.fromObject(element));
+        }
+        for (let index = 0; index < object.commands.length; index++) {
+            const element = object.commands[index];
+            commands.push(ExecutionTemplate.fromObject(element));
+        }
+        return new Perk(object.id, object.name, object.description, object.countable, params, commands, object.archived);
+    }
+}
+class PerkContext {
+    constructor(id, name, description, countable, params, commands, quantity, archived) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.countable == countable;
+        this.params = params;
+        this.commands = commands;
+        this.quantity = quantity;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        let params = new Array();
+        let commands = new Array();
+        for (let index = 0; index < object.params.length; index++) {
+            const element = object.params[index];
+            params.push(PerkParam.fromObject(element));
+        }
+        for (let index = 0; index < object.commands.length; index++) {
+            const element = object.commands[index];
+            commands.push(ExecutionTemplate.fromObject(element));
+        }
+        return new PerkContext(object.id, object.name, object.description, object.countable, params, commands, object.quantity, object.archived);
+    }
+}
+class PerkCategory {
+    constructor(id, name, description, archived) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        return new PerkCategory(object.id, object.name, object.description, object.archived);
+    }
+    createPerk(name, countable, description = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const countval = countable ? 'true' : 'false';
+            let call = new Call()
+                .addParam(Param.PerkCategory, this.id)
+                .addParam(Param.Name, name)
+                .addParam(Param.Countable, countval);
+            if (description != null) {
+                call.addParam(Param.Description, description);
+            }
+            return yield call.commit('store/perk/create/').then((res) => {
+                return Perk.fromObject(res);
+            });
+        });
+    }
+}
+class PerkCategoryRepresentation {
+    constructor(perkCategory, perks) {
+        this.perkCategory = perkCategory;
+        this.perks = perks;
+    }
+    static fromObject(object) {
+        let perks = new Array();
+        for (let i = 0; i < object.perks.length; i++) {
+            const element = object.perks[i];
+            if ('quantity' in element) {
+                perks.push(PerkContext.fromObject(element));
+            }
+            else {
+                perks.push(Perk.fromObject(element));
+            }
+        }
+        return new PerkCategoryRepresentation(PerkCategory.fromObject(object.perkCategory), perks);
+    }
+}
+class ParamRequirement {
+    constructor(type, value) {
+        this.type = type;
+        this.value = value;
+    }
+    static fromObject(object) {
+        let type = null;
+        let value = null;
+        switch (object.type) {
+            case 0:
+                type = RequirementType.RegExp;
+                value = RegExp(object.value);
+                break;
+            case 1:
+                type = RequirementType.ImageType;
+                value = String(object.value);
+                break;
+            case 2:
+                type = RequirementType.ImageSize;
+                value = new Array();
+                for (let i = 0; i < object.value.length; i++) {
+                    const element = object.value[i];
+                    value.push(Number(element));
+                }
+                break;
+            default:
+                type = RequirementType.Unknown;
+                break;
+        }
+        return new ParamRequirement(type, value);
+    }
+}
+var ParamType;
+(function (ParamType) {
+    ParamType[ParamType["Unknown"] = -1] = "Unknown";
+    ParamType[ParamType["String"] = 0] = "String";
+    ParamType[ParamType["Image"] = 1] = "Image";
+})(ParamType || (ParamType = {}));
+class PerkParam {
+    constructor(id, placeholder, name, description, type, defaultv, mandatory, requirements, archived) {
+        this.id = id;
+        this.placeholder = placeholder;
+        this.name = name;
+        this.description = description;
+        this.type = type;
+        this.default = defaultv;
+        this.mandatory = mandatory;
+        this.requirements = requirements;
+        this.archived = archived;
+    }
+    static fromObject(object) {
+        let requirements = new Array();
+        let paramType = null;
+        switch (object.type) {
+            case 0:
+                paramType = ParamType.String;
+                break;
+            case 1:
+                paramType = ParamType.Image;
+                break;
+            default:
+                paramType = ParamType.Unknown;
+                break;
+        }
+        for (let index = 0; index < object.requirements.length; index++) {
+            const element = object.requirements[index];
+            requirements.push(ParamRequirement.fromObject(element));
+        }
+        return new PerkParam(object.id, object.placeholder, object.name, object.description, paramType, object.default, object.mnandatory, requirements, object.archived);
+    }
+}
+var RequirementType;
+(function (RequirementType) {
+    RequirementType[RequirementType["Unknown"] = -1] = "Unknown";
+    RequirementType[RequirementType["RegExp"] = 0] = "RegExp";
+    RequirementType[RequirementType["ImageType"] = 1] = "ImageType";
+    RequirementType[RequirementType["ImageSize"] = 2] = "ImageSize";
+})(RequirementType || (RequirementType = {}));
+class StorePerkRepresentation {
+    constructor(representations) {
+        this.perkRepresentations = representations;
+    }
+    static fromObject(object) {
+        let representations = new Array();
+        for (let index = 0; index < object.perkRepresentations.length; index++) {
+            const element = object.perkRepresentations[index];
+            representations.push(PerkCategoryRepresentation.fromObject(element));
+        }
+        return new StorePerkRepresentation(representations);
+    }
+}
+class StoreRepresentation {
+    constructor(representations) {
+        this.itemCategoryRepresentations = representations;
+    }
+    static fromObject(object) {
+        let representations = new Array();
+        for (let i = 0; i < object.itemCategoryRepresentations.length; i++) {
+            const element = object.itemCategoryRepresentations[i];
+            representations.push(ItemCategoryRepresentation.fromObject(element));
+        }
+        return new StoreRepresentation(representations);
     }
 }
 class Player {

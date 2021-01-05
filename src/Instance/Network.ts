@@ -12,6 +12,14 @@ class Network {
         this.platform = platform;
     }
 
+    public asStore(): Store {
+        return new Store(this.id, this.name, this.game, this.platform);
+    }
+
+    public getId(): string {
+        return this.id;
+    }
+
     public asObject(): any {
         let obj = JSON.parse(JSON.stringify(this));
         return obj;
