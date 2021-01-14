@@ -5,10 +5,10 @@ class Perk {
     public description: string;
     public countable: boolean;
     public params: Array<PerkParam>;
-    public commands: Array<ExecutionTemplate>;
+    public commands: ExecutionSetup;
     public archived: boolean;
 
-    public constructor(id: string, name: string, description: string, countable: boolean, params: Array<PerkParam>, commands: Array<ExecutionTemplate>, archived: boolean) {
+    public constructor(id: string, name: string, description: string, countable: boolean, params: Array<PerkParam>, commands: ExecutionSetup, archived: boolean) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -20,16 +20,26 @@ class Perk {
 
     public static fromObject(object: any): Perk {
         let params = new Array<PerkParam>();
-        let commands = new Array<ExecutionTemplate>();
         for (let index = 0; index < object.params.length; index++) {
             const element = object.params[index];
             params.push(PerkParam.fromObject(element));
         }
-        for (let index = 0; index < object.commands.length; index++) {
-            const element = object.commands[index];
-            commands.push(ExecutionTemplate.fromObject(element));
+        return new Perk(object.id, object.name, object.description, object.countable, params, ExecutionSetup.fromObject(object.commands), object.archived);
+    }
+
+    public async addExecutionTemplate(template: ExecutionTemplate | string, type: ExecutionType | Number): Promise<void> {
+        let templateId = template;
+        if (template instanceof ExecutionTemplate) {
+            templateId = template.id;
         }
-        return new Perk(object.id, object.name, object.description, object.countable, params, commands, object.archived);
+        let main = this;
+        return await new Call()
+            .addParam(Param.Perk, main.id)
+            .addParam(Param.ExecutionTemplate, templateId)
+            .addParam(Param.ExecutionType, type)
+            .commit('store/item/category/create/').then(() => {
+                return;
+            })
     }
 
 }

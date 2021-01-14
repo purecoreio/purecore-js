@@ -3,7 +3,7 @@ class PerkCategoryRepresentation {
     public perkCategory: PerkCategory;
     public perks: Array<Perk | PerkContext>;
 
-    public constructor(perkCategory: PerkCategory, perks: Array<Perk>) {
+    public constructor(perkCategory: PerkCategory, perks: Array<Perk | PerkContext>) {
         this.perkCategory = perkCategory;
         this.perks = perks;
     }
