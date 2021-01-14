@@ -16,6 +16,10 @@ class Network {
         return new Store(this.id, this.name, this.game, this.platform);
     }
 
+    public asWebsite(): Website {
+        return new Website(this.id, this.name, this.game, this.platform);
+    }
+
     public getId(): string {
         return this.id;
     }
@@ -23,6 +27,27 @@ class Network {
     public asObject(): any {
         let obj = JSON.parse(JSON.stringify(this));
         return obj;
+    }
+
+    public async createExecutionTemplate(instances: Array<Instance | string>, command: string, requireOnline: boolean, delay: number): Promise<ExecutionTemplate> {
+        let instanceIDs = Array<string>();
+        for (let i = 0; i < instances.length; i++) {
+            const element = instances[i];
+            if (typeof element == 'string') {
+                instanceIDs.push(element);
+            } else if (element instanceof Instance) {
+                instanceIDs.push(element.getId());
+            }
+        }
+        return await new Call()
+            .addParam(Param.Network, this.id)
+            .addParam(Param.Instances, JSON.stringify(instanceIDs))
+            .addParam(Param.Command, command)
+            .addParam(Param.RequireOnline, Number(requireOnline))
+            .addParam(Param.Delay, delay)
+            .commit('execution/template/create').then((res) => {
+                return ExecutionTemplate.fromObject(res);
+            })
     }
 
     public static fromObject(object: any): Network {

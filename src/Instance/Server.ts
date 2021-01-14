@@ -3,7 +3,12 @@ class Server {
     private network: Network;
     private id: string;
     private name: string;
+    private online: boolean;
     private group: ServerGroup;
+
+    public isOnline(): boolean {
+        return this.online;
+    }
 
     public constructor(network?: Network, id?: string, name?: string, group?: ServerGroup) {
         this.network = network;
@@ -20,6 +25,7 @@ class Server {
         if ('group' in object && object.group != null) {
             ser.group = ServerGroup.fromObject(object.group);
         }
+        ser.online = Boolean(object.online);
         return ser;
     }
 
