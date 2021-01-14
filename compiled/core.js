@@ -876,18 +876,13 @@ class CallParam {
 var Param;
 (function (Param) {
     Param["Year"] = "ye";
-    Param["Years"] = "ye";
     Param["Month"] = "mo";
-    Param["Months"] = "mos";
     Param["Week"] = "we";
-    Param["Weeks"] = "wes";
     Param["Day"] = "da";
-    Param["Days"] = "das";
     Param["Hour"] = "ho";
-    Param["Hours"] = "ho";
     Param["Epoch"] = "ep";
-    Param["PaymentMethod"] = "pm";
     Param["Address"] = "ad";
+    Param["PaymentMethod"] = "pm";
     Param["Key"] = "k";
     Param["Hash"] = "h";
     Param["Session"] = "ses";
@@ -917,6 +912,9 @@ var Param;
     Param["Connections"] = "cs";
     Param["Command"] = "cmd";
     Param["CommandExecution"] = "cex";
+    Param["ExecutionTemplate"] = "ext";
+    Param["Delay"] = "de";
+    Param["RequireOnline"] = "ro";
     Param["EnvSource"] = "es";
     Param["Host"] = "ht";
     Param["Image"] = "hi";
@@ -934,18 +932,19 @@ var Param;
     Param["Payment"] = "p";
     Param["Discount"] = "d";
     Param["Discounts"] = "ds";
-    Param["Countable"] = "cnt";
-    Param["Price"] = "pr";
-    Param["Amount"] = "am";
     Param["StoreItem"] = "si";
     Param["StoreItems"] = "sis";
     Param["StoreParam"] = "sp";
     Param["StoreParamResponse"] = "spr";
     Param["StoreParamResponses"] = "sprs";
     Param["Perk"] = "pk";
-    Param["PerkCategory"] = "pc";
     Param["Perks"] = "pks";
     Param["StoreCategory"] = "sc";
+    Param["PerkCategory"] = "pc";
+    Param["Countable"] = "cnt";
+    Param["Price"] = "pr";
+    Param["Amount"] = "am";
+    Param["ExecutionType"] = "et";
     Param["Punishment"] = "pn";
     Param["Appeal"] = "a";
     Param["Report"] = "r";
@@ -983,11 +982,36 @@ class Instance {
         let ins = new Instance();
         ins.id = String(object.id);
         ins.name = String(object.name);
+        ins.online = Boolean(object.online);
         ins.type = Number(object.type);
         return ins;
     }
+    connect() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Instance, this.id)
+                .commit('instance/log/connection/').then(() => {
+                return;
+            });
+        });
+    }
+    disconnect() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Instance, this.id)
+                .commit('instance/log/disconnection').then(() => {
+                return;
+            });
+        });
+    }
+    isOnline() {
+        return this.online;
+    }
     asNetwork() {
         return new Network(this.id, this.name, Game.Unknown, Platform.Unknown);
+    }
+    getId() {
+        return this.id;
     }
     delete() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -1014,12 +1038,38 @@ class Network {
     asStore() {
         return new Store(this.id, this.name, this.game, this.platform);
     }
+    asWebsite() {
+        return new Website(this.id, this.name, this.game, this.platform);
+    }
     getId() {
         return this.id;
     }
     asObject() {
         let obj = JSON.parse(JSON.stringify(this));
         return obj;
+    }
+    createExecutionTemplate(instances, command, requireOnline, delay) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let instanceIDs = Array();
+            for (let i = 0; i < instances.length; i++) {
+                const element = instances[i];
+                if (typeof element == 'string') {
+                    instanceIDs.push(element);
+                }
+                else if (element instanceof Instance) {
+                    instanceIDs.push(element.getId());
+                }
+            }
+            return yield new Call()
+                .addParam(Param.Network, this.id)
+                .addParam(Param.Instances, JSON.stringify(instanceIDs))
+                .addParam(Param.Command, command)
+                .addParam(Param.RequireOnline, Number(requireOnline))
+                .addParam(Param.Delay, delay)
+                .commit('execution/template/create').then((res) => {
+                return ExecutionTemplate.fromObject(res);
+            });
+        });
     }
     static fromObject(object) {
         let net = new Network();
@@ -1118,6 +1168,9 @@ class Server {
         this.name = name;
         this.group = group;
     }
+    isOnline() {
+        return this.online;
+    }
     static fromObject(object) {
         let ser = new Server();
         ser.id = String(object.id);
@@ -1126,6 +1179,7 @@ class Server {
         if ('group' in object && object.group != null) {
             ser.group = ServerGroup.fromObject(object.group);
         }
+        ser.online = Boolean(object.online);
         return ser;
     }
     asInstance() {
@@ -1429,16 +1483,27 @@ class Perk {
     }
     static fromObject(object) {
         let params = new Array();
-        let commands = new Array();
         for (let index = 0; index < object.params.length; index++) {
             const element = object.params[index];
             params.push(PerkParam.fromObject(element));
         }
-        for (let index = 0; index < object.commands.length; index++) {
-            const element = object.commands[index];
-            commands.push(ExecutionTemplate.fromObject(element));
-        }
-        return new Perk(object.id, object.name, object.description, object.countable, params, commands, object.archived);
+        return new Perk(object.id, object.name, object.description, object.countable, params, ExecutionSetup.fromObject(object.commands), object.archived);
+    }
+    addExecutionTemplate(template, type) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let templateId = template;
+            if (template instanceof ExecutionTemplate) {
+                templateId = template.id;
+            }
+            let main = this;
+            return yield new Call()
+                .addParam(Param.Perk, main.id)
+                .addParam(Param.ExecutionTemplate, templateId)
+                .addParam(Param.ExecutionType, type)
+                .commit('store/item/category/create/').then(() => {
+                return;
+            });
+        });
     }
 }
 class PerkContext {
@@ -1511,6 +1576,33 @@ class PerkCategoryRepresentation {
         return new PerkCategoryRepresentation(PerkCategory.fromObject(object.perkCategory), perks);
     }
 }
+class ExecutionSetup {
+    static fromObject(object) {
+        let setup = new ExecutionSetup();
+        setup.uponPayment = new Array();
+        for (let i = 0; i < object.uponPayment.length; i++) {
+            const element = object.uponPayment[i];
+            setup.uponPayment.push(ExecutionTemplate.fromObject(element));
+        }
+        setup.uponRefund = new Array();
+        for (let i = 0; i < object.uponRefund.length; i++) {
+            const element = object.uponRefund[i];
+            setup.uponRefund.push(ExecutionTemplate.fromObject(element));
+        }
+        setup.uponDispute = new Array();
+        for (let i = 0; i < object.uponDispute.length; i++) {
+            const element = object.uponDispute[i];
+            setup.uponDispute.push(ExecutionTemplate.fromObject(element));
+        }
+        return setup;
+    }
+}
+var ExecutionType;
+(function (ExecutionType) {
+    ExecutionType[ExecutionType["UponPayment"] = 0] = "UponPayment";
+    ExecutionType[ExecutionType["UponRefund"] = 1] = "UponRefund";
+    ExecutionType[ExecutionType["UponDispute"] = 2] = "UponDispute";
+})(ExecutionType || (ExecutionType = {}));
 class ParamRequirement {
     constructor(type, value) {
         this.type = type;
@@ -1964,5 +2056,103 @@ class Util {
         if (platform > Platform.Discord, platform < Platform.Unknown)
             platform = Platform.Unknown;
         return platform;
+    }
+}
+class ColorScheme {
+    static fromObject(object) {
+        let scheme = new ColorScheme();
+        scheme.dark = Boolean(object.dark);
+        scheme.primary = String(object.primary);
+        scheme.secondary = String(object.secondary);
+        scheme.accent = String(object.accent);
+        scheme.error = String(object.errorColor);
+        return scheme;
+    }
+}
+class Component {
+    static fromObject(object) {
+        let component = new Component();
+        component.id = object.id;
+        component.name = object.name;
+        component.props = new Array();
+        for (let i = 0; i < object.props.length; i++) {
+            const element = object.props[i];
+            component.props.push(element);
+        }
+        component.template = String(object.template);
+        component.css = object.css;
+        component.js = object.js;
+        component.verified = Boolean(object.verified);
+        return component;
+    }
+}
+class Page {
+    static fromObject(object) {
+        let page = new Page();
+        page.id = object.id;
+        page.components = new Array();
+        for (let i = 0; i < object.components.length; i++) {
+            const element = object.components[i];
+            page.components.push(Component.fromObject(element));
+        }
+        page.children = new Array();
+        for (let i = 0; i < object.children.length; i++) {
+            const element = object.children[i];
+            page.children.push(Page.fromObject(element));
+        }
+        page.pathUnit = object.pathUnit;
+        page.propName = object.propName;
+        page.template = object.template;
+        page.css = object.css;
+        return page;
+    }
+    hasProp() {
+        return this.propName != null;
+    }
+    hasChildren() {
+        return this.children.length > 0;
+    }
+}
+class SimplifiedTemplate {
+    static fromObject(object) {
+        let template = new Template();
+        template.id = object.id;
+        template.name = object.name;
+        template.parent = object.template != null ? SimplifiedTemplate.fromObject(object.parent) : null;
+        template.colorScheme = ColorScheme.fromObject(object.colorScheme);
+        template.price = object.price;
+        template.bundled = Boolean(object.bundled);
+        return template;
+    }
+}
+class Template {
+    static fromObject(object) {
+        let template = new Template();
+        template.id = object.id;
+        template.name = object.name;
+        template.parent = object.parent != null ? SimplifiedTemplate.fromObject(object.parent) : null;
+        template.colorScheme = ColorScheme.fromObject(object.colorScheme);
+        template.template = object.template;
+        template.css = object.css;
+        template.price = object.price;
+        template.bundled = Boolean(object.bundled);
+        return template;
+    }
+}
+class Website extends Network {
+    constructor(id, name, game, platform) {
+        super(id, name, game, platform);
+    }
+}
+class WebsiteRepresentation {
+    static fromObject(object) {
+        let representation = new WebsiteRepresentation();
+        representation.pages = new Array();
+        for (let i = 0; i < object.pages.length; i++) {
+            const element = object.pages[i];
+            representation.pages.push(Page.fromObject(element));
+        }
+        representation.template = Template.fromObject(object.template);
+        return representation;
     }
 }
