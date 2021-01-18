@@ -56,4 +56,17 @@ class Instance {
             })
     }
 
+    public async getKeys(): Promise<Array<Key>> {
+        return await new Call()
+            .addParam(Param.Instance, this.id)
+            .commit('instance/get/key/').then((keyData) => {
+                let keys = new Array<Key>();
+                for (let i = 0; i < keyData.length; i++) {
+                    const element = keyData[i];
+                    keys.push(Key.fromObject(element));
+                }
+                return keys;
+            })
+    }
+
 }

@@ -1022,6 +1022,20 @@ class Instance {
             });
         });
     }
+    getKeys() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Instance, this.id)
+                .commit('instance/get/key/').then((keyData) => {
+                let keys = new Array();
+                for (let i = 0; i < keyData.length; i++) {
+                    const element = keyData[i];
+                    keys.push(Key.fromObject(element));
+                }
+                return keys;
+            });
+        });
+    }
 }
 var CoreInstanceType;
 (function (CoreInstanceType) {
@@ -1500,7 +1514,7 @@ class Perk {
                 .addParam(Param.Perk, main.id)
                 .addParam(Param.ExecutionTemplate, templateId)
                 .addParam(Param.ExecutionType, type)
-                .commit('store/item/category/create/').then(() => {
+                .commit('store/perk/command/add/').then(() => {
                 return;
             });
         });
@@ -1519,16 +1533,14 @@ class PerkContext {
     }
     static fromObject(object) {
         let params = new Array();
-        let commands = new Array();
         for (let index = 0; index < object.params.length; index++) {
             const element = object.params[index];
             params.push(PerkParam.fromObject(element));
         }
-        for (let index = 0; index < object.commands.length; index++) {
-            const element = object.commands[index];
-            commands.push(ExecutionTemplate.fromObject(element));
-        }
-        return new PerkContext(object.id, object.name, object.description, object.countable, params, commands, object.quantity, object.archived);
+        return new PerkContext(object.id, object.name, object.description, object.countable, params, ExecutionSetup.fromObject(object.commands), object.quantity, object.archived);
+    }
+    asPerk() {
+        return new Perk(this.id, this.name, this.description, this.countable, this.params, this.commands, this.archived);
     }
 }
 class PerkCategory {

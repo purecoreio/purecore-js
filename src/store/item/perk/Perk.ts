@@ -37,7 +37,7 @@ class Perk {
             .addParam(Param.Perk, main.id)
             .addParam(Param.ExecutionTemplate, templateId)
             .addParam(Param.ExecutionType, type)
-            .commit('store/item/category/create/').then(() => {
+            .commit('store/perk/command/add/').then(() => {
                 return;
             })
     }
