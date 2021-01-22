@@ -1,10 +1,10 @@
 class PerkCategoryRepresentation {
 
-    public perkCategory: PerkCategory;
+    public category: PerkCategory;
     public perks: Array<Perk | PerkContext>;
 
     public constructor(perkCategory: PerkCategory, perks: Array<Perk | PerkContext>) {
-        this.perkCategory = perkCategory;
+        this.category = perkCategory;
         this.perks = perks;
     }
 
@@ -18,7 +18,7 @@ class PerkCategoryRepresentation {
                 perks.push(Perk.fromObject(element));
             }
         }
-        return new PerkCategoryRepresentation(PerkCategory.fromObject(object.perkCategory), perks);
+        return new PerkCategoryRepresentation(PerkCategory.fromObject(object.category), perks);
     }
 
 }

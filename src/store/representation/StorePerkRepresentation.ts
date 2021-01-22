@@ -1,15 +1,15 @@
 class StorePerkRepresentation {
 
-    public perkRepresentations: Array<PerkCategoryRepresentation>;
+    public perks: Array<PerkCategoryRepresentation>;
 
     public constructor(representations: Array<PerkCategoryRepresentation>) {
-        this.perkRepresentations = representations;
+        this.perks = representations;
     }
 
     public static fromObject(object: any): StorePerkRepresentation {
         let representations = new Array<PerkCategoryRepresentation>();
-        for (let index = 0; index < object.perkRepresentations.length; index++) {
-            const element = object.perkRepresentations[index];
+        for (let index = 0; index < object.perks.length; index++) {
+            const element = object.perks[index];
             representations.push(PerkCategoryRepresentation.fromObject(element));
         }
         return new StorePerkRepresentation(representations);

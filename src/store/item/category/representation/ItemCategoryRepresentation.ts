@@ -1,10 +1,10 @@
 class ItemCategoryRepresentation {
 
-    public itemCategory: ItemCategory;
+    public category: ItemCategory;
     public items: Array<StoreItem>;
 
     public constructor(itemCategory: ItemCategory, items: Array<StoreItem>) {
-        this.itemCategory = itemCategory;
+        this.category = itemCategory;
         this.items = items;
     }
 

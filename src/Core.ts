@@ -31,7 +31,8 @@ class Core {
 
         // adds the authentication method to the ID manager if it is a valid authentication method
         if (method != null) {
-            Core.keychain.addMethod(Keychain.getMethod(method));
+            let methodFinal = Keychain.getMethod(method);
+            Core.keychain.addMethod(methodFinal);
         }
     }
 
@@ -67,6 +68,10 @@ class Core {
             })
     }
 
+    public getOfflineInstance(id: string): Instance {
+        return new Instance(id, null, null);
+    }
+
     /**
      * @description gets a network instance from the api
      */
@@ -75,6 +80,26 @@ class Core {
             .addParam(Param.Network, id)
             .commit('network/get/').then((res) => {
                 return Network.fromObject(res);
+            })
+    }
+
+    public async getProfiles(network: Network | string = null): Promise<Array<PlatformProfile>> {
+        let call = new Call();
+        if (network != null) {
+            if (typeof network == 'string') {
+                call.addParam(Param.Network, network);
+            } else {
+                call.addParam(Param.Network, network.getId());
+            }
+        }
+        return await call
+            .commit('network/list/profile/hash/').then((res) => {
+                let result = new Array<PlatformProfile>();
+                for (let i = 0; i < res.length; i++) {
+                    const element = res[i];
+                    result.push(PlatformProfile.fromObject(element));
+                }
+                return result;
             })
     }
 

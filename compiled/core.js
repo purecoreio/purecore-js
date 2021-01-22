@@ -33,7 +33,8 @@ class Core {
         }
         // adds the authentication method to the ID manager if it is a valid authentication method
         if (method != null) {
-            Core.keychain.addMethod(Keychain.getMethod(method));
+            let methodFinal = Keychain.getMethod(method);
+            Core.keychain.addMethod(methodFinal);
         }
     }
     /**
@@ -66,6 +67,9 @@ class Core {
             });
         });
     }
+    getOfflineInstance(id) {
+        return new Instance(id, null, null);
+    }
     /**
      * @description gets a network instance from the api
      */
@@ -75,6 +79,28 @@ class Core {
                 .addParam(Param.Network, id)
                 .commit('network/get/').then((res) => {
                 return Network.fromObject(res);
+            });
+        });
+    }
+    getProfiles(network = null) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let call = new Call();
+            if (network != null) {
+                if (typeof network == 'string') {
+                    call.addParam(Param.Network, network);
+                }
+                else {
+                    call.addParam(Param.Network, network.getId());
+                }
+            }
+            return yield call
+                .commit('network/list/profile/hash/').then((res) => {
+                let result = new Array();
+                for (let i = 0; i < res.length; i++) {
+                    const element = res[i];
+                    result.push(PlatformProfile.fromObject(element));
+                }
+                return result;
             });
         });
     }
@@ -477,7 +503,7 @@ class Key {
         return this.hash;
     }
     getParam() {
-        return Param.Hash;
+        return Param.Key;
     }
     static fromObject(object) {
         if ('hash' in object) {
@@ -1307,6 +1333,15 @@ class Store extends Network {
             });
         });
     }
+    getPublishableRepresentation() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Network, this.getId())
+                .commit('store/representation/publishable/').then((res) => {
+                return StoreRepresentation.fromObject(res);
+            });
+        });
+    }
     getPerkRepresentation() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield new Call()
@@ -1472,7 +1507,7 @@ var PreferredRepresentation;
 })(PreferredRepresentation || (PreferredRepresentation = {}));
 class ItemCategoryRepresentation {
     constructor(itemCategory, items) {
-        this.itemCategory = itemCategory;
+        this.category = itemCategory;
         this.items = items;
     }
     static fromObject(object) {
@@ -1571,7 +1606,7 @@ class PerkCategory {
 }
 class PerkCategoryRepresentation {
     constructor(perkCategory, perks) {
-        this.perkCategory = perkCategory;
+        this.category = perkCategory;
         this.perks = perks;
     }
     static fromObject(object) {
@@ -1585,26 +1620,28 @@ class PerkCategoryRepresentation {
                 perks.push(Perk.fromObject(element));
             }
         }
-        return new PerkCategoryRepresentation(PerkCategory.fromObject(object.perkCategory), perks);
+        return new PerkCategoryRepresentation(PerkCategory.fromObject(object.category), perks);
     }
 }
 class ExecutionSetup {
     static fromObject(object) {
         let setup = new ExecutionSetup();
         setup.uponPayment = new Array();
-        for (let i = 0; i < object.uponPayment.length; i++) {
-            const element = object.uponPayment[i];
-            setup.uponPayment.push(ExecutionTemplate.fromObject(element));
-        }
         setup.uponRefund = new Array();
-        for (let i = 0; i < object.uponRefund.length; i++) {
-            const element = object.uponRefund[i];
-            setup.uponRefund.push(ExecutionTemplate.fromObject(element));
-        }
         setup.uponDispute = new Array();
-        for (let i = 0; i < object.uponDispute.length; i++) {
-            const element = object.uponDispute[i];
-            setup.uponDispute.push(ExecutionTemplate.fromObject(element));
+        if (object != null) {
+            for (let i = 0; i < object.uponPayment.length; i++) {
+                const element = object.uponPayment[i];
+                setup.uponPayment.push(ExecutionTemplate.fromObject(element));
+            }
+            for (let i = 0; i < object.uponRefund.length; i++) {
+                const element = object.uponRefund[i];
+                setup.uponRefund.push(ExecutionTemplate.fromObject(element));
+            }
+            for (let i = 0; i < object.uponDispute.length; i++) {
+                const element = object.uponDispute[i];
+                setup.uponDispute.push(ExecutionTemplate.fromObject(element));
+            }
         }
         return setup;
     }
@@ -1695,12 +1732,12 @@ var RequirementType;
 })(RequirementType || (RequirementType = {}));
 class StorePerkRepresentation {
     constructor(representations) {
-        this.perkRepresentations = representations;
+        this.perks = representations;
     }
     static fromObject(object) {
         let representations = new Array();
-        for (let index = 0; index < object.perkRepresentations.length; index++) {
-            const element = object.perkRepresentations[index];
+        for (let index = 0; index < object.perks.length; index++) {
+            const element = object.perks[index];
             representations.push(PerkCategoryRepresentation.fromObject(element));
         }
         return new StorePerkRepresentation(representations);
@@ -1708,12 +1745,13 @@ class StorePerkRepresentation {
 }
 class StoreRepresentation {
     constructor(representations) {
-        this.itemCategoryRepresentations = representations;
+        this.categories = representations;
     }
     static fromObject(object) {
+        console.log(object);
         let representations = new Array();
-        for (let i = 0; i < object.itemCategoryRepresentations.length; i++) {
-            const element = object.itemCategoryRepresentations[i];
+        for (let i = 0; i < object.categories.length; i++) {
+            const element = object.categories[i];
             representations.push(ItemCategoryRepresentation.fromObject(element));
         }
         return new StoreRepresentation(representations);
@@ -1824,6 +1862,40 @@ class Owner extends Player {
                 return Network.fromObject(res);
             });
         });
+    }
+}
+class PlatformProfile {
+    static fromObject(object) {
+        let profile = new PlatformProfile();
+        profile.id = object.id;
+        profile.platformUsername = object.platformUsername;
+        profile.platformid = object.platformId;
+        profile.platformMeta = object.platformMeta;
+        switch (object.platform) {
+            case -1:
+                profile.platform = Platform.Unknown;
+                break;
+            case 0:
+                profile.platform = Platform.Mojang;
+                break;
+            case 1:
+                profile.platform = Platform.Xbox;
+                break;
+            case 2:
+                profile.platform = Platform.Steam;
+                break;
+            case 3:
+                profile.platform = Platform.Stadia;
+                break;
+            case 4:
+                profile.platform = Platform.EpicGames;
+                break;
+        }
+        profile.isManaged = Boolean(object.isManaged);
+        profile.isOwned = Boolean(object.isOwned);
+        profile.creation = Util.date(object.creation);
+        profile.lastUpdated = Util.date(object.lastUpdated);
+        return profile;
     }
 }
 /// <reference path="Player.ts"/>

@@ -12,6 +12,14 @@ class Store extends Network {
             })
     }
 
+    public async getPublishableRepresentation(): Promise<StoreRepresentation> {
+        return await new Call()
+            .addParam(Param.Network, this.getId())
+            .commit('store/representation/publishable/').then((res) => {
+                return StoreRepresentation.fromObject(res);
+            })
+    }
+
     public async getPerkRepresentation(): Promise<StorePerkRepresentation> {
         return await new Call()
             .addParam(Param.Network, this.getId())

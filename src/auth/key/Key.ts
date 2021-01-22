@@ -22,7 +22,7 @@ class Key implements AuthMethod {
     }
 
     public getParam(): string {
-        return Param.Hash;
+        return Param.Key;
     }
 
     public static fromObject(object: any): Key {
