@@ -1,153 +1,158 @@
 class Core {
-  key: string;
-  session: Session;
-  dev: boolean;
 
-  constructor(tool?: any, dev?) {
-    if (dev == null) {
-      this.dev = false;
-    } else {
-      this.dev = dev;
-    }
-    if (tool != undefined) {
-      if (typeof tool == "string") {
-        this.key = tool;
-      } else if (typeof tool == "object") {
-        if (tool instanceof Session) {
-          this.session = tool;
-        } else {
-          this.session = new Session(
-            new Core(this.session, this.dev)
-          ).fromObject(tool);
+    public static dev: boolean;
+    public static context: Context;
+    private static keychain: Keychain;
+
+    public constructor(method?: any, dev?: boolean) {
+
+        // context
+        if (Core.context == null) {
+            Core.context = new Context();
         }
-      }
+
+        // dev mode
+        if (dev == null || dev == false) {
+            let loc = location;
+            if (loc) {
+                // automatically set dev mode if running on localhost
+                Core.dev = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+            } else {
+                Core.dev = false;
+            }
+        } else {
+            Core.dev = dev;
+        }
+
+        // checks if the ID instance has not been started
+        if (Core.keychain == null) {
+            Core.keychain = new Keychain();
+        }
+
+        // adds the authentication method to the ID manager if it is a valid authentication method
+        if (method != null) {
+            let methodFinal = Keychain.getMethod(method);
+            Core.keychain.addMethod(methodFinal);
+        }
     }
 
-    // if not start with fromdiscord or fromtoken
-  }
-
-  public getCacheCollection(): CacheCollection {
-    return new CacheCollection(this.dev);
-  }
-
-  public async requestGlobalHash(): Promise<Array<ConnectionHashGlobal>> {
-    let core = this;
-    return await new Call(this)
-      .commit({}, "session/hash/list/")
-      .then((json) => {
-        var response = new Array<ConnectionHashGlobal>();
-        json.forEach((hashData) => {
-          var hash = new ConnectionHashGlobal(core);
-          response.push(hash.fromObject(hashData));
-        });
-        return response;
-      });
-  }
-
-  public getPlayersFromIds(ids): Array<Player> {
-    var playerList = new Array<Player>();
-    ids.forEach((id) => {
-      playerList.push(new Player(this, id));
-    });
-    return playerList;
-  }
-
-  public async getMachine(hash: string): Promise<Machine> {
-    return await new Call(this)
-      .commit({ hash: hash }, "machine")
-      .then((data) => { return new Machine(this, hash).fromObject(data) });
-  }
-
-
-  public async fromToken(googleToken: string): Promise<Session> {
-    return await new Call(this)
-      .commit({ token: googleToken }, "session/from/google")
-      .then(json => {
-        const session: Session = new Session(this).fromObject(json);
-        this.session = session;
-        return session;
-      });
-  }
-
-  public asBillingAddress(array): BillingAddress {
-    return new BillingAddress().fromObject(array);
-  }
-
-  public getWorkbench(): Workbench {
-    return new Workbench();
-  }
-
-  public async pushFCM(token: string): Promise<boolean> {
-    return await new Call(this)
-      .commit({ token: token }, "account/push/fcm")
-      .then(() => true);
-  }
-
-  public getTool() {
-    if (this.key != null && this.key != undefined) {
-      return this.key;
-    } else {
-      return this.session;
+    /**
+     * @description pass a callback to call when logging in
+     */
+    public getLoginManager(): LoginHelper {
+        return new LoginHelper();
     }
-  }
 
-  public getCoreSession() {
-    return this.session;
-  }
-
-  public getLegacyKey(): Key {
-    return new Key(this, "UNK", null, this.key, null);
-  }
-
-  public getKey() {
-    if (this.key == undefined) {
-      return null;
-    } else {
-      return this.key;
+    /**
+     * @description gets the current context. useful when making network-related calls with a session object
+     */
+    public getContext(): Context {
+        return Core.context;
     }
-  }
 
-  public getHostingManager(): HostingManager {
-    return new HostingManager(this);
-  }
+    /**
+     * @description gets the current keychain instance
+     */
+    public static getKeychain(): Keychain {
+        return Core.keychain;
+    }
 
-  public getElements() {
-    return new Elements(this);
-  }
+    /**
+     * @description gets a generic instance from the api
+     */
+    public async getInstance(id: string): Promise<Instance> {
+        return await new Call()
+            .addParam(Param.Instance, id)
+            .commit('instance/get/').then((res) => {
+                return Instance.fromObject(res);
+            })
+    }
 
-  public getInstance(instanceId, name?, type?): Instance {
-    return new Instance(this, instanceId, name, type);
-  }
+    public getOfflineInstance(id: string): Instance {
+        return new Instance(id, null, null);
+    }
 
-  public getCore(): Core {
-    return this;
-  }
+    /**
+     * @description gets a network instance from the api
+     */
+    public async getNetwork(id: string): Promise<Network> {
+        return await new Call()
+            .addParam(Param.Network, id)
+            .commit('network/get/').then((res) => {
+                return Network.fromObject(res);
+            })
+    }
 
-  public async fromDiscord(guildId: string, botToken: string, devkey: boolean): Promise<Core> {
-    let params: any = {
-      guildid: guildId,
-      token: botToken
-    };
+    public async getProfiles(network: Network | string = null): Promise<Array<PlatformProfile>> {
+        let call = new Call();
+        if (network != null) {
+            if (typeof network == 'string') {
+                call.addParam(Param.Network, network);
+            } else {
+                call.addParam(Param.Network, network.getId());
+            }
+        }
+        return await call
+            .commit('network/list/profile/hash/').then((res) => {
+                let result = new Array<PlatformProfile>();
+                for (let i = 0; i < res.length; i++) {
+                    const element = res[i];
+                    result.push(PlatformProfile.fromObject(element));
+                }
+                return result;
+            })
+    }
 
-    if (devkey) params.devkey = true;
+    public static getCopy(): Core {
+        return new Core()
+    }
 
-    return await new Call(this)
-      .commit(params, "key/from/discord")
-      .then(json => {
-        this.key = json.hash;
-        return this;
-      });
-  }
+    /**
+     * @description gets the highest priority authentication method
+     */
+    static getAuth(): AuthMethod {
+        let m = null;
+        let mths = Core.keychain.getMethods();
+        for (let i = 0; i < mths.length; i++) {
+            const element = mths[i];
+            if (m == null) {
+                m = element;
+            } else {
+                if (element instanceof CoreSession && m instanceof Key) {
+                    m = element;
+                    break;
+                }
+            }
+        }
+        return m;
+    }
+
+    public static addAuth(method: AuthMethod): void {
+        Core.keychain.addMethod(method);
+        try {
+            Core.context.updateSubscriptionStatus();
+        } catch (error) {
+            // ignore
+        }
+        return;
+    }
+
+    /**
+     * @description returns null if there is no assigned player to the global core instance
+     */
+    public getPlayer(): Player | null {
+        let ses = Core.keychain.getSession();
+        if (ses != null) {
+            return Core.keychain.getSession().getPlayer();
+        } else {
+            return null;
+        }
+    }
+
 }
 
 try {
-  module.exports = Core;
-  const fetch = require('node-fetch');
-  if (!global.fetch) {
-    global.fetch = fetch;
-  }
+    module.exports = Core;
 } catch (error) {
-  console.log(
-    "[corejs] starting plain vanilla instance, as nodejs exports were not available"
-  );
+
 }

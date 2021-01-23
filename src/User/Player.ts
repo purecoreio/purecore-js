@@ -1,247 +1,84 @@
-class Player extends Core {
-  core: Core;
-  id: string;
-  username: string;
-  uuid: string;
-  verified;
+class Player {
 
-  constructor(
-    core: Core,
-    id?: string,
-    username?: string,
-    uuid?: string,
-    verified?
-  ) {
-    super(core.getKey(), core.dev);
-    this.core = core;
-    this.id = id;
-    this.username = username;
-    this.uuid = uuid;
-    this.verified = verified;
-  }
+    private id: string;
+    private creation: Date;
+    private username: string;
+    private lastLogin: Date;
+    private lastUpdated: Date;
+    private bio: string;
+    private birthdate: Date;
 
-  public fromObject(object: any): Player {
-    this.id = object.coreid;
-    this.username = object.username;
-    this.uuid = object.uuid;
-    this.verified = object.verified;
-    return this;
-  }
-
-  public async closeConnections(
-    instance: Instance
-  ): Promise<Array<Connection>> {
-    var core = this.core;
-
-    return await new Call(core)
-      .commit({ instance: instance.getId(), uuid: this.uuid }, "connection/close/all/")
-      .then(function (jsonresponse) {
-        var connectionsClosed = new Array<Connection>();
-        jsonresponse.forEach((connectionJson) => {
-          connectionsClosed.push(
-            new Connection(core).fromObject(connectionJson)
-          );
-        });
-        return connectionsClosed;
-      });
-  }
-
-  public async openConnection(
-    ip: string,
-    instance: Instance
-  ): Promise<Connection> {
-    var core = this.core;
-
-    return await new Call(core)
-      .commit(
-        {
-          instance: instance.getId(),
-          ip: ip,
-          username: this.username,
-          uuid: this.uuid,
-        },
-        "connection/new/"
-      )
-      .then(function (jsonresponse) {
-        return new Connection(core).fromObject(jsonresponse);
-      });
-  }
-
-  public async getBillingAddress(): Promise<BillingAddress> {
-    var core = this.core;
-
-    return await new Call(core)
-      .commit({}, "player/billing/get/")
-      .then(function (jsonresponse) {
-        return new BillingAddress().fromObject(jsonresponse);
-      });
-  }
-
-  public async getPunishments(
-    network?: Network,
-    page?
-  ): Promise<Array<Punishment>> {
-    var id = this.id;
-    var core = this.core;
-    var queryPage = 0;
-
-    if (page != undefined || page != null) {
-      queryPage = page;
+    public constructor(id?: string, creation?: Date, username?: string, lastLogin?: Date, lastUpdated?: Date, bio?: string, birthdate?: Date) {
+        this.id = id;
+        this.creation = creation;
+        this.username = username;
+        this.lastLogin = lastLogin;
+        this.lastUpdated = lastUpdated;
+        this.bio = bio;
+        this.birthdate = birthdate;
     }
 
-    var args = {};
-    if (network != null) {
-      args = {
-        page: page.toString(),
-        player: id,
-        network: network.getId(),
-      };
-    } else {
-      args = {
-        player: id,
-        page: page.toString(),
-      };
+    public asObject(): any {
+        let obj = JSON.parse(JSON.stringify(this));
+        obj.lastUpdated = Util.epoch(this.getLastUpdated())
+        obj.lastLogin = Util.epoch(this.getLastLogin())
+        obj.birthdate = Util.epoch(this.getBirthdate())
+        obj.creation = Util.epoch(this.getCreation())
+        return obj;
     }
 
-    return await new Call(core)
-      .commit(args, "player/punishment/list/")
-      .then(function (jsonresponse) {
-        var punishments = new Array<Punishment>();
-        jsonresponse.forEach((punishmentJson) => {
-          punishments.push(new Punishment(core).fromObject(punishmentJson));
-        });
-        return punishments;
-      });
-  }
-
-  public async getPayments(store: Store, page?): Promise<Array<Payment>> {
-    var id = this.id;
-    var core = this.core;
-    var queryPage = 0;
-
-    if (page != undefined || page != null) {
-      queryPage = page;
+    public getLastUpdated(): Date {
+        return this.lastUpdated;
     }
 
-    return await new Call(core)
-      .commit(
-        {
-          network: store.getNetwork().getId(),
-          page: queryPage.toString(),
-          player: id,
-        },
-        "player/payment/list/"
-      )
-      .then(function (jsonresponse) {
-        var payments = new Array<Payment>();
-        jsonresponse.forEach((paymentJson) => {
-          payments.push(new Payment(core).fromObject(paymentJson));
-        });
-        return payments;
-      });
-  }
-
-  public async getDiscordId(): Promise<String> {
-    return await new Call(this.core)
-      .commit({}, "player/payment/list/")
-      .then(function (jsonresponse) {
-        return String(jsonresponse.id);
-      });
-  }
-
-  public async getConnections(
-    instance: Instance,
-    page?
-  ): Promise<Array<Connection>> {
-    var id = this.id;
-    var core = this.core;
-    var queryPage = 0;
-
-    if (page != undefined || page != null) {
-      queryPage = page;
+    public getLastLogin(): Date {
+        return this.lastLogin;
     }
 
-    var args = {};
-    if (instance != null) {
-      args = { page: queryPage, player: id, instance: instance.getId() };
-    } else {
-      args = { page: queryPage, player: id };
+    public getBirthdate(): Date {
+        return this.birthdate;
     }
 
-    return await new Call(this.core)
-      .commit(args, "player/connection/list/")
-      .then(function (jsonresponse) {
-        var connections = new Array<Connection>();
-        jsonresponse.forEach((connectionJson) => {
-          connections.push(new Connection(core).fromObject(connectionJson));
-        });
-        return connections;
-      });
-  }
-
-  public async getMatchingConnections(
-    instance: Instance,
-    page?,
-    playerList?: Array<Player>
-  ): Promise<Array<ActivityMatch>> {
-    var id = this.id;
-    var queryPage = 0;
-    var playerListIds = [];
-    playerList.forEach((player) => {
-      playerListIds.push(player.getId());
-    });
-
-    if (page != undefined || page != null) {
-      queryPage = page;
+    public getCreation(): Date {
+        return this.creation;
     }
 
-    return await new Call(this.core)
-      .commit(
-        {
-          instance: instance.getId(),
-          page: queryPage,
-          players: JSON.stringify(playerListIds),
-          player: id,
-        },
-        "connection/list/match/players/"
-      )
-      .then(function (jsonresponse) {
-        var activityMatch = new Array<ActivityMatch>();
+    public static fromObject(object: any): Player {
 
-        jsonresponse.forEach((activity) => {
-          var matchingRanges = new Array<MatchingRange>();
-          activity.matchList.forEach((matchingRangeJson) => {
-            var matchingRange = new MatchingRange(
-              new Date(matchingRangeJson.startedOn * 1000),
-              new Date(matchingRangeJson.finishedOn * 1000),
-              matchingRangeJson.matchWith
-            );
-            matchingRanges.push(matchingRange);
-          });
+        let ply = new Player();
 
-          activityMatch.push(
-            new ActivityMatch(
-              new Date(activity.startedOn * 1000),
-              new Date(activity.finishedOn * 1000),
-              activity.activity,
-              matchingRanges
-            )
-          );
-        });
+        if ('id' in object) {
+            ply.id = String(object.id);
+        }
+        if ('creation' in object) {
+            ply.creation = Util.date(object.creation)
+        }
+        if ('username' in object) {
+            ply.username = object.username == null ? null : String(object.username);
+        }
+        if ('lastLogin' in object) {
+            ply.lastLogin = Util.date(object.lastLogin);
+        }
+        if ('lastUpdated' in object) {
+            ply.lastUpdated = Util.date(object.lastUpdated);
+        }
+        if ('bio' in object) {
+            ply.bio = (object.bio == null ? null : String(object.bio));
+        }
+        if ('birthdate' in object) {
+            ply.birthdate = Util.date(object.birthdate);
+        }
 
-        return activityMatch;
-      });
-  }
+        return ply;
+    }
 
-  getId() {
-    return this.id;
-  }
+    public asOwner(): Owner {
+        return new Owner(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
+    }
 
-  getUuid() {
-    return this.uuid;
-  }
+    public getBilling(): PlayerBilling {
+        return new PlayerBilling(this.id, this.creation, this.username, this.lastLogin, this.lastUpdated, this.bio, this.birthdate)
+    }
 
-  getUsername() {
-    return this.username;
-  }
+
 }

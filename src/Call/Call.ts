@@ -1,65 +1,75 @@
-class Call extends Core {
-  private readonly baseURL: string;
-  private readonly core: Core;
+class Call {
 
-  public constructor(core: Core) {
-    super(core.getTool(), core.dev);
-    this.core = core;
-    this.baseURL = "https://api.purecore.io/rest/2";
-  }
+    private readonly baseURL: string;
+    private paramList: Array<CallParam>;
 
-  public async commit(
-    args: any,
-    endpoint: string,
-    request?: RequestInit
-  ): Promise<any> {
-    if (args == null) args = {};
-    if (request == null) request = { method: "POST" };
-
-    if (this.core.getCoreSession() != null && args.hash==null) {
-      args.hash = this.core.getCoreSession().getHash();
-    } else if (this.core.getKey() != null) {
-      args.key = this.core.getKey();
+    public constructor() {
+        this.baseURL = "https://api.purecore.io/rest/3";
+        this.paramList = new Array<CallParam>();
     }
 
-    const url =
-      this.baseURL +
-      Call.formatEndpoint(endpoint) +
-      "?" +
-      Object.keys(args)
-        .filter((key) => args.hasOwnProperty(key))
-        .map(
-          (key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key])
-        )
-        .join("&");
-
-    if (this.core.dev) {
-      var visibleArgs: any = args;
-      if (args.key != null) visibleArgs.key = "***";
-      if (args.hash != null) visibleArgs.hash = "***";
-      console.log(this.baseURL +
-        Call.formatEndpoint(endpoint), visibleArgs);
+    public addParam(param: Param, value: any): Call {
+        this.paramList.push(new CallParam(param, value));
+        return this;
     }
 
-    return new Promise((resolve, reject) => {
-      return fetch(url, request)
-        .then((response: Response) => response.json())
-        .then((response: any) => {
-          if ("error" in response) {
-            throw new Error(response.error + ". " + response.msg);
-          } else {
-            resolve(response);
-          }
-        })
-        .catch((error) => reject(error));
-    });
-  }
+    public async commit(
+        endpoint: string,
+    ): Promise<any> {
 
-  private static formatEndpoint(endpoint: string): string {
-    return (
-      (endpoint.startsWith("/") ? "" : "/") +
-      endpoint +
-      (endpoint.endsWith("/") ? "" : "/")
-    );
-  }
+        let args = {};
+        for (let i = 0; i < this.paramList.length; i++) {
+            const element = this.paramList[i];
+            args[element.param] = element.value;
+        }
+
+        let m = Core.getAuth();
+        if (m != null) {
+            args[m.getParam()] = m.getCredentials();
+        }
+
+        let formattedEndpoint = Call.formatEndpoint(endpoint);
+        const url =
+            this.baseURL +
+            formattedEndpoint +
+            "?" +
+            Object.keys(args)
+                .filter((key) => args.hasOwnProperty(key))
+                .map(
+                    (key) => encodeURIComponent(key) + "=" + encodeURIComponent(args[key])
+                )
+                .join("&");
+
+        if (Core.dev) {
+            var visibleArgs: any = args;
+            for (const arg in visibleArgs) {
+                if (Object.prototype.hasOwnProperty.call(visibleArgs, arg)) {
+                    if (arg == m.getParam()) visibleArgs[arg] = "***";
+                }
+            }
+            console.log(this.baseURL +
+                formattedEndpoint, visibleArgs);
+        }
+
+        return new Promise((resolve, reject) => {
+            return fetch(url, { method: "POST" })
+                .then((response: Response) => response.json())
+                .then((response: any) => {
+                    if ("error" in response) {
+                        throw new Error(response.error + ". " + response.msg);
+                    } else {
+                        resolve(response);
+                    }
+                })
+                .catch((error) => reject(error));
+        });
+    }
+
+    private static formatEndpoint(endpoint: string): string {
+        return (
+            (endpoint.startsWith("/") ? "" : "/") +
+            endpoint +
+            (endpoint.endsWith("/") ? "" : "/")
+        );
+    }
 }
