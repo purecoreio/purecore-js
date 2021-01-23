@@ -9,7 +9,7 @@ class ItemCategoryRepresentation {
     }
 
     public static fromObject(object: any): ItemCategoryRepresentation {
-        const itemCategory = ItemCategory.fromObject(object.itemCategory);
+        const itemCategory = ItemCategory.fromObject(object.category);
         let items = new Array<StoreItem>();
         for (let i = 0; i < object.items.length; i++) {
             const element = object.items[i];

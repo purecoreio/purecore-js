@@ -4,6 +4,28 @@ class Store extends Network {
         super(id, name, game, platform);
     }
 
+    public async requestPayment(profile: PlatformProfile | string, items: Array<StoreItem | string>, address: Address | any): Promise<HashedPayment> {
+        let profileId = (typeof profile == 'string') ? profile : profile.id;
+        let addressObj = (address instanceof Address) ? address.asObject() : address;
+        let itemIds = Array<String>();
+        for (let index = 0; index < items.length; index++) {
+            const element = items[index];
+            if (element instanceof StoreItem) {
+                itemIds.push(element.id);
+            } else if (typeof element == 'string') {
+                itemIds.push(element);
+            }
+        }
+        return await new Call()
+            .addParam(Param.Network, this.getId())
+            .addParam(Param.Profile, profileId)
+            .addParam(Param.Address, JSON.stringify(addressObj))
+            .addParam(Param.StoreItems, JSON.stringify(itemIds))
+            .commit('payment/request/').then((res) => {
+                return HashedPayment.fromObject(res);
+            })
+    }
+
     public async getRepresentation(): Promise<StoreRepresentation> {
         return await new Call()
             .addParam(Param.Network, this.getId())

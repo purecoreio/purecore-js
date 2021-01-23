@@ -1088,6 +1088,16 @@ class Network {
         let obj = JSON.parse(JSON.stringify(this));
         return obj;
     }
+    getProfileFromUsername(username) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield new Call()
+                .addParam(Param.Network, this.id)
+                .addParam(Param.PlatformName, username)
+                .commit('network/get/profile/from/username').then((res) => {
+                return PlatformProfile.fromObject(res);
+            });
+        });
+    }
     createExecutionTemplate(instances, command, requireOnline, delay) {
         return __awaiter(this, void 0, void 0, function* () {
             let instanceIDs = Array();
@@ -1320,9 +1330,332 @@ class ServerGroup {
         });
     }
 }
+class Bank {
+    constructor(name, logo) {
+        this.name = name;
+        this.logo = logo;
+    }
+}
+class Discount {
+    static fromObject(object) {
+        let discount = new Discount();
+        discount.id = object.id;
+        discount.network = object.network == null ? null : Network.fromObject(object.network);
+        discount.systemGenerated = object.systemGenerated;
+        discount.byItem = object.byItem == null ? null : StoreItem.fromObject(object.byItem);
+        discount.code = object.code;
+        discount.sale = object.sale;
+        discount.name = object.name;
+        discount.activeUntil = Util.date(object.activeUntil);
+        discount.activeFrom = Util.date(object.activeFrom);
+        discount.creation = Util.date(object.creation);
+        discount.amount = object.amount;
+        discount.percentage = object.percentage;
+        discount.uses = object.uses;
+        discount.maxUses = object.maxUses;
+        discount.forItems = null;
+        if (object.forItems != null) {
+            discount.forItems = new Array();
+            for (let i = 0; i < object.forItems.length; i++) {
+                const element = object.forItems[i];
+                discount.forItems.push(StoreItem.fromObject(element));
+            }
+        }
+        discount.archived = Util.date(object.archived);
+        discount.minimum = object.minimum;
+        discount.profileLimited = object.profileLimited;
+        discount.profiles = null;
+        if (object.profiles != null) {
+            discount.profiles = new Array();
+            for (let i = 0; i < object.profiles.length; i++) {
+                const element = object.profiles[i];
+                discount.profiles.push(PlatformProfile.fromObject(element));
+            }
+        }
+        return discount;
+    }
+}
+var Gateway;
+(function (Gateway) {
+    Gateway[Gateway["Unknown"] = -1] = "Unknown";
+    Gateway[Gateway["Stripe"] = 0] = "Stripe";
+    Gateway[Gateway["PayPal"] = 1] = "PayPal";
+    Gateway[Gateway["mollie"] = 2] = "mollie";
+})(Gateway || (Gateway = {}));
+class HashedPayment {
+    static fromObject(object) {
+        let hp = new HashedPayment();
+        hp.payment = Payment.fromObject(object.payment);
+        hp.hash = object.hash;
+        hp.stripeClientSecret = object.stripeClientSecret;
+        return hp;
+    }
+    getiDEALBanks() {
+        let banks = new Array();
+        banks.push(new Bank("ABN AMRO", "https://upload.wikimedia.org/wikipedia/commons/4/4f/ABN-AMRO_Logo_new_colors.svg"));
+        banks.push(new Bank("ASN Bank", "https://upload.wikimedia.org/wikipedia/en/4/4b/ASN_Bank_logo.svg"));
+        banks.push(new Bank("bunq", "https://upload.wikimedia.org/wikipedia/commons/5/58/Bunq_%28bank%29_company_logo_2017.svg"));
+        banks.push(new Bank("ING", "https://upload.wikimedia.org/wikipedia/commons/4/49/ING_Group_N.V._Logo.svg"));
+        banks.push(new Bank("Knab", "https://upload.wikimedia.org/wikipedia/en/1/1c/AEGON_%28logo%29.svg"));
+        banks.push(new Bank("Moneyou", "https://upload.wikimedia.org/wikipedia/commons/e/ec/Moneyou_logo.svg"));
+        banks.push(new Bank("Rabobank", "https://upload.wikimedia.org/wikipedia/de/9/9d/Logo_Rabobank.svg"));
+        banks.push(new Bank("RegioBank", "https://upload.wikimedia.org/wikipedia/commons/7/70/Logo_Regiobank.svg"));
+        banks.push(new Bank("Revolut", "https://upload.wikimedia.org/wikipedia/commons/c/c9/Logo_Revolut.png"));
+        banks.push(new Bank("SNS", "https://upload.wikimedia.org/wikipedia/en/d/db/De_Volksbank_logo.svg"));
+        banks.push(new Bank("Svenska Handelsbanken", "https://upload.wikimedia.org/wikipedia/commons/e/e8/Handelsbanken.svg"));
+        banks.push(new Bank("Triodos Bank", "https://upload.wikimedia.org/wikipedia/en/2/20/Triodos_Bank.svg"));
+        banks.push(new Bank("Van Lanschot", "https://dbrt.ch/wp-content/uploads/2016/06/VL-Logo-Transparant-002.png"));
+        return banks;
+    }
+    getURL(method, bank = null) {
+        let url = "https://api.purecore.io/rest/3/payment/pay/";
+        if (method == PaymentMethod.PayPal || String(method).toLowerCase() == "paypal") {
+            url += "paypal/" + "?" + Param.PaymentHash + "=" + this.hash;
+        }
+        else if (method == PaymentMethod.Bancontact || String(method).toLocaleLowerCase() == "bancontact") {
+            url += "stripe/bancontact/" + "?" + Param.PaymentHash + "=" + this.hash;
+        }
+        else if (method == PaymentMethod.Giropay || String(method).toLocaleLowerCase() == "giropay") {
+            url += "stripe/giropay/" + "?" + Param.PaymentHash + "=" + this.hash;
+        }
+        else if (method == PaymentMethod.iDEAL || String(method).toLocaleLowerCase() == "ideal") {
+            url += "stripe/ideal/" + "?" + Param.PaymentHash + "=" + this.hash;
+            if (bank == null) {
+                throw new Error("Bank param required");
+            }
+            else if (bank instanceof Bank) {
+                url += "&" + Param.Bank + "=" + bank.name.toLocaleLowerCase();
+            }
+            else {
+                url += "&" + Param.Bank + "=" + bank.toLocaleLowerCase();
+            }
+        }
+        else {
+            throw new Error("Unknown method (or must be processed locally)");
+        }
+        return url;
+    }
+    pay(method, bank = null) {
+        return new Promise((resolve, reject) => {
+            if (window != null) {
+                try {
+                    if (this.activeWindow != null)
+                        this.activeWindow.close();
+                    // generates popup
+                    let h = 600;
+                    let w = 400;
+                    const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+                    const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
+                    let popup = window.open(this.getURL(method, bank), 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
+                    this.activeWindow = popup;
+                    let listenerActive = true;
+                    let res = null;
+                    // waits for result
+                    window.addEventListener("message", (event) => {
+                        if (listenerActive) {
+                            if (event.origin !== "https://api.purecore.io") {
+                                return;
+                            }
+                            switch (event.data.message) {
+                                case 'paymentFailure':
+                                    reject(event.data.data);
+                                    break;
+                                case 'paymentSuccess':
+                                    resolve();
+                                    break;
+                            }
+                        }
+                    }, false);
+                    // check if the window gets closed before a result was retrieved
+                    let interval = setInterval(() => {
+                        if (this.activeWindow != null && this.activeWindow.closed) {
+                            this.activeWindow = null;
+                        }
+                        if (popup.closed && res == null) {
+                            // stop listening for events
+                            listenerActive = false;
+                            // stop the window state checker
+                            clearInterval(interval);
+                            // throw error
+                            reject(new Error("The popup was closed before completing the payment flow"));
+                        }
+                    }, 50);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            }
+            else {
+                reject(new Error("In order to create a login popup, you must be executing purecore from a Document Object Model"));
+            }
+        });
+    }
+}
+class Payment {
+    static fromObject(object) {
+        let payment = new Payment();
+        payment.id = object.id;
+        payment.network = Network.fromObject(object.network);
+        payment.customer = object.customer;
+        payment.relatedProfiles = new Array();
+        if (object.relatedProfiles != null) {
+            for (let i = 0; i < object.relatedProfiles.length; i++) {
+                const element = object.relatedProfiles[i];
+                payment.relatedProfiles.push(PlatformProfile.fromObject(element));
+            }
+        }
+        payment.country = object.country;
+        payment.region = object.region;
+        payment.amount = object.amount;
+        payment.amountOriginal = object.amountOriginal;
+        payment.currency = object.currency;
+        payment.presentedCurrency = object.presentedCurrency;
+        payment.presentedExchange = object.presentedExchange;
+        payment.presentedAmount = object.presentedAmount;
+        payment.taxRate = object.taxRate;
+        payment.taxIncluded = object.taxIncluded;
+        payment.discounts = new Array();
+        for (let i = 0; i < object.discounts.length; i++) {
+            const element = object.discounts[i];
+            payment.discounts.push(Discount.fromObject(element));
+        }
+        payment.items = new Array();
+        for (let i = 0; i < object.items.length; i++) {
+            const element = object.items[i];
+            payment.items.push(StoreItem.fromObject(element));
+        }
+        payment.test = object.test;
+        payment.profile = PlatformProfile.fromObject(object.profile);
+        payment.creation = Util.date(object.creation);
+        payment.paid = Util.date(object.creation);
+        payment.cancelled = Util.date(object.creation);
+        payment.refunded = Util.date(object.creation);
+        payment.refundable = Util.date(object.creation);
+        payment.dispute = Util.date(object.creation);
+        payment.disputeClosed = Util.date(object.creation);
+        payment.availableGateways = new Array();
+        for (let i = 0; i < object.availableGateways.length; i++) {
+            const element = object.availableGateways[i];
+            switch (element) {
+                case 0:
+                    payment.availableGateways.push(Gateway.Stripe);
+                    break;
+                case 1:
+                    payment.availableGateways.push(Gateway.PayPal);
+                    break;
+                case 2:
+                    payment.availableGateways.push(Gateway.mollie);
+                    break;
+            }
+        }
+        payment.availableMethods = new Array();
+        for (let i = 0; i < object.availableMethods.length; i++) {
+            const element = object.availableMethods[i];
+            switch (element) {
+                case 0:
+                    payment.availableMethods.push(PaymentMethod.Card);
+                    break;
+                case 1:
+                    payment.availableMethods.push(PaymentMethod.PayPal);
+                    break;
+                case 2:
+                    payment.availableMethods.push(PaymentMethod.Bancontact);
+                    break;
+                case 3:
+                    payment.availableMethods.push(PaymentMethod.Giropay);
+                    break;
+                case 4:
+                    payment.availableMethods.push(PaymentMethod.iDEAL);
+                    break;
+            }
+        }
+        payment.stripePaymentIntent = object.stripePaymentIntent;
+        payment.stripeCharge = object.stripeCharge;
+        payment.paypalOrder = object.paypalOrder;
+        payment.paypalCharge = object.paypalCharge;
+        if (object.gateway != null) {
+            switch (object.gateway) {
+                case 0:
+                    payment.gateway = Gateway.Stripe;
+                    break;
+                case 1:
+                    payment.gateway = Gateway.PayPal;
+                    break;
+                case 2:
+                    payment.gateway = Gateway.mollie;
+                    break;
+                default:
+                    payment.gateway = Gateway.Unknown;
+                    break;
+            }
+        }
+        else {
+            payment.gateway = null;
+        }
+        if (object.method != null) {
+            switch (object.method) {
+                case 0:
+                    payment.method = PaymentMethod.Card;
+                    break;
+                case 1:
+                    payment.method = PaymentMethod.PayPal;
+                    break;
+                case 2:
+                    payment.method = PaymentMethod.Bancontact;
+                    break;
+                case 3:
+                    payment.method = PaymentMethod.Giropay;
+                    break;
+                case 4:
+                    payment.method = PaymentMethod.iDEAL;
+                    break;
+                default:
+                    payment.method = PaymentMethod.Unknown;
+                    break;
+            }
+        }
+        else {
+            payment.method = null;
+        }
+        return payment;
+    }
+}
+var PaymentMethod;
+(function (PaymentMethod) {
+    PaymentMethod[PaymentMethod["Unknown"] = -1] = "Unknown";
+    PaymentMethod[PaymentMethod["Card"] = 0] = "Card";
+    PaymentMethod[PaymentMethod["PayPal"] = 1] = "PayPal";
+    PaymentMethod[PaymentMethod["Bancontact"] = 2] = "Bancontact";
+    PaymentMethod[PaymentMethod["Giropay"] = 3] = "Giropay";
+    PaymentMethod[PaymentMethod["iDEAL"] = 4] = "iDEAL";
+})(PaymentMethod || (PaymentMethod = {}));
 class Store extends Network {
     constructor(id, name, game, platform) {
         super(id, name, game, platform);
+    }
+    requestPayment(profile, items, address) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let profileId = (typeof profile == 'string') ? profile : profile.id;
+            let addressObj = (address instanceof Address) ? address.asObject() : address;
+            let itemIds = Array();
+            for (let index = 0; index < items.length; index++) {
+                const element = items[index];
+                if (element instanceof StoreItem) {
+                    itemIds.push(element.id);
+                }
+                else if (typeof element == 'string') {
+                    itemIds.push(element);
+                }
+            }
+            return yield new Call()
+                .addParam(Param.Network, this.getId())
+                .addParam(Param.Profile, profileId)
+                .addParam(Param.Address, JSON.stringify(addressObj))
+                .addParam(Param.StoreItems, JSON.stringify(itemIds))
+                .commit('payment/request/').then((res) => {
+                return HashedPayment.fromObject(res);
+            });
+        });
     }
     getRepresentation() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -1511,7 +1844,7 @@ class ItemCategoryRepresentation {
         this.items = items;
     }
     static fromObject(object) {
-        const itemCategory = ItemCategory.fromObject(object.itemCategory);
+        const itemCategory = ItemCategory.fromObject(object.category);
         let items = new Array();
         for (let i = 0; i < object.items.length; i++) {
             const element = object.items[i];
@@ -1748,7 +2081,6 @@ class StoreRepresentation {
         this.categories = representations;
     }
     static fromObject(object) {
-        console.log(object);
         let representations = new Array();
         for (let i = 0; i < object.categories.length; i++) {
             const element = object.categories[i];

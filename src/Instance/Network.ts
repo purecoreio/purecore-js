@@ -29,6 +29,15 @@ class Network {
         return obj;
     }
 
+    public async getProfileFromUsername(username: string): Promise<PlatformProfile> {
+        return await new Call()
+            .addParam(Param.Network, this.id)
+            .addParam(Param.PlatformName, username)
+            .commit('network/get/profile/from/username').then((res) => {
+                return PlatformProfile.fromObject(res);
+            })
+    }
+
     public async createExecutionTemplate(instances: Array<Instance | string>, command: string, requireOnline: boolean, delay: number): Promise<ExecutionTemplate> {
         let instanceIDs = Array<string>();
         for (let i = 0; i < instances.length; i++) {
