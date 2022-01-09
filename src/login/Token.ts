@@ -21,8 +21,8 @@ class Token {
                     grant_type: "refresh_token",
                     refresh_token: this.refreshToken
                 }
-                if (Core.publicId) body["client_id"] = Core.publicId
-                return Token.fromObject(await Core.call("/oauth/token/", body, true))
+                if (Credentials.publicId) body["client_id"] = Credentials.publicId
+                return Token.fromObject(await Call.commit("/oauth/token/", body, true))
             } else {
                 throw new Error("expired access token")
             }

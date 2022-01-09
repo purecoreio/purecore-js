@@ -20,16 +20,22 @@
     <button onclick="login('discord')">discord</button>
     <script src="./target/core.js"></script>
     <script>
-        let core = new Core()
+        let core = new Core("SbiSCdHP")
 
         function login(method) {
             console.log("login")
-            core.login(method)
+            core.login(method).then(() => {
+                loadProfiles()
+            })
         }
 
-        core.getUser().getProfiles().then((profiles) => {
-            console.log(profiles)
-        })
+        function loadProfiles() {
+            core.getUser().getProfiles().then((profiles) => {
+                console.log(profiles)
+            })
+        }
+
+        loadProfiles()
     </script>
 
 </body>

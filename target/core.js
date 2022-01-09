@@ -1,83 +1,41 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 class Core {
-    static publicId; // client id
-    privateId; // api key
-    static userToken; // user jwt token
     constructor(publicId) {
-        Core.publicId = publicId;
+        Credentials.publicId = publicId;
         if (localStorage) {
             // if an offline token was generated, this will automatically retrieve if from localstorage
             const accessToken = localStorage.getItem(btoa("purecore-access-token"));
             const refreshToken = localStorage.getItem(btoa("purecore-refresh-token"));
             if (accessToken && refreshToken) {
                 const accessTokenParsed = JSON.parse(atob(accessToken));
-                Core.userToken = new Token(accessTokenParsed.accessToken, new Date(accessTokenParsed.expires), JSON.parse(atob(refreshToken)).refreshToken);
+                Credentials.userToken = new Token(accessTokenParsed.accessToken, new Date(accessTokenParsed.expires), JSON.parse(atob(refreshToken)).refreshToken);
             }
-        }
-    }
-    static async call(endpoint, data, refreshCall = false) {
-        let options = {
-            method: "GET",
-            headers: new Headers({
-                'Accept': 'application/json',
-            }),
-        };
-        if (Core.userToken && !refreshCall) {
-            const newToken = await Core.userToken.use();
-            if (newToken) {
-                Core.userToken = newToken;
-                Core.saveToken();
-            }
-            options.headers = new Headers({
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${Core.userToken.accessToken}`,
-            });
-        }
-        if (data) {
-            options = {
-                method: "POST",
-                headers: new Headers({
-                    'Accept': 'application/json',
-                    'Content-type': 'application/json',
-                    'Authorization': `Bearer ${Core.userToken.accessToken}`,
-                }),
-                body: JSON.stringify(data)
-            };
-        }
-        const response = await fetch(`https://api.purecore.io${endpoint}`, options);
-        if (response.ok) {
-            return await response.json();
-        }
-        else {
-            throw new Error(await response.text());
         }
     }
     getUser() {
         return new User();
     }
-    async login(method, scope = ["offline", "payment/autofill", "profile/list", "profile/link", "defaultScope"], redirectURI, state) {
-        if (scope.includes("defaultScope") && Core.publicId && !scope.includes(`network/${Core.publicId}`))
-            scope.push(`network/${Core.publicId}`);
-        scope = scope.filter(item => item !== "defaultScope");
-        const token = await LoginHelper.login(method, scope, redirectURI ? "code" : "token", Core.publicId, redirectURI, state, Core.userToken ? Core.userToken.accessToken : null);
-        if (!Core.userToken) {
-            // keep the old user token if it was an account link, since it will still be valid
-            Core.userToken = token;
-            Core.saveToken();
-        }
-        return this;
-    }
-    static saveToken() {
-        if (Core.userToken.refreshToken) {
-            localStorage.setItem(btoa("purecore-access-token"), btoa(JSON.stringify({
-                accessToken: Core.userToken.accessToken,
-                expires: Core.userToken.expires
-            })));
-            if (Core.userToken.refreshToken) {
-                localStorage.setItem(btoa("purecore-refresh-token"), btoa(JSON.stringify({
-                    refreshToken: Core.userToken.refreshToken,
-                })));
+    login(method, scope = ["offline", "payment/autofill", "profile/list", "profile/link", "defaultScope"], redirectURI, state) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (scope.includes("defaultScope") && Credentials.publicId && !scope.includes(`network/${Credentials.publicId}`))
+                scope.push(`network/${Credentials.publicId}`);
+            scope = scope.filter(item => item !== "defaultScope");
+            const token = yield LoginHelper.login(method, scope, redirectURI ? "code" : "token", Credentials.publicId, redirectURI, state, Credentials.userToken ? Credentials.userToken.accessToken : null);
+            if (!Credentials.userToken) {
+                // keep the old user token if it was an account link, since it will still be valid
+                Credentials.userToken = token;
+                Credentials.saveUserToken();
             }
-        }
+            return this;
+        });
     }
 }
 try {
@@ -85,8 +43,63 @@ try {
 }
 catch (error) {
 }
+class Call {
+    static commit(endpoint, data, refreshCall = false) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let options = {
+                method: "GET",
+                headers: new Headers({
+                    'Accept': 'application/json',
+                }),
+            };
+            if (Credentials.userToken && !refreshCall) {
+                const newToken = yield Credentials.userToken.use();
+                if (newToken) {
+                    Credentials.userToken = newToken;
+                    Credentials.saveUserToken();
+                }
+                options.headers = new Headers({
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${Credentials.userToken.accessToken}`,
+                });
+            }
+            if (data) {
+                options = {
+                    method: "POST",
+                    headers: new Headers({
+                        'Accept': 'application/json',
+                        'Content-type': 'application/json',
+                        'Authorization': `Bearer ${Credentials.userToken.accessToken}`,
+                    }),
+                    body: JSON.stringify(data)
+                };
+            }
+            const response = yield fetch(`https://api.purecore.io${endpoint}`, options);
+            if (response.ok) {
+                return yield response.json();
+            }
+            else {
+                throw new Error(yield response.text());
+            }
+        });
+    }
+}
+class Credentials {
+    static saveUserToken() {
+        if (Credentials.userToken.refreshToken) {
+            localStorage.setItem(btoa("purecore-access-token"), btoa(JSON.stringify({
+                accessToken: Credentials.userToken.accessToken,
+                expires: Credentials.userToken.expires
+            })));
+            if (Credentials.userToken.refreshToken) {
+                localStorage.setItem(btoa("purecore-refresh-token"), btoa(JSON.stringify({
+                    refreshToken: Credentials.userToken.refreshToken,
+                })));
+            }
+        }
+    }
+}
 class LoginHelper {
-    static activeWindow;
     static login(method, scope, responseType, clientId, redirectURI, state, accessToken) {
         return new Promise((resolve, reject) => {
             if (window != null) {
@@ -149,9 +162,6 @@ class LoginHelper {
     }
 }
 class Token {
-    accessToken;
-    refreshToken;
-    expires;
     constructor(accessToken, expires, refreshToken) {
         this.accessToken = accessToken;
         this.expires = expires;
@@ -160,31 +170,29 @@ class Token {
     static fromObject(object) {
         return new Token(object.access_token, new Date(object.expires), object.refresh_token);
     }
-    async use() {
-        if (new Date().getTime() > this.expires.getTime()) {
-            if (this.refreshToken) {
-                let body = {
-                    grant_type: "refresh_token",
-                    refresh_token: this.refreshToken
-                };
-                if (Core.publicId)
-                    body["client_id"] = Core.publicId;
-                return Token.fromObject(await Core.call("/oauth/token/", body, true));
+    use() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (new Date().getTime() > this.expires.getTime()) {
+                if (this.refreshToken) {
+                    let body = {
+                        grant_type: "refresh_token",
+                        refresh_token: this.refreshToken
+                    };
+                    if (Credentials.publicId)
+                        body["client_id"] = Credentials.publicId;
+                    return Token.fromObject(yield Call.commit("/oauth/token/", body, true));
+                }
+                else {
+                    throw new Error("expired access token");
+                }
             }
             else {
-                throw new Error("expired access token");
+                return null;
             }
-        }
-        else {
-            return null;
-        }
+        });
     }
 }
 class Profile {
-    service;
-    id;
-    name;
-    email;
     constructor(service, id, name, email) {
         this.service = service;
         this.id = id;
@@ -196,12 +204,14 @@ class Profile {
     }
 }
 class User {
-    async getProfiles() {
-        const profileData = await Core.call("/rest/3/user/profile/list/");
-        const profiles = [];
-        profileData.forEach(element => {
-            profiles.push(Profile.fromObject(element));
+    getProfiles() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const profileData = yield Call.commit("/rest/3/user/profile/list/");
+            const profiles = [];
+            profileData.forEach(element => {
+                profiles.push(Profile.fromObject(element));
+            });
+            return profiles;
         });
-        return profiles;
     }
 }
