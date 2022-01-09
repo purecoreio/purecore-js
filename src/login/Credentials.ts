@@ -17,5 +17,17 @@ class Credentials {
             }
         }
     }
-    
+
+    static attemptLoadFromLocalStorage() {
+        if (localStorage) {
+            // if an offline token was generated, this will automatically retrieve if from localstorage
+            const accessToken = localStorage.getItem(btoa("purecore-access-token"))
+            const refreshToken = localStorage.getItem(btoa("purecore-refresh-token"))
+            if (accessToken && refreshToken) {
+                const accessTokenParsed = JSON.parse(atob(accessToken))
+                Credentials.userToken = new Token(accessTokenParsed.accessToken, new Date(accessTokenParsed.expires), JSON.parse(atob(refreshToken)).refreshToken)
+            }
+        }
+    }
+
 }
