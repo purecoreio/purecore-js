@@ -24,6 +24,10 @@ class Core {
         return this
     }
 
+    public logout() {
+        Credentials.clear()
+    }
+
 }
 
 try {

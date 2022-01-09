@@ -30,4 +30,11 @@ class Credentials {
         }
     }
 
+    static clear() {
+        Credentials.publicId = undefined
+        Credentials.userToken = undefined
+        localStorage.removeItem(btoa("purecore-access-token"))
+        localStorage.removeItem(btoa("purecore-refresh-token"))
+    }
+
 }
