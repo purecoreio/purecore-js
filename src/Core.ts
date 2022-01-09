@@ -1,151 +1,90 @@
 class Core {
 
-    public static dev: boolean;
-    public static context: Context;
-    private static keychain: Keychain;
+    public static publicId: string | undefined; // client id
+    private privateId: string | undefined;        // api key
+    private static userToken: Token | undefined;         // user jwt token
 
-    public constructor(method?: any, dev?: boolean) {
+    constructor(publicId?: string) {
+        Core.publicId = publicId
 
-        // context
-        if (Core.context == null) {
-            Core.context = new Context();
+        if (localStorage) {
+            // if an offline token was generated, this will automatically retrieve if from localstorage
+            const accessToken = localStorage.getItem(btoa("purecore-access-token"))
+            const refreshToken = localStorage.getItem(btoa("purecore-refresh-token"))
+            if (accessToken && refreshToken) {
+                const accessTokenParsed = JSON.parse(atob(accessToken))
+                Core.userToken = new Token(accessTokenParsed.accessToken, new Date(accessTokenParsed.expires), JSON.parse(atob(refreshToken)).refreshToken)
+            }
         }
 
-        // dev mode
-        if (dev == null || dev == false) {
-            let loc = location;
-            if (loc) {
-                // automatically set dev mode if running on localhost
-                Core.dev = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-            } else {
-                Core.dev = false;
+    }
+
+    public static async call(endpoint: string, data?: any, refreshCall: boolean = false) {
+        let options: any = {
+            method: "GET",
+            headers: new Headers({
+                'Accept': 'application/json',
+            }),
+        }
+        if (Core.userToken && !refreshCall) {
+            const newToken = await Core.userToken.use()
+            if (newToken) {
+                Core.userToken = newToken
+                Core.saveToken()
             }
+            options.headers = new Headers({
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${Core.userToken.accessToken}`,
+            })
+        }
+        if (data) {
+            options = {
+                method: "POST",
+                headers: new Headers({
+                    'Accept': 'application/json',
+                    'Content-type': 'application/json',
+                    'Authorization': `Bearer ${Core.userToken.accessToken}`,
+                }),
+                body: JSON.stringify(data)
+            }
+        }
+        const response = await fetch(`https://api.purecore.io${endpoint}`, options)
+        if (response.ok) {
+            return await response.json()
         } else {
-            Core.dev = dev;
-        }
-
-        // checks if the ID instance has not been started
-        if (Core.keychain == null) {
-            Core.keychain = new Keychain();
-        }
-
-        // adds the authentication method to the ID manager if it is a valid authentication method
-        if (method != null) {
-            let methodFinal = Keychain.getMethod(method);
-            Core.keychain.addMethod(methodFinal);
+            throw new Error(await response.text())
         }
     }
 
-    /**
-     * @description pass a callback to call when logging in
-     */
-    public getLoginManager(): LoginHelper {
-        return new LoginHelper();
+    public getUser(): User {
+        return new User()
     }
 
-    /**
-     * @description gets the current context. useful when making network-related calls with a session object
-     */
-    public getContext(): Context {
-        return Core.context;
+    public async login(method: Method, scope: Scope = ["offline", "payment/autofill", "profile/list", "profile/link", "defaultScope"], redirectURI?: string, state?: string): Promise<Core> {
+        if (scope.includes("defaultScope") && Core.publicId && !scope.includes(`network/${Core.publicId}`)) scope.push(`network/${Core.publicId}`)
+        scope = scope.filter(item => item !== "defaultScope")
+        const token: Token = await LoginHelper.login(method, scope, redirectURI ? "code" : "token", Core.publicId, redirectURI, state, Core.userToken ? Core.userToken.accessToken : null)
+
+        if (!Core.userToken) {
+            // keep the old user token if it was an account link, since it will still be valid
+            Core.userToken = token
+            Core.saveToken()
+        }
+        return this
     }
 
-    /**
-     * @description gets the current keychain instance
-     */
-    public static getKeychain(): Keychain {
-        return Core.keychain;
-    }
+    private static saveToken() {
+        if (Core.userToken.refreshToken) {
+            localStorage.setItem(btoa("purecore-access-token"), btoa(JSON.stringify({
+                accessToken: Core.userToken.accessToken,
+                expires: Core.userToken.expires
+            })))
 
-    /**
-     * @description gets a generic instance from the api
-     */
-    public async getInstance(id: string): Promise<Instance> {
-        return await new Call()
-            .addParam(Param.Instance, id)
-            .commit('instance/get/').then((res) => {
-                return Instance.fromObject(res);
-            })
-    }
-
-    public getOfflineInstance(id: string): Instance {
-        return new Instance(id, null, null);
-    }
-
-    /**
-     * @description gets a network instance from the api
-     */
-    public async getNetwork(id: string): Promise<Network> {
-        return await new Call()
-            .addParam(Param.Network, id)
-            .commit('network/get/').then((res) => {
-                return Network.fromObject(res);
-            })
-    }
-
-    public async getProfiles(network: Network | string = null): Promise<Array<PlatformProfile>> {
-        let call = new Call();
-        if (network != null) {
-            if (typeof network == 'string') {
-                call.addParam(Param.Network, network);
-            } else {
-                call.addParam(Param.Network, network.getId());
+            if (Core.userToken.refreshToken) {
+                localStorage.setItem(btoa("purecore-refresh-token"), btoa(JSON.stringify({
+                    refreshToken: Core.userToken.refreshToken,
+                })))
             }
-        }
-        return await call
-            .commit('network/list/profile/hash/').then((res) => {
-                let result = new Array<PlatformProfile>();
-                for (let i = 0; i < res.length; i++) {
-                    const element = res[i];
-                    result.push(PlatformProfile.fromObject(element));
-                }
-                return result;
-            })
-    }
-
-    public static getCopy(): Core {
-        return new Core()
-    }
-
-    /**
-     * @description gets the highest priority authentication method
-     */
-    static getAuth(): AuthMethod {
-        let m = null;
-        let mths = Core.keychain.getMethods();
-        for (let i = 0; i < mths.length; i++) {
-            const element = mths[i];
-            if (m == null) {
-                m = element;
-            } else {
-                if (element instanceof CoreSession && m instanceof Key) {
-                    m = element;
-                    break;
-                }
-            }
-        }
-        return m;
-    }
-
-    public static addAuth(method: AuthMethod): void {
-        Core.keychain.addMethod(method);
-        try {
-            Core.context.updateSubscriptionStatus();
-        } catch (error) {
-            // ignore
-        }
-        return;
-    }
-
-    /**
-     * @description returns null if there is no assigned player to the global core instance
-     */
-    public getPlayer(): Player | null {
-        let ses = Core.keychain.getSession();
-        if (ses != null) {
-            return Core.keychain.getSession().getPlayer();
-        } else {
-            return null;
         }
     }
 

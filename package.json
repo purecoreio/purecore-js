@@ -1,29 +1,31 @@
 {
-  "name": "purecore",
-  "version": "3.1.0",
-  "description": "purecore js client",
-  "main": "./compiled/core.js",
-  "directories": {
-    "test": "tests"
-  },
-  "dependencies": {
-    "@types/node": "^12.12.55",
-    "node-fetch": "^2.6.1"
-  },
-  "devDependencies": {},
-  "scripts": {
-    "build": "tsc && terser --compress --mangle --output ./compiled/core.min.js -- ./compiled/core.js "
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/purecoreio/purecore-js.git"
-  },
-  "keywords": [
-    "purecore",
-    "minecraft",
-    "mojang"
-  ],
-  "author": "quiquelhappy",
-  "license": "ISC",
-  "homepage": "https://github.com/purecoreio/purecore-js/blob/master/README.md"
+    "name": "purecore",
+    "version": "3.2.0",
+    "description": "purecore js client",
+    "main": "./target/core.js",
+    "directories": {
+        "test": "tests"
+    },
+    "dependencies": {
+        "node-fetch": "^2.6.1"
+    },
+    "devDependencies": {
+        "@types/node": "^17.0.8",
+        "terser": "^5.10.0"
+    },
+    "scripts": {
+        "build": "tsc && terser --compress --mangle --output ./target/core.min.js -- ./target/core.js "
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/purecoreio/purecore-js.git"
+    },
+    "keywords": [
+        "purecore",
+        "minecraft",
+        "mojang"
+    ],
+    "author": "quiquelhappy",
+    "license": "ISC",
+    "homepage": "https://github.com/purecoreio/purecore-js/blob/master/README.md"
 }

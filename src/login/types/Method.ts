@@ -1,0 +1,1 @@
+type Method = "discord" | "minecraft" | "steam" | "github" | "paypal" | "stripe" | "google" | "microsoft"

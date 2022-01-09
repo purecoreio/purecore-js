@@ -1,0 +1,1 @@
+type oAuthResponseType = "token" | "code"

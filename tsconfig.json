@@ -2,8 +2,8 @@
     "compilerOptions": {
         "emitDecoratorMetadata": false,
         "module": "amd",
-        "target": "es6",
-        "outFile": "compiled/core.js",
+        "target": "esnext",
+        "outFile": "target/core.js",
         "rootDir": "src"
     }
 }

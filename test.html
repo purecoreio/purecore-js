@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <button onclick="login('minecraft')">minecraft</button>
+    <button onclick="login('microsoft')">microsoft</button>
+    <button onclick="login('google')">google</button>
+    <button onclick="login('steam')">steam</button>
+    <button onclick="login('stripe')">stripe</button>
+    <button onclick="login('github')">github</button>
+    <button onclick="login('paypal')">paypal</button>
+    <button onclick="login('discord')">discord</button>
+    <script src="./target/core.js"></script>
+    <script>
+        let core = new Core()
+
+        function login(method) {
+            console.log("login")
+            core.login(method)
+        }
+
+        core.getUser().getProfiles().then((profiles) => {
+            console.log(profiles)
+        })
+    </script>
+
+</body>
+
+</html>
