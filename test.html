@@ -6,36 +6,176 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+        * {
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom:24px;
+        }
+
+        button {
+            background-color: rgb(230, 230, 230);
+            padding: 10px;
+            border-radius: 0px;
+            border-width: 0px;
+            transition: 200ms;
+        }
+
+        button:hover {
+            background-color: rgb(206, 206, 206);
+        }
+
+        button:focus {
+            background-color: rgb(199, 199, 199);
+        }
+
+        .divider {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border-width: 1px;
+            border-style: solid;
+            width: 100%;
+            border-color: rgb(230, 230, 230);
+        }
+
+        .card {
+            background-color: rgb(230, 230, 230);
+            padding: 10px;
+            margin-bottom: 5px;
+        }
+
+        p {
+            margin-top: 0px
+        }
+
+        input {
+            border-radius: 0px;
+            border-width: 0px;
+            background-color: rgb(230, 230, 230);
+            padding: 0px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            width: 100%;
+            display: block;
+            text-indent: 10px;
+            margin-bottom: 5px
+        }
+
+        form, .inputCard {
+            padding: 10px;
+            background-color: rgb(243, 243, 243);
+            text-align: right;
+        }
+    </style>
 </head>
 
 <body>
 
-    <button onclick="login('minecraft')">minecraft</button>
-    <button onclick="login('microsoft')">microsoft</button>
-    <button onclick="login('google')">google</button>
-    <button onclick="login('steam')">steam</button>
-    <button onclick="login('stripe')">stripe</button>
-    <button onclick="login('github')">github</button>
-    <button onclick="login('paypal')">paypal</button>
-    <button onclick="login('discord')">discord</button>
+    <div>
+        <h1>purecore.io quick testing tool</h1>
+
+        <div class="divider"></div>
+
+        <section>
+            <h1>profiles</h1>
+            <div id="profiles">
+
+            </div>
+            <div class="inputCard">
+                <button onclick="login('minecraft')">minecraft</button>
+                <button onclick="login('microsoft')">microsoft</button>
+                <button onclick="login('google')">google</button>
+                <button onclick="login('steam')">steam</button>
+                <button onclick="login('github')">github</button>
+                <button onclick="login('discord')">discord</button>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <section>
+            <h1>networks</h1>
+            <div id="networks">
+
+            </div>
+            <form onsubmit="createNetwork(event)">
+                <input placeholder="name" type="text" />
+                <input placeholder="cname" type="text" />
+                <button>Create Network</button>
+            </form>
+        </section>
+
+        <section>
+            <h1>wallets</h1>
+            <div id="wallets">
+
+            </div>
+            <div class="inputCard">
+                <button onclick="wallet('stripe')">stripe</button>
+                <button onclick="wallet('paypal')">paypal</button>
+                <button onclick="wallet('mollie')">mollie</button>
+                <button onclick="wallet('coinbase')">coinbase</button>
+            </div>
+        </section>
+
+    </div>
+
+
     <script src="./target/core.js"></script>
     <script>
-        let core = new Core("SbiSCdHP")
+        let core = new Core(undefined, true)
+        let user;
 
         function login(method) {
             console.log("login")
-            core.login(method).then(() => {
-                loadProfiles()
+            core.login(method).then(async () => {
+                user = await core.getUser()
+                loadEverything()
             })
         }
 
-        function loadProfiles() {
-            core.getUser().getProfiles().then((profiles) => {
-                console.log(profiles)
-            })
+        async function loadEverything() {
+            if (!user) user = await core.getUser()
+            loadProfiles()
+            loadNetworks()
         }
 
-        loadProfiles()
+        async function loadProfiles() {
+            document.getElementById("profiles").innerHTML = ""
+            const profiles = await user.getProfiles()
+            profiles.forEach(profile => {
+                document.getElementById("profiles").innerHTML += `<div class="card"><p>${profile.externalName} (${profile.service})</p>${profile.id} - ${profile.externalId}</div>`
+            });
+        }
+
+        async function createNetwork(event) {
+            event.preventDefault();
+            const name = event.target[0].value
+            const cname = event.target[1].value
+            const network = await user.asOwner().createNetwork(name, cname)
+            await loadNetworks()
+        }
+
+        async function loadNetworks() {
+            document.getElementById("networks").innerHTML = ""
+            const networks = await user.asOwner().getNetworks()
+            networks.forEach(network => {
+                document.getElementById("networks").innerHTML += `<div class="card">${network.name} (${network.id})</div>`
+            });
+        }
+
+        async function wallet(service) {
+            console.log(await user.linkWallet('stripe'))
+        }
+
+        loadEverything()
     </script>
 
 </body>

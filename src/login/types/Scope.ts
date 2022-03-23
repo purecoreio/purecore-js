@@ -1,1 +1,1 @@
-type Scope = Array<'self' | 'self/all' | 'offline' | 'payment/autofill' | 'profile/list' | 'profile/link' | 'network/<id>' | string>
+type scope = 'self' | 'self/all' | 'offline' | 'payment/autofill' | 'profile/list' | 'profile/link' | 'network/<id>' | string

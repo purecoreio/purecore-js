@@ -1,19 +1,24 @@
+type service = 'minecraft' | 'steam' | 'discord' | 'google' | 'github' | 'microsoft'
+
 class Profile {
 
-    public readonly service: string;
     public readonly id: string;
-    public readonly name: string | undefined;
-    public readonly email: string | undefined;
+    public readonly service: service;
+    public readonly externalId: string;
+    public readonly externalName: string | undefined;
+    public readonly externalEmail: string | undefined;
 
-    constructor(service: string, id: string, name?: string, email?: string) {
+    constructor(service: service, id: string, externalId: string, externalName?: string, externalEmail?: string) {
         this.service = service;
         this.id = id;
-        this.name = name;
-        this.email = email;
+        this.externalId = externalId;
+        this.externalId = externalId;
+        this.externalName = externalName;
+        this.externalEmail = externalEmail;
     }
 
     public static fromObject(object: any): Profile {
-        return new Profile(object.service, object.id, object.name, object.email)
+        return new Profile(object.service, object.id, object.externalId, object.externalName, object.externalEmail)
     }
 
 }

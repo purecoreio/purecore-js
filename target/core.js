@@ -8,18 +8,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 class Core {
-    constructor(publicId) {
+    constructor(publicId, test = false) {
+        Core.test = test;
         Credentials.publicId = publicId;
         Credentials.attemptLoadFromLocalStorage();
     }
-    getUser() {
-        return new User();
+    static getBase() {
+        if (Core.test) {
+            return "http://localhost:3000";
+        }
+        else {
+            return "https://api.purecore.io";
+        }
     }
-    login(method, scope = ["offline", "payment/autofill", "profile/list", "profile/link", "defaultScope"], redirectURI, state) {
+    getUser() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (scope.includes("defaultScope") && Credentials.publicId && !scope.includes(`network/${Credentials.publicId}`))
-                scope.push(`network/${Credentials.publicId}`);
-            scope = scope.filter(item => item !== "defaultScope");
+            return User.fromObject(yield Call.commit("user/"));
+        });
+    }
+    login(method, scope = ["offline", "payment/autofill", "profile/list", "profile/link"], redirectURI, state) {
+        return __awaiter(this, void 0, void 0, function* () {
             const token = yield LoginHelper.login(method, scope, redirectURI ? "code" : "token", Credentials.publicId, redirectURI, state, Credentials.userToken ? Credentials.userToken.accessToken : null);
             if (!Credentials.userToken) {
                 // keep the old user token if it was an account link, since it will still be valid
@@ -38,8 +46,65 @@ try {
 }
 catch (error) {
 }
+class Popup {
+    static openPopup(url, expectedMessage, domain = Core.getBase()) {
+        return new Promise((resolve, reject) => {
+            if (window != null) {
+                try {
+                    if (Popup.activePopup != null)
+                        Popup.activePopup.close();
+                    // generates popup
+                    let h = 700;
+                    let w = 500;
+                    const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
+                    const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
+                    let popup = window.open(`${domain !== null && domain !== void 0 ? domain : ''}${url}`, 'purecore.io', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
+                    Popup.activePopup = popup;
+                    let listenerActive = true;
+                    // waits for result
+                    window.addEventListener("message", (event) => {
+                        if (event.origin !== Core.getBase()) {
+                            return;
+                        }
+                        if (event.data.message == expectedMessage && listenerActive) {
+                            // close window (result already got)
+                            if (!popup.closed) {
+                                popup.close();
+                                Popup.activePopup = null;
+                            }
+                            // do not listen for further events (task completed)
+                            listenerActive = false;
+                            // resolve data
+                            resolve(event.data.data);
+                        }
+                    }, false);
+                    // check if the window gets closed before a result was retrieved
+                    let interval = setInterval(() => {
+                        if (Popup.activePopup != null && Popup.activePopup.closed) {
+                            Popup.activePopup = null;
+                        }
+                        if (popup.closed && listenerActive) {
+                            // stop listening for events
+                            listenerActive = false;
+                            // stop the window state checker
+                            clearInterval(interval);
+                            // throw error
+                            reject(new Error("The popup was closed"));
+                        }
+                    }, 50);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            }
+            else {
+                reject(new Error("In order to create a popup, you must be executing purecore from a Document Object Model"));
+            }
+        });
+    }
+}
 class Call {
-    static commit(endpoint, data, refreshCall = false) {
+    static commit(endpoint, data, refreshCall = false, skipPrefix = false) {
         return __awaiter(this, void 0, void 0, function* () {
             let options = {
                 method: "GET",
@@ -69,14 +134,27 @@ class Call {
                     body: JSON.stringify(data)
                 };
             }
-            const response = yield fetch(`https://api.purecore.io${endpoint}`, options);
+            const response = yield fetch(`${Core.getBase()}${!skipPrefix ? Call.prefix : ''}${endpoint}`, options);
             if (response.ok) {
-                return yield response.json();
+                const parsedResponse = yield response.json();
+                if (Object.keys(parsedResponse).length == 1 && 'data' in parsedResponse)
+                    return parsedResponse.data;
+                return parsedResponse;
             }
             else {
                 throw new Error(yield response.text());
             }
         });
+    }
+}
+Call.prefix = "/rest/3/";
+class Network {
+    constructor(id, name) {
+        this.id = id;
+        this.name = name;
+    }
+    static fromObject(object) {
+        return new Network(object.id, object.name);
     }
 }
 class Credentials {
@@ -113,63 +191,8 @@ class Credentials {
 }
 class LoginHelper {
     static login(method, scope, responseType, clientId, redirectURI, state, accessToken) {
-        return new Promise((resolve, reject) => {
-            if (window != null) {
-                try {
-                    if (LoginHelper.activeWindow != null)
-                        LoginHelper.activeWindow.close();
-                    // generates popup
-                    let h = 700;
-                    let w = 500;
-                    const y = window.top.outerHeight / 2 + window.top.screenY - (h / 2);
-                    const x = window.top.outerWidth / 2 + window.top.screenX - (w / 2);
-                    let popup = window.open(`https://api.purecore.io/oauth/authorize/${method}/?scope=${scope.join(" ")}&response_type=${responseType}${clientId != null ? `&client_id=${clientId}` : ""}${redirectURI != null ? `&redirect_uri=${redirectURI}` : ""}${state != null ? `&state=${state}` : ""}${accessToken != null ? `&access_token=${accessToken}` : ""}`, 'Login', `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${w}, height=${h}, top=${y}, left=${x}`);
-                    LoginHelper.activeWindow = popup;
-                    let listenerActive = true;
-                    let res = null;
-                    // waits for result
-                    window.addEventListener("message", (event) => {
-                        if (event.origin !== "https://api.purecore.io") {
-                            return;
-                        }
-                        switch (event.data.message) {
-                            case 'login':
-                                if (listenerActive) {
-                                    res = Token.fromObject(event.data.data);
-                                    // close window (result already got)
-                                    if (!popup.closed) {
-                                        popup.close();
-                                        LoginHelper.activeWindow = null;
-                                    }
-                                    // do not listen for further events (task completed)
-                                    listenerActive = false;
-                                }
-                                resolve(res);
-                                break;
-                        }
-                    }, false);
-                    // check if the window gets closed before a result was retrieved
-                    let interval = setInterval(() => {
-                        if (LoginHelper.activeWindow != null && LoginHelper.activeWindow.closed) {
-                            LoginHelper.activeWindow = null;
-                        }
-                        if (popup.closed && res == null) {
-                            // stop listening for events
-                            listenerActive = false;
-                            // stop the window state checker
-                            clearInterval(interval);
-                            // throw error
-                            reject(new Error("The popup was closed before any session was retrieved"));
-                        }
-                    }, 50);
-                }
-                catch (error) {
-                    reject(error);
-                }
-            }
-            else {
-                reject(new Error("In order to create a login popup, you must be executing purecore from a Document Object Model"));
-            }
+        return __awaiter(this, void 0, void 0, function* () {
+            return Token.fromObject(yield Popup.openPopup(`/oauth/authorize/${method}/?scope=${scope.join(" ")}&response_type=${responseType}${clientId != null ? `&client_id=${clientId}` : ""}${redirectURI != null ? `&redirect_uri=${redirectURI}` : ""}${state != null ? `&state=${state}` : ""}${accessToken != null ? `&access_token=${accessToken}` : ""}`, "login"));
         });
     }
 }
@@ -192,7 +215,7 @@ class Token {
                     };
                     if (Credentials.publicId)
                         body["client_id"] = Credentials.publicId;
-                    return Token.fromObject(yield Call.commit("/oauth/token/", body, true));
+                    return Token.fromObject(yield Call.commit("/oauth/token/", body, true, true));
                 }
                 else {
                     throw new Error("expired access token");
@@ -205,25 +228,61 @@ class Token {
     }
 }
 class Profile {
-    constructor(service, id, name, email) {
+    constructor(service, id, externalId, externalName, externalEmail) {
         this.service = service;
         this.id = id;
-        this.name = name;
-        this.email = email;
+        this.externalId = externalId;
+        this.externalId = externalId;
+        this.externalName = externalName;
+        this.externalEmail = externalEmail;
     }
     static fromObject(object) {
-        return new Profile(object.service, object.id, object.name, object.email);
+        return new Profile(object.service, object.id, object.externalId, object.externalName, object.externalEmail);
     }
 }
 class User {
+    constructor(id) {
+        this.id = id;
+    }
     getProfiles() {
         return __awaiter(this, void 0, void 0, function* () {
-            const profileData = yield Call.commit("/rest/3/user/profile/list/");
+            const profileData = yield Call.commit("user/profile/list/");
             const profiles = [];
             profileData.forEach(element => {
                 profiles.push(Profile.fromObject(element));
             });
             return profiles;
+        });
+    }
+    static fromObject(object) {
+        return new User(object.id);
+    }
+    asOwner() {
+        return new Owner(this.id);
+    }
+    linkWallet(processor) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Popup.openPopup(yield Call.commit(`user/wallet/link/${processor}`), "success", null);
+        });
+    }
+}
+class Owner extends User {
+    constructor(id) {
+        super(id);
+    }
+    createNetwork(name, cname) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const network = yield Call.commit("network/create", {
+                name: name,
+                cname: cname
+            });
+            return Network.fromObject(network);
+        });
+    }
+    getNetworks() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const networks = yield Call.commit("network/list");
+            return networks.map(o => Network.fromObject(o));
         });
     }
 }

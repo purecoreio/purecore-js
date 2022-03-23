@@ -1,0 +1,1 @@
+type processor = 'stripe' | 'paypal' | 'coinbase' | 'mollie'

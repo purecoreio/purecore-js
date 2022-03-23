@@ -22,7 +22,7 @@ class Token {
                     refresh_token: this.refreshToken
                 }
                 if (Credentials.publicId) body["client_id"] = Credentials.publicId
-                return Token.fromObject(await Call.commit("/oauth/token/", body, true))
+                return Token.fromObject(await Call.commit("/oauth/token/", body, true, true))
             } else {
                 throw new Error("expired access token")
             }

@@ -1,6 +1,8 @@
 class Call {
 
-    public static async commit(endpoint: string, data?: any, refreshCall: boolean = false) {
+    private static prefix = "/rest/3/"
+
+    public static async commit(endpoint: string, data?: any, refreshCall: boolean = false, skipPrefix: boolean = false) {
         let options: any = {
             method: "GET",
             headers: new Headers({
@@ -29,12 +31,14 @@ class Call {
                 body: JSON.stringify(data)
             }
         }
-        const response = await fetch(`https://api.purecore.io${endpoint}`, options)
+        const response = await fetch(`${Core.getBase()}${!skipPrefix ? Call.prefix : ''}${endpoint}`, options)
         if (response.ok) {
-            return await response.json()
+            const parsedResponse = await response.json()
+            if (Object.keys(parsedResponse).length == 1 && 'data' in parsedResponse) return parsedResponse.data
+            return parsedResponse
         } else {
             throw new Error(await response.text())
         }
     }
-    
+
 }

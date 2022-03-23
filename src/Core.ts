@@ -1,19 +1,26 @@
 class Core {
 
-    private privateId: string | undefined;        // api key
+    private static test: boolean;
 
-    constructor(publicId?: string) {
+    constructor(publicId?: string, test: boolean = false) {
+        Core.test = test
         Credentials.publicId = publicId
         Credentials.attemptLoadFromLocalStorage()
     }
 
-    public getUser(): User {
-        return new User()
+    public static getBase(): string {
+        if (Core.test) {
+            return "http://localhost:3000"
+        } else {
+            return "https://api.purecore.io"
+        }
     }
 
-    public async login(method: Method, scope: Scope = ["offline", "payment/autofill", "profile/list", "profile/link", "defaultScope"], redirectURI?: string, state?: string): Promise<Core> {
-        if (scope.includes("defaultScope") && Credentials.publicId && !scope.includes(`network/${Credentials.publicId}`)) scope.push(`network/${Credentials.publicId}`)
-        scope = scope.filter(item => item !== "defaultScope")
+    public async getUser(): Promise<User> {
+        return User.fromObject(await Call.commit("user/"))
+    }
+
+    public async login(method: Method, scope: scope[] = ["offline", "payment/autofill", "profile/list", "profile/link"], redirectURI?: string, state?: string): Promise<Core> {
         const token: Token = await LoginHelper.login(method, scope, redirectURI ? "code" : "token", Credentials.publicId, redirectURI, state, Credentials.userToken ? Credentials.userToken.accessToken : null)
 
         if (!Credentials.userToken) {
