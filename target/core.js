@@ -262,7 +262,7 @@ class User {
     }
     linkWallet(processor) {
         return __awaiter(this, void 0, void 0, function* () {
-            return Popup.openPopup(yield Call.commit(`user/wallet/link/${processor}`), "success", null);
+            return yield Popup.openPopup(`/oauth/link/${processor}/?access_token=${Credentials.userToken.accessToken}`, 'wallet');
         });
     }
 }

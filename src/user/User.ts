@@ -24,7 +24,7 @@ class User {
     }
 
     public async linkWallet(processor: processor): Promise<any> {
-        return Popup.openPopup(await Call.commit(`user/wallet/link/${processor}`), "success", null)
+        return await Popup.openPopup(`/oauth/link/${processor}/?access_token=${Credentials.userToken.accessToken}`, 'wallet')
     }
 
 }
