@@ -1,5 +1,5 @@
 node_modules/
-src.old/
+target/
 tests/
 .idea/
 .DS_Store
