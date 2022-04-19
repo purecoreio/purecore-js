@@ -1,9 +1,9 @@
-import { Popup } from "../dom/Popup";
-import { Call } from "../http/Call";
-import { Network } from "../instance/Network";
-import { Credentials } from "../login/Credentials";
+import Popup from "../dom/Popup"
+import Call from "../http/Call"
+import Network from "../instance/Network"
+import Credentials from "../login/Credentials"
 
-export class User {
+export default class User {
 
     public readonly id: string
 

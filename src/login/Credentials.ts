@@ -1,6 +1,6 @@
-import { Token } from "./Token";
+import Token from "./Token";
 
-export class Credentials {
+export default class Credentials {
 
     static publicId: string | undefined;
     static userToken: Token | undefined;

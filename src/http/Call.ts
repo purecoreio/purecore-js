@@ -1,7 +1,7 @@
 import Core from "../Core"
-import { Credentials } from "../login/Credentials"
+import Credentials from "../login/Credentials"
 
-export class Call {
+export default class Call {
 
     private static prefix = "/rest/3/"
 

@@ -1,7 +1,7 @@
-import { Call } from "../http/Call"
-import { Credentials } from "./Credentials"
+import Call from "../http/Call"
+import Credentials from "./Credentials"
 
-export class Token {
+export default class Token {
 
     public readonly accessToken: string
     public readonly refreshToken: string | null

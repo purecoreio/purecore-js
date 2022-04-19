@@ -1,6 +1,6 @@
 import Core from "../Core";
 
-export class Popup {
+export default class Popup {
 
     public static activePopup;
 

@@ -1,8 +1,8 @@
-import { Call } from "./http/Call";
-import { Credentials } from "./login/Credentials";
-import { LoginHelper } from "./login/LoginHelper";
-import { Token } from "./login/Token";
-import { User } from "./user/User";
+import Call from "./http/Call";
+import Credentials from "./login/Credentials";
+import LoginHelper from "./login/LoginHelper";
+import Token from "./login/Token";
+import User from "./user/User";
 
 export default class Core {
 

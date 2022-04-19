@@ -1,6 +1,7 @@
-import { Call } from "../http/Call";
+import Call from "../http/Call";
 
-export class Network {
+
+export default class Network {
     public readonly id: string;
     public readonly name: string;
 
