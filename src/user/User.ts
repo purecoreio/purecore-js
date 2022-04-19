@@ -1,4 +1,9 @@
-class User {
+import { Popup } from "../dom/Popup";
+import { Call } from "../http/Call";
+import { Network } from "../instance/Network";
+import { Credentials } from "../login/Credentials";
+
+export class User {
 
     public readonly id: string
 
@@ -6,8 +11,21 @@ class User {
         this.id = id
     }
 
+    public async createNetwork(name: string, cname: string): Promise<Network> {
+        const network = await Call.commit("network", {
+            name: name,
+            cname: cname
+        })
+        return Network.fromObject(network)
+    }
+
+    public async getNetworks(): Promise<Network[]> {
+        const networks: any[] = await Call.commit("network")
+        return networks.map(o => Network.fromObject(o))
+    }
+
     public async getProfiles(): Promise<Profile[]> {
-        const profileData = await Call.commit("user/profile/list/")
+        const profileData = await Call.commit("user/profiles")
         const profiles: Profile[] = []
         profileData.forEach(element => {
             profiles.push(Profile.fromObject(element))
@@ -17,10 +35,6 @@ class User {
 
     public static fromObject(object: any): User {
         return new User(object.id)
-    }
-
-    public asOwner(): Owner {
-        return new Owner(this.id)
     }
 
     public async linkWallet(processor: processor): Promise<any> {

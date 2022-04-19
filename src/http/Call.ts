@@ -1,13 +1,24 @@
-class Call {
+import Core from "../Core"
+import { Credentials } from "../login/Credentials"
+
+export class Call {
 
     private static prefix = "/rest/3/"
 
-    public static async commit(endpoint: string, data?: any, refreshCall: boolean = false, skipPrefix: boolean = false) {
-        let options: any = {
-            method: "GET",
+    public static async commit(endpoint: string, data?: any, method?: 'POST' | 'GET' | 'DELETE' | 'PATCH', refreshCall: boolean = false, skipPrefix: boolean = false) {
+        if (!method) {
+            if (data) {
+                method = 'POST'
+            } else {
+                method = 'GET'
+            }
+        }
+        let options = {
+            method: method,
             headers: new Headers({
                 'Accept': 'application/json',
             }),
+            body: undefined
         }
         if (Credentials.userToken && !refreshCall) {
             const newToken = await Credentials.userToken.use()
@@ -21,15 +32,8 @@ class Call {
             })
         }
         if (data) {
-            options = {
-                method: "POST",
-                headers: new Headers({
-                    'Accept': 'application/json',
-                    'Content-type': 'application/json',
-                    'Authorization': `Bearer ${Credentials.userToken.accessToken}`,
-                }),
-                body: JSON.stringify(data)
-            }
+            options.body = JSON.stringify(data)
+            options.headers.set('Content-type', 'application/json')
         }
         const response = await fetch(`${Core.getBase()}${!skipPrefix ? Call.prefix : ''}${endpoint}`, options)
         if (response.ok) {
@@ -37,7 +41,8 @@ class Call {
             if (Object.keys(parsedResponse).length == 1 && 'data' in parsedResponse) return parsedResponse.data
             return parsedResponse
         } else {
-            throw new Error(await response.text())
+            const parsedResponse = await response.json()
+            throw new Error(parsedResponse ? parsedResponse.error : undefined)
         }
     }
 

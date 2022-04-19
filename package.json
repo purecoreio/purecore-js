@@ -2,19 +2,23 @@
     "name": "purecore",
     "version": "3.2.2",
     "description": "purecore js client",
-    "main": "./target/core.js",
+    "main": "target/core.js",
+    "type": "module",
+    "module": "target/core.js",
     "directories": {
         "test": "tests"
     },
     "dependencies": {
-        "node-fetch": "^2.6.1"
+        "node-fetch": "^2.6.1",
+        "nodemon": "^2.0.15"
     },
     "devDependencies": {
         "@types/node": "^17.0.8",
         "terser": "^5.10.0"
     },
     "scripts": {
-        "build": "tsc && terser --compress --mangle --output ./target/core.min.js -- ./target/core.js "
+        "build": "rm -rf ./target/** && tsc",
+        "dev": "nodemon"
     },
     "repository": {
         "type": "git",

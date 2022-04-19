@@ -1,4 +1,7 @@
-class LoginHelper {
+import { Popup } from "../dom/Popup";
+import { Token } from "./Token";
+
+export class LoginHelper {
 
     private static activeWindow: Window;
 

@@ -1,4 +1,6 @@
-class Network {
+import { Call } from "../http/Call";
+
+export class Network {
     public readonly id: string;
     public readonly name: string;
 
@@ -10,4 +12,16 @@ class Network {
     public static fromObject(object: any): Network {
         return new Network(object.id, object.name)
     }
+
+    public async update(name?: string, cname?: string): Promise<Network> {
+        const obj: any = {}
+        if (name) obj.name = name
+        if (cname) obj.cname = cname
+        return await Call.commit(`network/${this.id}`, obj, 'PATCH') as Network
+    }
+
+    public async delete(): Promise<void> {
+        return await Call.commit(`network/${this.id}`, undefined, 'DELETE')
+    }
+
 }

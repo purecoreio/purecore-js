@@ -1,4 +1,10 @@
-class Core {
+import { Call } from "./http/Call";
+import { Credentials } from "./login/Credentials";
+import { LoginHelper } from "./login/LoginHelper";
+import { Token } from "./login/Token";
+import { User } from "./user/User";
+
+export default class Core {
 
     private static test: boolean;
 
@@ -20,7 +26,7 @@ class Core {
         return User.fromObject(await Call.commit("user/"))
     }
 
-    public async login(method: Method, scope: scope[] = ["offline", "payment/autofill", "profile/list", "profile/link"], redirectURI?: string, state?: string): Promise<Core> {
+    public async login(method: Method, scope: scope[] = ["offline"], redirectURI?: string, state?: string): Promise<Core> {
         const token: Token = await LoginHelper.login(method, scope, redirectURI ? "code" : "token", Credentials.publicId, redirectURI, state, Credentials.userToken ? Credentials.userToken.accessToken : null)
 
         if (!Credentials.userToken) {
@@ -34,11 +40,5 @@ class Core {
     public logout() {
         Credentials.clear()
     }
-
-}
-
-try {
-    module.exports = Core;
-} catch (error) {
 
 }

@@ -1,4 +1,4 @@
-type service = 'minecraft' | 'steam' | 'discord' | 'google' | 'github' | 'microsoft'
+type service = 'minecraft' | 'steam' | 'discord' | 'google' | 'github' | 'microsoft' | 'xbox'
 
 class Profile {
 
@@ -18,7 +18,7 @@ class Profile {
     }
 
     public static fromObject(object: any): Profile {
-        return new Profile(object.service, object.id, object.externalId, object.externalName, object.externalEmail)
+        return new Profile(object.service, object.id, object.externalId, object.externalUsername, object.externalEmail)
     }
 
 }

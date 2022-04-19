@@ -1,4 +1,7 @@
-class Token {
+import { Call } from "../http/Call"
+import { Credentials } from "./Credentials"
+
+export class Token {
 
     public readonly accessToken: string
     public readonly refreshToken: string | null
@@ -11,7 +14,7 @@ class Token {
     }
 
     public static fromObject(object: any): Token {
-        return new Token(object.access_token, new Date(object.expires), object.refresh_token)
+        return new Token(object.access_token, new Date(new Date().getTime() + object.expires_in * 1000), object.refresh_token)
     }
 
     public async use(): Promise<Token | null> {
@@ -22,7 +25,7 @@ class Token {
                     refresh_token: this.refreshToken
                 }
                 if (Credentials.publicId) body["client_id"] = Credentials.publicId
-                return Token.fromObject(await Call.commit("/oauth/token/", body, true, true))
+                return Token.fromObject(await Call.commit("/oauth/token", body, 'POST', true, true))
             } else {
                 throw new Error("expired access token")
             }

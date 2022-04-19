@@ -1,4 +1,6 @@
-class Popup {
+import Core from "../Core";
+
+export class Popup {
 
     public static activePopup;
 
