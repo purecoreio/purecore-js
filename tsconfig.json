@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "emitDecoratorMetadata": false,
-        "module": "esnext",
-        "target": "esnext",
+        "module": "ESNext",
+        "target": "ESNext",
         "outDir": "target",
         "rootDir": "src"
     }

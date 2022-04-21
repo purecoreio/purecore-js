@@ -1,7 +1,8 @@
+import Core from "../Core"
 import Popup from "../dom/Popup"
-import Call from "../http/Call"
+import { call } from "../http/Call"
 import Network from "../instance/Network"
-import Credentials from "../login/Credentials"
+import Profile from "./Profile"
 
 export default class User {
 
@@ -12,7 +13,7 @@ export default class User {
     }
 
     public async createNetwork(name: string, cname: string): Promise<Network> {
-        const network = await Call.commit("network", {
+        const network = await call("network", {
             name: name,
             cname: cname
         })
@@ -20,12 +21,16 @@ export default class User {
     }
 
     public async getNetworks(): Promise<Network[]> {
-        const networks: any[] = await Call.commit("network")
+        const networks: any[] = await call("network")
         return networks.map(o => Network.fromObject(o))
     }
 
+    public async getNetwork(id): Promise<Network> {
+        return Network.fromObject(await call(`network/${id}`))
+    }
+
     public async getProfiles(): Promise<Profile[]> {
-        const profileData = await Call.commit("user/profiles")
+        const profileData = await call("user/profiles")
         const profiles: Profile[] = []
         profileData.forEach(element => {
             profiles.push(Profile.fromObject(element))
@@ -38,7 +43,7 @@ export default class User {
     }
 
     public async linkWallet(processor: processor): Promise<any> {
-        return await Popup.openPopup(`/oauth/link/${processor}/?access_token=${Credentials.userToken.accessToken}`, 'wallet')
+        return await Popup.openPopup(`/oauth/link/${processor}/?access_token=${Core.credentials.userToken.accessToken}`, 'wallet')
     }
 
 }

@@ -2,9 +2,9 @@
     "name": "purecore",
     "version": "3.2.2",
     "description": "purecore js client",
-    "main": "target/core.js",
+    "main": "target/bootstrap.js",
     "type": "module",
-    "module": "target/core.js",
+    "module": "target/bootstrap.js",
     "directories": {
         "test": "tests"
     },

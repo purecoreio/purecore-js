@@ -1,5 +1,5 @@
-import Call from "../http/Call"
-import Credentials from "./Credentials"
+import Core from "../Core"
+import { call } from "../http/Call"
 
 export default class Token {
 
@@ -24,10 +24,11 @@ export default class Token {
                     grant_type: "refresh_token",
                     refresh_token: this.refreshToken
                 }
-                if (Credentials.publicId) body["client_id"] = Credentials.publicId
-                return Token.fromObject(await Call.commit("/oauth/token", body, 'POST', true, true))
+                if (Core.credentials.publicId) body["client_id"] = Core.credentials.publicId
+                return Token.fromObject(await call("/oauth/token", body, 'POST', true, true))
             } else {
-                throw new Error("expired access token")
+                // expired token, no way to refresh it
+                return null
             }
         } else {
             return null

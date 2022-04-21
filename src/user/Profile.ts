@@ -1,6 +1,6 @@
 type service = 'minecraft' | 'steam' | 'discord' | 'google' | 'github' | 'microsoft' | 'xbox'
 
-class Profile {
+export default class Profile {
 
     public readonly id: string;
     public readonly service: service;

@@ -1,5 +1,4 @@
-import Call from "../http/Call";
-
+import { call } from "../http/Call";
 
 export default class Network {
     public readonly id: string;
@@ -18,11 +17,11 @@ export default class Network {
         const obj: any = {}
         if (name) obj.name = name
         if (cname) obj.cname = cname
-        return await Call.commit(`network/${this.id}`, obj, 'PATCH') as Network
+        return await call(`network/${this.id}`, obj, 'PATCH') as Network
     }
 
     public async delete(): Promise<void> {
-        return await Call.commit(`network/${this.id}`, undefined, 'DELETE')
+        return await call(`network/${this.id}`, undefined, 'DELETE')
     }
 
 }
