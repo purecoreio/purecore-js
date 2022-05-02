@@ -1,3 +1,4 @@
+import Store from "../commerce/Store";
 import { call } from "../http/Call";
 import Instance from "./Instance";
 
@@ -18,6 +19,10 @@ export default class Network {
 
     public static fromObject(object: any): Network {
         return new Network(object.id, object.name, object.cname)
+    }
+
+    public async getStore(): Promise<Store> {
+        return new Store(this)
     }
 
     public async update(name?: string, cname?: string): Promise<Network> {
