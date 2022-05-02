@@ -1,11 +1,7 @@
 import Network from "./Network";
 
-export default class NetworkOwned {
+export default interface NetworkOwned {
 
-    public readonly network: Network
-
-    constructor(network: Network) {
-        this.network = network
-    }
+    get network(): Network | Promise<Network>
 
 }

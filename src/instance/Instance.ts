@@ -2,30 +2,31 @@ import { call } from "../http/Call";
 import Network from "./Network";
 import NetworkOwned from "./NetworkOwned";
 
-export default class Instance extends NetworkOwned {
+export default class Instance implements NetworkOwned {
 
+    public readonly network: Network
     public readonly id: string
-    private path: string
+    private _path: string
 
     constructor(network: Network, id: string, path: string) {
-        super(network)
+        this.network = network
         this.id = id
-        this.path = path
+        this._path = path
     }
 
     public static fromObject(network: Network, object: any): Instance {
         return new Instance(network, object.id, object.path)
     }
 
-    public get getPath(): string {
-        return this.path
+    public get path(): string {
+        return this._path
     }
 
     public async update(path: string): Promise<Instance> {
         await call(`network/${this.network.id}/instance/${this.id}`, {
             path: path
         }, 'PATCH')
-        this.path = path
+        this._path = path
         return this
     }
 
