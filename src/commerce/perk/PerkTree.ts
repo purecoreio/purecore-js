@@ -15,8 +15,8 @@ export default class PerkTree {
     }
 
     public static fromObject(obj: any, pkg: Package): PerkTree {
-        const category = PerkCategory.fromObject(obj, pkg.network)
-        return new PerkTree(pkg, category, (pkg.perks as any).map(perk => PerkUsage.fromObject(perk, pkg, category)))
+        const category = PerkCategory.fromObject(obj.category, pkg.category.store)
+        return new PerkTree(pkg, category, (obj.perks as any).map(perk => PerkUsage.fromObject(perk, pkg, category)))
     }
 
 

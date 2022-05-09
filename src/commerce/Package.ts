@@ -10,14 +10,16 @@ export default class Package implements NetworkOwned {
 
     public readonly id: string
     private _index: number;
+    private _price: number;
     private _name: string;
     private _description?: string
     private _elastic: boolean
     private _perks: PerkTree[]
     private _category: Category
 
-    constructor(id: string, category: Category, index: number, name: string, elastic: boolean, perks: PerkTree[], description?: string) {
+    constructor(id: string, price: number, category: Category, index: number, name: string, elastic: boolean, perks: PerkTree[], description?: string) {
         this.id = id
+        this._price = price
         this._category = category
         this._index = index
         this._name = name
@@ -27,7 +29,7 @@ export default class Package implements NetworkOwned {
     }
 
     public static fromObject(obj: any, category: Category): Package {
-        const pkg = new Package(obj.id, category, obj.index, obj.name, obj.elastic, [], obj.description)
+        const pkg = new Package(obj.id, obj.price, category, obj.index, obj.name, obj.elastic, [], obj.description)
         pkg._perks = (obj.perks as any[]).map(tree => PerkTree.fromObject(tree, pkg))
         return pkg
     }
@@ -36,6 +38,7 @@ export default class Package implements NetworkOwned {
         return this.category.network
     }
 
+    public get price(): number { return this._price }
     public get category(): Category { return this._category }
     public get index(): number { return this._index }
     public get name(): string { return this._name }
@@ -63,22 +66,27 @@ export default class Package implements NetworkOwned {
         return this
     }
 
-    public async update(name?: string, description?: string, index?: number, elastic?: boolean): Promise<Package> {
+    public async update(name?: string, description?: string, index?: number, elastic?: boolean, price?: number): Promise<Package> {
         await call(`network/${this.network.id}/store/package/${this.id}`, {
             name: name,
             description: description,
             index: index,
-            elastic: elastic
+            elastic: elastic,
+            price: price
         }, 'PATCH')
+        if (price != undefined) this._price = price
         if (name) this._name = name
         if (description != undefined) this._description = description
-        if (index != undefined) this._index = index
+        if (index != undefined) {
+            const oldIndex = this.index
+            this._index = index
+            // todo update parent
+        }
         if (elastic != undefined) this._elastic = elastic
         return this
     }
 
     public async delete(): Promise<void> {
-        // TODO remove from parent
         await call(`network/${this.network.id}/store/package/${this.id}`, undefined, 'DELETE')
     }
 

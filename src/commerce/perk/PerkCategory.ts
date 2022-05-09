@@ -1,11 +1,13 @@
 import { call } from "../../http/Call"
 import Network from "../../instance/Network"
 import NetworkOwned from "../../instance/NetworkOwned"
+import Package from "../Package"
+import Store from "../Store"
 import Perk from "./Perk"
 
 export default class PerkCategory implements NetworkOwned {
 
-    public readonly network: Network
+    public readonly store: Store
     public readonly id: string
 
     private _index: number
@@ -13,8 +15,8 @@ export default class PerkCategory implements NetworkOwned {
     private _description?: string
     private _perks: Perk[]
 
-    constructor(id: string, network: Network, perks: Perk[], name: string, index: number, description?: string) {
-        this.network = network
+    constructor(id: string, store: Store, perks: Perk[], name: string, index: number, description?: string) {
+        this.store = store
         this.id = id
         this._perks = perks
         this._name = name
@@ -22,22 +24,32 @@ export default class PerkCategory implements NetworkOwned {
         this._description = description
     }
 
+    public get network(): Network { return this.store.network }
     public get perks(): Perk[] { return this._perks }
     public get name(): string { return this._name }
     public get index(): number { return this._index }
     public get description(): string { return this._description }
 
-    public static fromObject(obj: any, network: Network) {
-        const category: PerkCategory = new PerkCategory(obj.id, network, [], obj.name, obj.index, obj.description)
-        category._perks = obj.perks.map(perk => Perk.fromObject(perk, category))
+    public static fromObject(obj: any, store: Store) {
+        const category: PerkCategory = new PerkCategory(obj.id, store, [], obj.name, obj.index, obj.description)
+        category._perks = obj.perks ? obj.perks.map(perk => Perk.fromObject(perk, category)) : undefined
         return category
     }
 
-    public async createPerk(name: string, description?: string): Promise<Perk> {
-        return Perk.fromObject(await call(`network/${this.network.id}/store/category/perk/${this.id}`, {
+    public async createPerk(pkg: Package, name: string, quantity?: number, description?: string): Promise<Perk> {
+        const perk = Perk.fromObject(await call(`network/${this.network.id}/store/category/perk/${this.id}`, {
             name: name,
-            description: description
+            description: description,
+            package: pkg.id,
+            quantity: quantity
         }), this)
+        this.perks.push(perk)
+        return perk
+    }
+
+    public async deletePerk(perk: Perk): Promise<void> {
+        await call(`network/${this.network.id}/store/perk/${perk.id}`, undefined, 'DELETE')
+        this._perks = this.perks.filter(p => p.id != perk.id)
     }
 
     public async update(name?: string, description?: string, index?: number): Promise<PerkCategory> {
@@ -53,8 +65,7 @@ export default class PerkCategory implements NetworkOwned {
     }
 
     public async delete(): Promise<void> {
-        // TODO remove from parent
-        await call(`network/${this.network.id}/store/category/perk/${this.id}`, undefined, 'DELETE')
+        return this.store.removePerkCategory(this)
     }
 
 

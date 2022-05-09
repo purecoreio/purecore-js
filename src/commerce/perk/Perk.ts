@@ -47,8 +47,7 @@ export default class Perk implements NetworkOwned {
     }
 
     public async delete(): Promise<void> {
-        // TODO remove from parent
-        await call(`network/${this.network.id}/store/perk/${this.id}`, undefined, 'DELETE')
+        return this.category.deletePerk(this)
     }
 
 }
