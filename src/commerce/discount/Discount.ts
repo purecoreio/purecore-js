@@ -111,4 +111,8 @@ export default class Discount implements NetworkOwned {
         return discount
     }
 
+    public async delete(){
+        await this.store.removeDiscount(this)
+    }
+
 }
