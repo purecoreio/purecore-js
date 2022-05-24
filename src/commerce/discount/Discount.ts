@@ -16,6 +16,8 @@ export default class Discount implements NetworkOwned {
 
     public readonly store: Store
     public readonly id: string
+    private _name: string
+
     private _code: string | null                                         // code to activate (if any)
     private _since: Date | null                                          // since
     private _until: Date | null                                          // until
@@ -38,6 +40,7 @@ export default class Discount implements NetworkOwned {
 
     private _acquisitionRequirements: AcquisitionRequirement[]            // own any of the list, own all of the list, don't own any of the list
 
+    get name(): string { return this._name }
     get code(): string { return this._code }
     get since(): Date { return this._since }
     get until(): Date { return this._until }
@@ -57,12 +60,15 @@ export default class Discount implements NetworkOwned {
     get discriminative(): boolean { return this._discriminative }
     get acquisitionRequirements(): AcquisitionRequirement[] { return this._acquisitionRequirements }
 
+    get isAbsolute(): boolean { return this.type == ReductionType.ABSOLUTE }
+
     get network(): Network {
         return this.store.network
     }
 
-    constructor(store: Store, id: string, code: string, since: Date | null, until: Date | null, type: ReductionType, amount: number, useLimit: NumericLimitation.NumericLimitation, amountLimit: NumericLimitation.NumericLimitation, itemLimit: NumericLimitation.NumericLimitation, previousPurchaseLimit: NumericLimitation.NumericLimitation, previousAmountLimit: NumericLimitation.NumericLimitation, packages: Package[], categories: Category[], profiles: Profile[], announce: boolean, suggest: boolean, gifts: boolean, discriminative: boolean, acquisitionRequirements: AcquisitionRequirement[]) {
+    constructor(store: Store, name: string, id: string, code: string, since: Date | null, until: Date | null, type: ReductionType, amount: number, useLimit: NumericLimitation.NumericLimitation, amountLimit: NumericLimitation.NumericLimitation, itemLimit: NumericLimitation.NumericLimitation, previousPurchaseLimit: NumericLimitation.NumericLimitation, previousAmountLimit: NumericLimitation.NumericLimitation, packages: Package[], categories: Category[], profiles: Profile[], announce: boolean, suggest: boolean, gifts: boolean, discriminative: boolean, acquisitionRequirements: AcquisitionRequirement[]) {
         this.store = store
+        this._name = name
         this.id = id
         this._code = code
         this._since = since
@@ -88,10 +94,11 @@ export default class Discount implements NetworkOwned {
         let discount: Discount
         discount = new Discount(
             store,
+            obj.name,
             obj.id,
             obj.code,
-            new Date(obj.since),
-            new Date(obj.until),
+            obj.since ? new Date(obj.since) : null,
+            obj.until ? new Date(obj.until) : null,
             obj.type,
             obj.amount,
             NumericLimitation.fromObject(obj.useLimit),
@@ -111,7 +118,7 @@ export default class Discount implements NetworkOwned {
         return discount
     }
 
-    public async delete(){
+    public async delete() {
         await this.store.removeDiscount(this)
     }
 
