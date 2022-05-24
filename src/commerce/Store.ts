@@ -24,17 +24,17 @@ export default class Store implements NetworkOwned {
 
     async removeCategory(category: Category) {
         await call(`network/${this.network.id}/store/category/${category.id}`, undefined, 'DELETE')
-        this._categories = this.categories.filter(cat => cat.id != category.id)
+        if (this.categories) this._categories = this.categories.filter(cat => cat.id != category.id)
     }
 
     async removePerkCategory(category: PerkCategory) {
         await call(`network/${this.network.id}/store/category/perk/${category.id}`, undefined, 'DELETE')
-        this._perks = this.perks.filter(cat => cat.id != category.id)
+        if (this.perks) this._perks = this.perks.filter(cat => cat.id != category.id)
     }
 
     async removeDiscount(discount: Discount) {
         await call(`network/${this.network.id}/store/discount/${discount.id}`, undefined, 'DELETE')
-        this._discounts = this.discounts.filter(d => d.id != discount.id)
+        if (this.discounts) this._discounts = this.discounts.filter(d => d.id != discount.id)
     }
 
     public async getCategories(): Promise<Category[]> {
@@ -44,6 +44,10 @@ export default class Store implements NetworkOwned {
 
     public async getCategory(id: string): Promise<Category> {
         return Category.fromObject(await call(`network/${this.network.id}/store/category/${id}`) as any, this)
+    }
+
+    public async getDiscount(id: string): Promise<Discount> {
+        return Discount.fromObject(await call(`network/${this.network.id}/store/discount/${id}`) as any, this)
     }
 
     public async getPerks(): Promise<PerkCategory[]> {
@@ -61,7 +65,7 @@ export default class Store implements NetworkOwned {
             name: name,
             description: description
         }), this)
-        this._categories.push(category)
+        if (this.categories) this._categories.push(category)
         return category
     }
 
@@ -70,16 +74,17 @@ export default class Store implements NetworkOwned {
             name: name,
             description: description
         }), this)
-        this._perks.push(category)
+        if (this.perks) this._perks.push(category)
         return category
     }
 
-    public async createDiscount(amount: number, type: ReductionType): Promise<Discount> {
+    public async createDiscount(name: string, amount: number, type: ReductionType): Promise<Discount> {
         const discount = Discount.fromObject(await call(`network/${this.network.id}/store/discount`, {
             amount: amount,
+            name: name,
             type: Number(type)
         }), this)
-        this._discounts.push(discount)
+        if (this.discounts) this._discounts.unshift(discount)
         return discount
     }
 
