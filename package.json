@@ -18,7 +18,8 @@
     },
     "scripts": {
         "build": "rm -rf ./target/** && tsc",
-        "dev": "nodemon"
+        "dev": "npm link && nodemon",
+        "cleanup": "npm unlink"
     },
     "repository": {
         "type": "git",
