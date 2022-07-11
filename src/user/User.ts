@@ -1,3 +1,4 @@
+import Wallet from "../commerce/Wallet"
 import Core from "../Core"
 import Popup from "../dom/Popup"
 import { call } from "../http/Call"
@@ -42,8 +43,18 @@ export default class User {
         return new User(object.id)
     }
 
-    public async linkWallet(processor: processor): Promise<any> {
-        return await Popup.openPopup(`/oauth/link/${processor}/?access_token=${Core.credentials.userToken.accessToken}`, 'wallet')
+    public async linkWallet(processor: processor, privateKey?: string, publicKey?: string): Promise<Wallet | undefined> {
+        if (processor == 'coinbase') {
+            // public+private key
+            if (!privateKey) throw new Error("missing private key")
+            return Wallet.fromObject(await call(`/user/wallets/link/${processor}`, {
+                privateKey: privateKey,
+                publicKey: publicKey ?? null
+            }, 'POST', true, true))
+        } else {
+            const walletData = await Popup.openPopup(`/rest/3/user/wallets/link/${processor}?access_token=${Core.credentials.userToken.accessToken}`, 'wallet')
+            if (walletData) return Wallet.fromObject(walletData)
+        }
     }
 
 }

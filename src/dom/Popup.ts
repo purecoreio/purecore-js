@@ -4,7 +4,10 @@ export default class Popup {
 
     public static activePopup;
 
-    public static openPopup(url: string, expectedMessage: string, domain: string | null = Core.getBase()) {
+    /**
+     * @todo https://stackoverflow.com/a/3951843/7280257
+     */
+    public static openPopup(url: string, expectedMessage: string, domain: string | null = Core.getBase()): Promise<any> {
         return new Promise((resolve, reject) => {
             if (window != null) {
                 try {
