@@ -1,23 +1,22 @@
-import { call } from "../http/Call";
 import Network from "../instance/Network";
 import NetworkOwned from "../instance/NetworkOwned";
 import Category from "./Category";
 import Perk from "./perk/Perk";
 import PerkTree from "./perk/PerkTree";
-import PerkUsage from "./perk/PerkUsage";
+import { TimedAmount } from "./pricing/TimedAmount";
 
 export default class Package implements NetworkOwned {
 
     public readonly id: string
     private _index: number;
-    private _price: number;
+    private _price: TimedAmount;
     private _name: string;
     private _description?: string
     private _elastic: boolean
     private _perks: PerkTree[]
     private _category: Category
 
-    constructor(id: string, price: number, category: Category, index: number, name: string, elastic: boolean, perks: PerkTree[], description?: string) {
+    constructor(id: string, price: TimedAmount, category: Category, index: number, name: string, elastic: boolean, perks: PerkTree[], description?: string) {
         this.id = id
         this._price = price
         this._category = category
@@ -29,7 +28,7 @@ export default class Package implements NetworkOwned {
     }
 
     public static fromObject(obj: any, category: Category): Package {
-        const pkg = new Package(obj.id, obj.price, category, obj.index, obj.name, obj.elastic, [], obj.description)
+        const pkg = new Package(obj.id, TimedAmount.fromObject(obj.price), category, obj.index, obj.name, obj.elastic, [], obj.description)
         pkg._perks = (obj.perks as any[]).map(tree => PerkTree.fromObject(tree, pkg))
         return pkg
     }
@@ -38,7 +37,7 @@ export default class Package implements NetworkOwned {
         return this.category.network
     }
 
-    public get price(): number { return this._price }
+    public get price(): TimedAmount { return this._price }
     public get category(): Category { return this._category }
     public get index(): number { return this._index }
     public get name(): string { return this._name }
@@ -47,7 +46,7 @@ export default class Package implements NetworkOwned {
     public get perks(): PerkTree[] { return this._perks }
 
     public async addPerk(perk: Perk, quantity?: number): Promise<Package> {
-        this._perks = (await call(`network/${this.network.id}/store/package/${this.id}/perk`, {
+        this._perks = (await this.network.call(`store/package/${this.id}/perk`, {
             perk: perk.id,
             quantity: quantity,
         }) as any[]).map(tree => PerkTree.fromObject(tree, this))
@@ -55,26 +54,26 @@ export default class Package implements NetworkOwned {
     }
 
     public async updatePerk(perk: Perk, quantity?: number): Promise<Package> {
-        this._perks = (await call(`network/${this.network.id}/store/package/${this.id}/perk/${perk.id}`, {
+        this._perks = (await this.network.call(`store/package/${this.id}/perk/${perk.id}`, {
             quantity: quantity,
         }, 'PATCH') as any[]).map(tree => PerkTree.fromObject(tree, this))
         return this
     }
 
     public async deletePerk(perk: Perk): Promise<Package> {
-        this._perks = (await call(`network/${this.network.id}/store/package/${this.id}/perk/${perk.id}`, undefined, 'DELETE') as any[]).map(tree => PerkTree.fromObject(tree, this))
+        this._perks = (await this.network.call(`store/package/${this.id}/perk/${perk.id}`, undefined, 'DELETE') as any[]).map(tree => PerkTree.fromObject(tree, this))
         return this
     }
 
     public async update(name?: string, description?: string, index?: number, elastic?: boolean, price?: number): Promise<Package> {
-        await call(`network/${this.network.id}/store/package/${this.id}`, {
+        await this.network.call(`store/package/${this.id}`, {
             name: name,
             description: description,
             index: index,
             elastic: elastic,
             price: price
         }, 'PATCH')
-        if (price != undefined) this._price = price
+        if (price != undefined) this._price.amount.original.amount = price
         if (name) this._name = name
         if (description != undefined) this._description = description
         if (index != undefined) {
@@ -87,7 +86,7 @@ export default class Package implements NetworkOwned {
     }
 
     public async delete(): Promise<void> {
-        await call(`network/${this.network.id}/store/package/${this.id}`, undefined, 'DELETE')
+        await this.network.call(`store/package/${this.id}`, undefined, 'DELETE')
     }
 
 }
