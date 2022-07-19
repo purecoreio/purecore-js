@@ -1,9 +1,10 @@
-import Wallet from "../commerce/Wallet"
+import { processor } from "../commerce/processor"
 import Core from "../Core"
 import Popup from "../dom/Popup"
 import { call } from "../http/Call"
 import Network from "../instance/Network"
 import Profile from "./Profile"
+import Wallet from "./Wallet"
 
 export default class User {
 
@@ -31,29 +32,29 @@ export default class User {
     }
 
     public async getProfiles(): Promise<Profile[]> {
-        const profileData = await call("user/profiles")
-        const profiles: Profile[] = []
-        profileData.forEach(element => {
-            profiles.push(Profile.fromObject(element))
-        });
-        return profiles
+        const profiles = await call("user/profiles") as Array<any>
+        return profiles.map((p) => Profile.fromObject(p))
+    }
+
+    public async getWallets(): Promise<Wallet[]> {
+        const wallets = await call("user/wallets") as Array<any>
+        return wallets.map((w) => Wallet.fromObject(w))
     }
 
     public static fromObject(object: any): User {
         return new User(object.id)
     }
 
-    public async linkWallet(processor: processor, privateKey?: string, publicKey?: string): Promise<Wallet | undefined> {
+    public async linkWallet(processor: processor, network?: Network, privateKey?: string, publicKey?: string): Promise<void> {
         if (processor == 'coinbase') {
             // public+private key
             if (!privateKey) throw new Error("missing private key")
-            return Wallet.fromObject(await call(`/user/wallets/link/${processor}`, {
+            await call(`/user/wallets/link/${processor}`, {
                 privateKey: privateKey,
                 publicKey: publicKey ?? null
-            }, 'POST', true, true))
+            }, 'POST', true, true)
         } else {
-            const walletData = await Popup.openPopup(`/rest/3/user/wallets/link/${processor}?access_token=${Core.credentials.userToken.accessToken}`, 'wallet')
-            if (walletData) return Wallet.fromObject(walletData)
+            await Popup.openPopup(`/rest/3/user/wallets/link/${processor}?access_token=${Core.credentials.userToken.accessToken}` + (network ? `&network=${network.id}` : ''), "callback")
         }
     }
 
