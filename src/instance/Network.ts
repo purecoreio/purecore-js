@@ -1,5 +1,5 @@
 import Store from "../commerce/Store";
-import { call } from "../http/Call";
+import { call, method } from "../http/Call";
 import Instance from "./Instance";
 
 export default class Network {
@@ -25,11 +25,15 @@ export default class Network {
         return new Store(this)
     }
 
+    public async call(path: string, data?: any, method?: method): Promise<any> {
+        return call(`network/${this.id}/${path}`, data, method)
+    }
+
     public async update(name?: string, cname?: string): Promise<Network> {
         const obj: any = {}
         if (name) obj.name = name
         if (cname) obj.cname = cname
-        const result = await call(`network/${this.id}`, obj, 'PATCH') as Network
+        const result = await this.call('', obj, 'PATCH')
         this._cname = result.cname;
         this._name = result.name;
         return this
@@ -40,18 +44,18 @@ export default class Network {
     }
 
     public async createInstance(path: string): Promise<Instance> {
-        return Instance.fromObject(this, await call(`network/${this.id}/instance`, {
+        return Instance.fromObject(this, await this.call(`instance`, {
             path: path
         }))
     }
 
     public async getInstances(): Promise<Instance[]> {
-        const instances: any[] = await call(`network/${this.id}/instance`)
+        const instances: any[] = await this.call(`instance`)
         return instances.map(o => Instance.fromObject(this, o))
     }
 
     public async getInstance(id: string): Promise<Instance> {
-        return Instance.fromObject(this, await call(`network/${this.id}/instance/${id}`))
+        return Instance.fromObject(this, await this.call(`instance/${id}`))
     }
 
 }

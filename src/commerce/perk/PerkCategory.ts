@@ -37,7 +37,7 @@ export default class PerkCategory implements NetworkOwned {
     }
 
     public async createPerk(pkg: Package, name: string, quantity?: number, description?: string): Promise<Perk> {
-        const perk = Perk.fromObject(await call(`network/${this.network.id}/store/category/perk/${this.id}`, {
+        const perk = Perk.fromObject(await this.network.call(`store/category/perk/${this.id}`, {
             name: name,
             description: description,
             package: pkg.id,
@@ -48,12 +48,12 @@ export default class PerkCategory implements NetworkOwned {
     }
 
     public async deletePerk(perk: Perk): Promise<void> {
-        await call(`network/${this.network.id}/store/perk/${perk.id}`, undefined, 'DELETE')
+        await this.network.call(`store/perk/${perk.id}`, undefined, 'DELETE')
         this._perks = this.perks.filter(p => p.id != perk.id)
     }
 
     public async update(name?: string, description?: string, index?: number): Promise<PerkCategory> {
-        await call(`network/${this.network.id}/store/category/perk/${this.id}`, {
+        await this.network.call(`store/category/perk/${this.id}`, {
             name: name,
             description: description,
             index: index

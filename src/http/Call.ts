@@ -2,7 +2,9 @@ import Core from "../Core"
 
 const prefix = "/rest/3/"
 
-export async function call(endpoint: string, data?: any, method?: 'POST' | 'GET' | 'DELETE' | 'PATCH', refreshCall: boolean = false, skipPrefix: boolean = false) {
+export type method = 'POST' | 'GET' | 'DELETE' | 'PATCH'
+
+export async function call(endpoint: string, data?: any, method?: method, refreshCall: boolean = false, skipPrefix: boolean = false) {
     // automatic method if none specified
     if (!method) {
         if (data) {

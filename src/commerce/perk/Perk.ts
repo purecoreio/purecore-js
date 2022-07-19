@@ -35,7 +35,7 @@ export default class Perk implements NetworkOwned {
     }
 
     public async update(name?: string, description?: string, index?: number): Promise<Perk> {
-        await call(`network/${this.network.id}/store/perk/${this.id}`, {
+        await this.network.call(`store/perk/${this.id}`, {
             name: name,
             description: description,
             index: index

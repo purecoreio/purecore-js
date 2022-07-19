@@ -1,9 +1,12 @@
 import { call } from "../http/Call";
 import Network from "../instance/Network";
 import NetworkOwned from "../instance/NetworkOwned";
+import User from "../user/User";
 import Category from "./Category";
 import Discount, { ReductionType } from "./discount/Discount";
+import Gateway from "./Gateway";
 import PerkCategory from "./perk/PerkCategory";
+import { processor } from "./processor";
 
 export default class Store implements NetworkOwned {
 
@@ -12,6 +15,7 @@ export default class Store implements NetworkOwned {
     private _categories: Category[]
     private _perks: PerkCategory[]
     private _discounts: Discount[]
+    private _gateways: Gateway[]
 
     constructor(network: Network, currency?: string, categories?: Category[], perks?: PerkCategory[]) {
         this.network = network
@@ -23,45 +27,50 @@ export default class Store implements NetworkOwned {
     public get discounts(): Discount[] { return this._discounts }
 
     async removeCategory(category: Category) {
-        await call(`network/${this.network.id}/store/category/${category.id}`, undefined, 'DELETE')
+        await this.network.call(`store/category/${category.id}`, undefined, 'DELETE')
         if (this.categories) this._categories = this.categories.filter(cat => cat.id != category.id)
     }
 
     async removePerkCategory(category: PerkCategory) {
-        await call(`network/${this.network.id}/store/category/perk/${category.id}`, undefined, 'DELETE')
+        await this.network.call(`store/category/perk/${category.id}`, undefined, 'DELETE')
         if (this.perks) this._perks = this.perks.filter(cat => cat.id != category.id)
     }
 
     async removeDiscount(discount: Discount) {
-        await call(`network/${this.network.id}/store/discount/${discount.id}`, undefined, 'DELETE')
+        await this.network.call(`store/discount/${discount.id}`, undefined, 'DELETE')
         if (this.discounts) this._discounts = this.discounts.filter(d => d.id != discount.id)
     }
 
     public async getCategories(): Promise<Category[]> {
-        this._categories = (await call(`network/${this.network.id}/store/category`) as any[]).map(category => Category.fromObject(category, this))
+        this._categories = (await this.network.call(`store/category`) as any[]).map(category => Category.fromObject(category, this))
         return this.categories
     }
 
     public async getCategory(id: string): Promise<Category> {
-        return Category.fromObject(await call(`network/${this.network.id}/store/category/${id}`) as any, this)
+        return Category.fromObject(await this.network.call(`store/category/${id}`) as any, this)
     }
 
     public async getDiscount(id: string): Promise<Discount> {
-        return Discount.fromObject(await call(`network/${this.network.id}/store/discount/${id}`) as any, this)
+        return Discount.fromObject(await this.network.call(`store/discount/${id}`) as any, this)
     }
 
     public async getPerks(): Promise<PerkCategory[]> {
-        this._perks = (await call(`network/${this.network.id}/store/category/perk`) as any[]).map(category => PerkCategory.fromObject(category, this))
+        this._perks = (await this.network.call(`store/category/perk`) as any[]).map(category => PerkCategory.fromObject(category, this))
         return this.perks
     }
 
     public async getDiscounts(): Promise<Discount[]> {
-        this._discounts = (await call(`network/${this.network.id}/store/discount`) as any[]).map(discount => Discount.fromObject(discount, this))
+        this._discounts = (await this.network.call(`store/discount`) as any[]).map(discount => Discount.fromObject(discount, this))
         return this._discounts
     }
 
+    public async getGateways(): Promise<Gateway[]> {
+        this._gateways = (await this.network.call(`store/gateway`) as any[]).map(gateway => Gateway.fromObject(gateway, this))
+        return this._gateways
+    }
+
     public async createCategory(name: string, description?: string): Promise<Category> {
-        const category = Category.fromObject(await call(`network/${this.network.id}/store/category`, {
+        const category = Category.fromObject(await this.network.call(`store/category`, {
             name: name,
             description: description
         }), this)
@@ -70,7 +79,7 @@ export default class Store implements NetworkOwned {
     }
 
     public async createPerkCategory(name: string, description?: string): Promise<PerkCategory> {
-        const category = PerkCategory.fromObject(await call(`network/${this.network.id}/store/category/perk`, {
+        const category = PerkCategory.fromObject(await this.network.call(`store/category/perk`, {
             name: name,
             description: description
         }), this)
@@ -79,13 +88,26 @@ export default class Store implements NetworkOwned {
     }
 
     public async createDiscount(name: string, amount: number, type: ReductionType): Promise<Discount> {
-        const discount = Discount.fromObject(await call(`network/${this.network.id}/store/discount`, {
+        const discount = Discount.fromObject(await this.network.call(`store/discount`, {
             amount: amount,
             name: name,
             type: Number(type)
         }), this)
         if (this.discounts) this._discounts.unshift(discount)
         return discount
+    }
+
+    /**
+     * ! returns an invalid gateway id.
+     * syn for User.linkWallet(processor,<this>,privateKey,publicKey)
+     */
+    public async linkGateway(processor: processor, privateKey?: string, publicKey?: string): Promise<void> {
+        const user = new User('')
+        await user.linkWallet(processor, this.network, privateKey, publicKey)
+    }
+
+    public async getCheckout(): Promise<any> {
+        return this.network.call('store/checkout')
     }
 
 }

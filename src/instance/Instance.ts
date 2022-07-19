@@ -23,7 +23,7 @@ export default class Instance implements NetworkOwned {
     }
 
     public async update(path: string): Promise<Instance> {
-        await call(`network/${this.network.id}/instance/${this.id}`, {
+        await this.network.call(`instance/${this.id}`, {
             path: path
         }, 'PATCH')
         this._path = path
@@ -31,7 +31,7 @@ export default class Instance implements NetworkOwned {
     }
 
     public async delete(): Promise<void> {
-        await call(`network/${this.network.id}/instance/${this.id}`, undefined, 'DELETE')
+        await this.network.call(`instance/${this.id}`, undefined, 'DELETE')
     }
 
 }

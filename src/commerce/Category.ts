@@ -32,11 +32,11 @@ export default class Category implements NetworkOwned {
     public get packages(): Package[] { return this._packages }
 
     public async getPackage(id: string): Promise<Package> {
-        return Package.fromObject(await call(`network/${this.network.id}/store/package/${id}`), this)
+        return Package.fromObject(await this.network.call(`store/package/${id}`), this)
     }
 
     public async createPackage(name: string, price: number, description?: string): Promise<Package> {
-        return Package.fromObject(await call(`network/${this.network.id}/store/category/${this.id}`, {
+        return Package.fromObject(await this.network.call(`store/category/${this.id}`, {
             name: name,
             price: price,
             description: description
@@ -44,7 +44,7 @@ export default class Category implements NetworkOwned {
     }
 
     public async update(name?: string, description?: string, index?: number, upgradable?: boolean): Promise<Category> {
-        await call(`network/${this.network.id}/store/category/${this.id}`, {
+        await this.network.call(`store/category/${this.id}`, {
             name: name,
             description: description,
             index: index,
