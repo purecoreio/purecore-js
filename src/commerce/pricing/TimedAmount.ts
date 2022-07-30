@@ -21,7 +21,7 @@ export class TimedAmount {
     }
 
     public static fromObject(obj: any): TimedAmount {
-        return new TimedAmount(Amount.fromObject(obj), obj.type, obj.timing, obj.period)
+        return new TimedAmount(Amount.fromObject(obj.amount), obj.type, obj.timing, obj.period)
     }
 
 }
