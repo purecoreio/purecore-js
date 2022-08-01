@@ -21,6 +21,16 @@ export default class Network {
         return new Network(object.id, object.name, object.cname)
     }
 
+    public async getSetupStep(): Promise<number> {
+        return (await this.call('setup')).result
+    }
+
+    public async setSetupStep(step: number): Promise<void> {
+        await this.call('setup', {
+            step: step
+        })
+    }
+
     public async getStore(): Promise<Store> {
         return new Store(this)
     }
