@@ -21,6 +21,13 @@ export default class Network {
         return new Network(object.id, object.name, object.cname)
     }
 
+    public async refresh(): Promise<Network> {
+        const network = await this.call()
+        this._name = network.name
+        this._cname = network.cname
+        return this
+    }
+
     public async getSetupStep(): Promise<number> {
         return (await this.call('setup')).result
     }
@@ -35,7 +42,7 @@ export default class Network {
         return new Store(this)
     }
 
-    public async call(path: string, data?: any, method?: method): Promise<any> {
+    public async call(path: string = '', data?: any, method?: method): Promise<any> {
         return call(`network/${this.id}/${path}`, data, method)
     }
 

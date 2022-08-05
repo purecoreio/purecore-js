@@ -28,7 +28,7 @@ export default class User {
     }
 
     public async getNetwork(id): Promise<Network> {
-        return Network.fromObject(await call(`network/${id}`))
+        return new Network(id, '', '').refresh()
     }
 
     public async getProfiles(): Promise<Profile[]> {
@@ -56,6 +56,11 @@ export default class User {
         } else {
             await Popup.openPopup(`/rest/3/user/wallets/link/${processor}?access_token=${Core.credentials.userToken.accessToken}` + (network ? `&network=${network.id}` : ''), "callback")
         }
+    }
+
+    public async logout() {
+        // TODO token
+        Core.credentials.clear()
     }
 
 }

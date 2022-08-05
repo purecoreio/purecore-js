@@ -1,4 +1,5 @@
 import { call } from "./http/Call";
+import Network from "./instance/Network";
 import Credentials from "./login/Credentials";
 import LoginHelper from "./login/LoginHelper";
 import Token from "./login/Token";
@@ -42,8 +43,9 @@ export default class Core {
         return this
     }
 
-    public logout() {
-        Core.credentials.clear()
-    }
+}
 
+export {
+    User,
+    Network
 }
