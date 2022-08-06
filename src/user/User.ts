@@ -2,7 +2,7 @@ import { processor } from "../commerce/processor"
 import Core from "../Core"
 import Popup from "../dom/Popup"
 import { call } from "../http/Call"
-import Network from "../instance/Network"
+import Network from "../instance/network/Network"
 import Profile from "./Profile"
 import Wallet from "./Wallet"
 

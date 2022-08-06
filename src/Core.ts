@@ -1,5 +1,5 @@
 import { call } from "./http/Call";
-import Network from "./instance/Network";
+import Network from "./instance/network/Network";
 import Credentials from "./login/Credentials";
 import LoginHelper from "./login/LoginHelper";
 import Token from "./login/Token";

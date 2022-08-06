@@ -1,6 +1,7 @@
-import Store from "../commerce/Store";
-import { call, method } from "../http/Call";
-import Instance from "./Instance";
+import Store from "../../commerce/Store";
+import { call, method } from "../../http/Call";
+import Instance from "../Instance";
+import * as SetupSteps from "./SetupSteps";
 
 export default class Network {
 
@@ -28,8 +29,8 @@ export default class Network {
         return this
     }
 
-    public async getSetupStep(): Promise<number> {
-        return (await this.call('setup')).result
+    public async getSetupStep(): Promise<SetupSteps.SetupSteps> {
+        return SetupSteps.fromObject(await this.call('setup'))
     }
 
     public async setSetupStep(step: number): Promise<void> {

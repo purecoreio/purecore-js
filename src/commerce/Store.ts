@@ -1,5 +1,5 @@
 import { call } from "../http/Call";
-import Network from "../instance/Network";
+import Network from "../instance/network/Network";
 import NetworkOwned from "../instance/NetworkOwned";
 import User from "../user/User";
 import Category from "./Category";

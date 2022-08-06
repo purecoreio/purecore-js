@@ -1,4 +1,4 @@
-import Network from "../../instance/Network"
+import Network from "../../instance/network/Network"
 import NetworkOwned from "../../instance/NetworkOwned"
 import Profile from "../../user/Profile"
 import Category from "../Category"

@@ -1,4 +1,4 @@
-import Network from "./Network";
+import Network from "./network/Network";
 
 export default interface NetworkOwned {
 

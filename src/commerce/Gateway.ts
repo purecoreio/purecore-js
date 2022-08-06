@@ -1,4 +1,4 @@
-import Network from "../instance/Network"
+import Network from "../instance/network/Network"
 import NetworkOwned from "../instance/NetworkOwned"
 import Wallet from "../user/Wallet"
 import Store from "./Store"

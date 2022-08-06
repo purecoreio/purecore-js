@@ -1,6 +1,6 @@
 
 import { call } from "../../http/Call"
-import Network from "../../instance/Network"
+import Network from "../../instance/network/Network"
 import NetworkOwned from "../../instance/NetworkOwned"
 import PerkCategory from "./PerkCategory"
 

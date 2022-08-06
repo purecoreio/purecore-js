@@ -12,7 +12,7 @@ import { call } from "./http/Call";
 
 // resource owners
 import User from "./user/User";
-import Network from "./instance/Network";
+import Network from "./instance/network/Network";
 
 // resources
 import Profile from "./user/Profile";

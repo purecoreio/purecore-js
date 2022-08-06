@@ -1,5 +1,5 @@
 import { call } from "../http/Call";
-import Network from "./Network";
+import Network from "./network/Network";
 import NetworkOwned from "./NetworkOwned";
 
 export default class Instance implements NetworkOwned {
