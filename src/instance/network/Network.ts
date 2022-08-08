@@ -1,6 +1,7 @@
 import Store from "../../commerce/Store";
 import { call, method } from "../../http/Call";
 import Instance from "../Instance";
+import Branding from "./Branding";
 import * as SetupSteps from "./SetupSteps";
 
 export default class Network {
@@ -29,14 +30,28 @@ export default class Network {
         return this
     }
 
-    public async getSetupStep(): Promise<SetupSteps.SetupSteps> {
+    public async getSetupSteps(): Promise<SetupSteps.SetupSteps> {
         return SetupSteps.fromObject(await this.call('setup'))
     }
 
-    public async setSetupStep(step: number): Promise<void> {
+    public async getMissingSetupSteps(): Promise<SetupSteps.SetupFlag[]> {
+        const steps = await this.getSetupSteps()
+        let missing = []
+        steps.forEach((value, step) => {
+            if (!value) missing.push(step)
+        });
+        return missing
+    }
+
+    public async getBranding(): Promise<Branding> {
+        return Branding.fromObject(this, await this.call('branding'))
+    }
+
+    public async setSetupStep(step: SetupSteps.SetupFlag, value: boolean): Promise<void> {
         await this.call('setup', {
-            step: step
-        })
+            step: step,
+            value: value
+        }, 'PATCH')
     }
 
     public async getStore(): Promise<Store> {
