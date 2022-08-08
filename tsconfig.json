@@ -4,6 +4,7 @@
         "module": "ESNext",
         "target": "ESNext",
         "outDir": "target",
-        "rootDir": "src"
+        "rootDir": "src",
+        "moduleResolution": "node"
     }
 }
