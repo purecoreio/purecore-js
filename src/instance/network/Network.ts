@@ -1,4 +1,5 @@
 import Store from "../../commerce/Store";
+import Community from "../../community/Community";
 import { call, method } from "../../http/Call";
 import Instance from "../Instance";
 import Branding from "./Branding";
@@ -71,6 +72,8 @@ export default class Network {
         this._name = result.name;
         return this
     }
+
+    public get community(): Community { return new Community(this) }
 
     public async delete(): Promise<void> {
         return await call(`network/${this.id}`, undefined, 'DELETE')

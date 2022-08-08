@@ -7,7 +7,7 @@ export default class Popup {
     /**
      * @todo https://stackoverflow.com/a/3951843/7280257
      */
-    public static openPopup(url: string, expectedMessage: string, domain: string | null = Core.getBase()): Promise<any> {
+    public static openPopup(url: string, expectedMessage?: string, domain: string | null = Core.getBase()): Promise<any> {
         return new Promise((resolve, reject) => {
             if (window != null) {
                 try {
@@ -26,26 +26,28 @@ export default class Popup {
 
                     // waits for result
 
-                    window.addEventListener("message", (event) => {
-                        if (event.origin !== Core.getBase()) {
-                            return;
-                        }
-                        if (event.data.message == expectedMessage && listenerActive) {
-                            // close window (result already got)
-
-                            if (!popup.closed) {
-                                popup.close();
-                                Popup.activePopup = null;
+                    if (expectedMessage) {
+                        window.addEventListener("message", (event) => {
+                            if (event.origin !== Core.getBase()) {
+                                return;
                             }
+                            if (event.data.message == expectedMessage && listenerActive) {
+                                // close window (result already got)
 
-                            // do not listen for further events (task completed)
+                                if (!popup.closed) {
+                                    popup.close();
+                                    Popup.activePopup = null;
+                                }
 
-                            listenerActive = false;
+                                // do not listen for further events (task completed)
 
-                            // resolve data
-                            resolve(event.data.data);
-                        }
-                    }, false);
+                                listenerActive = false;
+
+                                // resolve data
+                                resolve(event.data.data);
+                            }
+                        }, false);
+                    }
 
                     // check if the window gets closed before a result was retrieved
 
@@ -65,7 +67,7 @@ export default class Popup {
 
                             // throw error
 
-                            reject(new Error("The popup was closed"));
+                            if (expectedMessage) reject(new Error("The popup was closed"));
                         }
                     }, 50);
                 }
