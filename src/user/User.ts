@@ -5,6 +5,7 @@ import { call } from "../http/Call"
 import Network from "../instance/network/Network"
 import Profile from "./Profile"
 import Wallet from "./Wallet"
+import { Address } from "@stripe/stripe-js"
 
 export default class User {
 
@@ -12,6 +13,14 @@ export default class User {
 
     constructor(id: string) {
         this.id = id
+    }
+
+    public async getAddress(): Promise<Address> {
+        return (await call('user/address')) as Address
+    }
+
+    public async setAddress(address: Address): Promise<void> {
+        await call('user/address', address, 'PATCH')
     }
 
     public async createNetwork(name: string, cname: string): Promise<Network> {
