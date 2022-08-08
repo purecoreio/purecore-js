@@ -26,6 +26,20 @@ export default class Store implements NetworkOwned {
     public get perks(): PerkCategory[] { return this._perks }
     public get discounts(): Discount[] { return this._discounts }
 
+    async getCurrency(): Promise<string> {
+        return (await this.network.call('store/currency')).result
+    }
+
+    async setCurrency(currency: string): Promise<void> {
+        await this.network.call('store/currency', {
+            currency: currency
+        }, 'PATCH')
+    }
+
+    async getRecommendedCurrencies(): Promise<string[]> {
+        return await this.network.call('store/currency/recommended')
+    }
+
     async removeCategory(category: Category) {
         await this.network.call(`store/category/${category.id}`, undefined, 'DELETE')
         if (this.categories) this._categories = this.categories.filter(cat => cat.id != category.id)
