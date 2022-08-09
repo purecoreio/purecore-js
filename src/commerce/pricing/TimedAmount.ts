@@ -1,27 +1,25 @@
-import { Amount } from "./Amount";
-
 export enum Timing {
     INSTANT = 0,
     OFFSET = 1,
     DATE = 2
 }
 
-export class TimedAmount {
+export default interface TimedAmount {
 
-    amount: Amount
-    type: Timing
-    timing: number | null
-    period: number | null
+    readonly type: Timing
+    readonly timing: number | Date | null
+    readonly period: number | null
+    readonly amount: number
+    readonly currency: string
 
-    constructor(amount: Amount, type: Timing, timing: number | null, period: number | null) {
-        this.amount = amount
-        this.type = type
-        this.timing = timing
-        this.period = period
+}
+
+export function fromObject(obj: any): TimedAmount {
+    return <TimedAmount>{
+        amount: obj.amount,
+        currency: obj.currency,
+        type: obj.type,
+        timing: obj.type == Timing.DATE ? new Date(obj.timing) : obj.timing,
+        period: obj.period
     }
-
-    public static fromObject(obj: any): TimedAmount {
-        return new TimedAmount(Amount.fromObject(obj.amount), obj.type, obj.timing, obj.period)
-    }
-
 }
