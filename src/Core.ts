@@ -1,3 +1,4 @@
+import Elements from "./elements/Elements";
 import { call } from "./http/Call";
 import Network from "./instance/network/Network";
 import Credentials from "./login/Credentials";
@@ -16,7 +17,17 @@ export default class Core {
         Core.credentials.attemptLoadFromLocalStorage()
     }
 
-    public static getBase(): string {
+    public get elements() { return new Elements() }
+
+    public static getElementsREST(): string {
+        if (Core.test) {
+            return "http://localhost:3002"
+        } else {
+            return "https://elements.purecore.io"
+        }
+    }
+
+    public static getBaseREST(): string {
         if (Core.test) {
             return "http://localhost:3000"
         } else {

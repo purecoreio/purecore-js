@@ -7,7 +7,7 @@ export default class Popup {
     /**
      * @todo https://stackoverflow.com/a/3951843/7280257
      */
-    public static openPopup(url: string, expectedMessage?: string, domain: string | null = Core.getBase()): Promise<any> {
+    public static openPopup(url: string, expectedMessage?: string, domain: string | null = Core.getBaseREST()): Promise<any> {
         return new Promise((resolve, reject) => {
             if (window != null) {
                 try {
@@ -28,7 +28,7 @@ export default class Popup {
 
                     if (expectedMessage) {
                         window.addEventListener("message", (event) => {
-                            if (event.origin !== Core.getBase()) {
+                            if (event.origin !== Core.getBaseREST()) {
                                 return;
                             }
                             if (event.data.message == expectedMessage && listenerActive) {

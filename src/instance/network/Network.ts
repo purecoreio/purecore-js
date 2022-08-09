@@ -55,9 +55,7 @@ export default class Network {
         }, 'PATCH')
     }
 
-    public async getStore(): Promise<Store> {
-        return new Store(this)
-    }
+    public get store() { return new Store(this) }
 
     public async call(path: string = '', data?: any, method?: method): Promise<any> {
         return call(`network/${this.id}/${path}`, data, method)

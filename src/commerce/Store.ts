@@ -5,6 +5,7 @@ import User from "../user/User";
 import Category from "./Category";
 import Discount, { ReductionType } from "./discount/Discount";
 import Gateway from "./Gateway";
+import Package from "./Package";
 import PerkCategory from "./perk/PerkCategory";
 import { processor } from "./processor";
 
@@ -120,8 +121,10 @@ export default class Store implements NetworkOwned {
         await user.linkWallet(processor, this.network, privateKey, publicKey)
     }
 
-    public async getCheckout(): Promise<any> {
-        return this.network.call('store/checkout')
+    public async getCheckout(items: string[] | Package[]): Promise<any> {
+        return this.network.call('store/checkout', {
+            items: items.map(i => 'id' in i ? i.id : i)
+        })
     }
 
 }

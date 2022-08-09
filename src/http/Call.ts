@@ -48,7 +48,7 @@ export async function call(endpoint: string, data?: any, method?: method, refres
     }
 
     // actual request
-    const response = await fetch(`${Core.getBase()}${!skipPrefix ? prefix : ''}${endpoint}`, options)
+    const response = await fetch(`${Core.getBaseREST()}${!skipPrefix ? prefix : ''}${endpoint}`, options)
     if (response.ok) {
         const parsedResponse = await response.json()
         if (Object.keys(parsedResponse).length == 1 && 'data' in parsedResponse) return parsedResponse.data
