@@ -12,7 +12,6 @@ export default class Package implements NetworkOwned {
     private _price: TimedAmount.default;
     private _name: string;
     private _description?: string
-    private _elastic: boolean
     private _perks: PerkTree[]
     private _category: Category
     private _enabled: boolean
@@ -26,24 +25,22 @@ export default class Package implements NetworkOwned {
     public get index(): number { return this._index }
     public get name(): string { return this._name }
     public get description(): string { return this._description }
-    public get elastic(): boolean { return this._elastic }
     public get perks(): PerkTree[] { return this._perks }
     public get enabled(): boolean { return this._enabled }
 
-    constructor(id: string, price: TimedAmount.default, category: Category, index: number, name: string, elastic: boolean, perks: PerkTree[], description: string | null, enabled: boolean) {
+    constructor(id: string, price: TimedAmount.default, category: Category, index: number, name: string, perks: PerkTree[], description: string | null, enabled: boolean) {
         this.id = id
         this._price = price
         this._category = category
         this._index = index
         this._name = name
         this._description = description
-        this._elastic = elastic
         this._perks = perks
         this._enabled = enabled
     }
 
     public static fromObject(obj: any, category: Category): Package {
-        const pkg = new Package(obj.id, TimedAmount.fromObject(obj.price), category, obj.index, obj.name, obj.elastic, [], obj.description, obj.enabled)
+        const pkg = new Package(obj.id, TimedAmount.fromObject(obj.price), category, obj.index, obj.name, [], obj.description, obj.enabled)
         pkg._perks = (obj.perks as any[]).map(tree => PerkTree.fromObject(tree, pkg))
         return pkg
     }
@@ -86,7 +83,7 @@ export default class Package implements NetworkOwned {
             this._index = index
             // TODO update parent
         }
-        
+
         return this
     }
 
