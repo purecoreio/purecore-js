@@ -2,6 +2,8 @@ import Elements from "./elements/Elements";
 import { call } from "./http/Call";
 import Network from "./instance/network/Network";
 import Credentials from "./login/Credentials";
+import EmailVerification from "./login/EmailVerification";
+import { Login } from "./login/Login";
 import LoginHelper from "./login/LoginHelper";
 import Token from "./login/Token";
 import User from "./user/User";
@@ -43,16 +45,7 @@ export default class Core {
         return User.fromObject(await call("user/"))
     }
 
-    public async login(method: Method, scope: scope[] = ["offline"], redirectURI?: string, state?: string): Promise<Core> {
-        const token: Token = await LoginHelper.login(method, scope, redirectURI ? "code" : "token", Core.credentials.publicId, redirectURI, state, Core.credentials.userToken ? Core.credentials.userToken.accessToken : null)
-
-        if (!Core.credentials.userToken) {
-            // keep the old user token if it was an account link, since it will still be valid
-            Core.credentials.userToken = token
-            Core.credentials.saveUserToken()
-        }
-        return this
-    }
+    public get login(): Login { return new Login() }
 
 }
 

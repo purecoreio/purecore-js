@@ -1,3 +1,4 @@
+import { Login } from "./Login";
 import Token from "./Token";
 
 export default class Credentials extends EventTarget {
@@ -24,8 +25,36 @@ export default class Credentials extends EventTarget {
         this.dispatchEvent(new Event('loaded'));
     }
 
+    storePublicKey(pkid: string, userId: string) {
+        localStorage.setItem(btoa("purecore-public-key"), btoa(JSON.stringify({
+            user: userId,
+            pkid: pkid
+        })))
+    }
+
+    getStoredPublicKey(): { pkid: string, user: string } {
+        const pk = localStorage.getItem(btoa("purecore-public-key"))
+        if (pk) {
+            return JSON.parse(atob(pk))
+        } else {
+            throw new Error("no stored public key")
+        }
+    }
+
+    clearStoredPublicKey() {
+        localStorage.removeItem(btoa("purecore-public-key"))
+    }
+
     public get authenticated(): boolean {
         return this.userToken && this.userToken.accessToken != null
+    }
+
+    saveLogin(token: Token) {
+        // keep the old user token if it was an account link, since it will still be valid
+        if (!this.userToken) {
+            this.userToken = token
+            this.saveUserToken()
+        }
     }
 
     attemptLoadFromLocalStorage() {
