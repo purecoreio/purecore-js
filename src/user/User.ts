@@ -7,6 +7,11 @@ import Profile from "./Profile"
 import Wallet from "./Wallet"
 import { Address } from "@stripe/stripe-js"
 
+export enum Plan {
+    FREE = 0,
+    PLUS = 1
+}
+
 export default class User {
 
     public readonly id: string
@@ -21,6 +26,10 @@ export default class User {
 
     public async setAddress(address: Address): Promise<void> {
         await call('user/address', address, 'PATCH')
+    }
+
+    public async getPlan(): Promise<Plan> {
+        return (await call('user/plan')).plan
     }
 
     public async createNetwork(name: string, cname: string): Promise<Network> {
