@@ -1,4 +1,3 @@
-import { call } from "../http/Call";
 import Network from "../instance/network/Network";
 import NetworkOwned from "../instance/NetworkOwned";
 import User from "../user/User";
@@ -7,7 +6,7 @@ import Discount, { ReductionType } from "./discount/Discount";
 import Gateway from "./Gateway";
 import Package from "./Package";
 import PerkCategory from "./perk/PerkCategory";
-import { processor } from "./processor";
+import * as processor from "./processor";
 
 export default class Store implements NetworkOwned {
 
@@ -26,6 +25,17 @@ export default class Store implements NetworkOwned {
     public get categories(): Category[] { return this._categories }
     public get perks(): PerkCategory[] { return this._perks }
     public get discounts(): Discount[] { return this._discounts }
+
+    async getCreditFallback(): Promise<processor.processor[]> {
+        return (await this.network.call('store/credit')).map(s => processor.fromNumber(s))
+    }
+
+    async setCreditFallback(modifiedProcessor: processor.processor, fallback: boolean): Promise<processor.processor[]> {
+        return (await this.network.call('store/credit', {
+            service: processor.asNumber(modifiedProcessor),
+            fallback: fallback
+        })).map(s => processor.fromNumber(s))
+    }
 
     async getCurrency(): Promise<string> {
         return (await this.network.call('store/currency')).result
@@ -116,7 +126,7 @@ export default class Store implements NetworkOwned {
      * ! returns an invalid gateway id.
      * syn for User.linkWallet(processor,<this>,privateKey,publicKey)
      */
-    public async linkGateway(processor: processor, privateKey?: string, publicKey?: string): Promise<void> {
+    public async linkGateway(processor: processor.processor, privateKey?: string, publicKey?: string): Promise<void> {
         const user = new User('')
         await user.linkWallet(processor, this.network, privateKey, publicKey)
     }
