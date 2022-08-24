@@ -14,3 +14,19 @@ export function fromNumber(n: number): processor {
             throw new Error("unknown service")
     }
 }
+
+export function asNumber(processor: processor): number {
+    switch (processor) {
+        case 'paypal':
+            return 0
+        case 'stripe':
+            return 1
+        case 'mollie':
+            return 2
+        case 'coinbase':
+            return 3
+        default:
+            throw new Error("unknown service");
+
+    }
+}
