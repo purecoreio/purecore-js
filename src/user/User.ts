@@ -6,6 +6,7 @@ import Network from "../instance/network/Network"
 import Profile from "./Profile"
 import Wallet from "./Wallet"
 import { Address } from "@stripe/stripe-js"
+import Machine from "../hosting/Machine"
 
 export enum Plan {
     FREE = 0,
@@ -30,6 +31,14 @@ export default class User {
 
     public async getPlan(): Promise<Plan> {
         return (await call('user/plan')).plan
+    }
+
+    public async createMachine(): Promise<Machine> {
+        return Machine.fromObject(await call('user/machine', undefined, 'POST'))
+    }
+
+    public async getMachines(): Promise<Machine[]> {
+        return (await call('user/machine')).map(m => Machine.fromObject(m))
     }
 
     public async createNetwork(name: string, cname: string): Promise<Network> {
