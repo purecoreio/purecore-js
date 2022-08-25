@@ -1,6 +1,7 @@
 import Network from "../instance/network/Network";
 import NetworkOwned from "../instance/NetworkOwned";
 import User from "../user/User";
+import Wallet from "../user/Wallet";
 import Category from "./Category";
 import Discount, { ReductionType } from "./discount/Discount";
 import Gateway from "./Gateway";
@@ -34,7 +35,7 @@ export default class Store implements NetworkOwned {
         return (await this.network.call('store/credit', {
             service: processor.asNumber(modifiedProcessor),
             fallback: fallback
-        })).map(s => processor.fromNumber(s))
+        }, 'PATCH')).map(s => processor.fromNumber(s))
     }
 
     async getCurrency(): Promise<string> {
@@ -129,6 +130,12 @@ export default class Store implements NetworkOwned {
     public async linkGateway(processor: processor.processor, privateKey?: string, publicKey?: string): Promise<void> {
         const user = new User('')
         await user.linkWallet(processor, this.network, privateKey, publicKey)
+    }
+
+    public async createGateway(wallet: Wallet): Promise<Gateway> {
+        return Gateway.fromObject(await this.network.call('store/gateway', {
+            wallet: wallet.id
+        }), this)
     }
 
     public async getCheckout(items: string[] | Package[]): Promise<any> {
