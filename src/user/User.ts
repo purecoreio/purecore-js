@@ -7,6 +7,7 @@ import Profile from "./Profile"
 import Wallet from "./Wallet"
 import { Address } from "@stripe/stripe-js"
 import Machine from "../hosting/Machine"
+import HostingImage from "../hosting/HostingImage"
 
 export enum Plan {
     FREE = 0,
@@ -34,11 +35,26 @@ export default class User {
     }
 
     public async createMachine(): Promise<Machine> {
-        return Machine.fromObject(await call('user/machine', undefined, 'POST'))
+        return Machine.fromObject(await call('user/hosting/machine', undefined, 'POST'))
     }
 
     public async getMachines(): Promise<Machine[]> {
-        return (await call('user/machine')).map(m => Machine.fromObject(m))
+        return (await call('user/hosting/machine')).map(m => Machine.fromObject(m))
+    }
+
+    public async createHostingImage(image: string, tags: string[] | null = null): Promise<HostingImage> {
+        return HostingImage.fromObject(await call('user/hosting/image', {
+            image: image,
+            tags: tags
+        }))
+    }
+
+    public async getHostingImages(): Promise<HostingImage[]> {
+        return (await call('user/hosting/image')).map(m => HostingImage.fromObject(m))
+    }
+
+    public async getHostingImage(id: string): Promise<HostingImage> {
+        return HostingImage.fromObject(await call(`user/hosting/image/${id}`))
     }
 
     public async createNetwork(name: string, cname: string): Promise<Network> {
