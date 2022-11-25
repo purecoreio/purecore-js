@@ -8,6 +8,7 @@ import Wallet from "./Wallet"
 import { Address } from "@stripe/stripe-js"
 import Machine from "../hosting/Machine"
 import HostingImage from "../hosting/HostingImage"
+import ResourceTemplate from "../hosting/ResourceTemplate"
 
 export enum Plan {
     FREE = 0,
@@ -40,6 +41,23 @@ export default class User {
 
     public async getMachines(): Promise<Machine[]> {
         return (await call('user/hosting/machine')).map(m => Machine.fromObject(m))
+    }
+
+    public async createResourceTemplate(images: HostingImage[], cores: number, memory: number, storage?: number): Promise<ResourceTemplate> {
+        return ResourceTemplate.fromObject(await call('user/hosting/template', {
+            images: images.map(i => i.id),
+            cores: cores,
+            memory: memory,
+            storage: storage
+        }))
+    }
+
+    public async getResourceTemplates(): Promise<ResourceTemplate[]> {
+        return (await call('user/hosting/template')).map(t => ResourceTemplate.fromObject(t))
+    }
+
+    public async getResourceTemplate(id: string): Promise<ResourceTemplate> {
+        return ResourceTemplate.fromObject(await call(`user/hosting/template/${id}`))
     }
 
     public async createHostingImage(image: string, tags: string[] | null = null): Promise<HostingImage> {

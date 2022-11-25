@@ -41,13 +41,27 @@ export default class HostingImage {
         await call(`user/hosting/image/${this.id}`, undefined, 'DELETE')
     }
 
-    public async addEnv(key: string, filter: string[] | RegExp, defo?: string): Promise<ImageEnv> {
-        return ImageEnv.fromObject(await call(`user/hosting/image/${this.id}/env`, {
+    public async deleteEnv(env: ImageEnv): Promise<void> {
+        await call(`user/hosting/image/${this.id}/env/${env.id}`, undefined, 'DELETE')
+        this._envs = this.envs.filter(e => e.id != env.id)
+    }
+
+    public async addEnv(key: string, filter: string[] | RegExp, mandatory: boolean, defo?: string): Promise<ImageEnv> {
+        let obj: any = {
             key: key,
+            mandatory: mandatory,
             default: defo,
-            regex: Array.isArray(filter) ? undefined : filter,
-            values: Array.isArray(filter) ? filter : undefined
-        }, 'POST'), this)
+        }
+        if (filter) {
+            if (Array.isArray(filter)) {
+                obj = { ...obj, values: filter }
+            } else {
+                obj = { ...obj, regex: ImageEnv.sanitizeRegEx(filter) }
+            }
+        }
+        const env = ImageEnv.fromObject(await call(`user/hosting/image/${this.id}/env`, obj, 'POST'), this)
+        this.envs.push(env)
+        return env
     }
 
 }
